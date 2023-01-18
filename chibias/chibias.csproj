@@ -6,6 +6,7 @@
     <AssemblyName>chibias</AssemblyName>
     <IsPackable>true</IsPackable>
     <PackageId>chibias-cli</PackageId>
+    <PackAsTool>true</PackAsTool>
   </PropertyGroup>
 
   <ItemGroup>
