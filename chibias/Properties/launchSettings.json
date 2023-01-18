@@ -2,7 +2,7 @@
   "profiles": {
     "chibias": {
       "commandName": "Project",
-      "commandLineArgs": "-r C:\\Projects\\chibicc\\tmp2.dll C:\\Projects\\test-output.dll test.il"
+      "commandLineArgs": "-o tmp.exe test.s"
     }
   }
 }

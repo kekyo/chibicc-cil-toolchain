@@ -81,7 +81,7 @@ public static class Program
             using var logger = new TextWriterLogger(
                 logLevel, Console.Out, ThisAssembly.AssemblyMetadata.TargetFramework);
 
-            logger.Information($"Started.");
+            logger.Trace($"Started.");
 
             var sourcePaths = parsed.ToArray();
             var referenceAssemblyBasePaths = referenceAssemblyPaths.
@@ -107,6 +107,8 @@ public static class Program
                 assembleOptions,
                 version,
                 targetFrameworkMoniker);
+
+            logger.Trace($"Finished.");
 
             return 0;
         }

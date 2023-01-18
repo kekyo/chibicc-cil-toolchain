@@ -135,6 +135,10 @@ public sealed class Assembler
             return false;
         }
 
+        var sourceFullPaths = sourcePaths.
+            Select(Path.GetFullPath).
+            ToArray();
+
         //////////////////////////////////////////////////////////////
 
         var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
@@ -167,10 +171,10 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        var baseSourcePath = sourcePaths.Length == 1 ?
-            Utilities.GetDirectoryPath(sourcePaths[0]) :           
-            Path.Combine(sourcePaths.
-                Select(path => Path.GetFullPath(path).Split(Path.DirectorySeparatorChar)).
+        var baseSourcePath = sourceFullPaths.Length == 1 ?
+            Utilities.GetDirectoryPath(sourceFullPaths[0]) :           
+            Path.Combine(sourceFullPaths.
+                Select(path => path.Split(Path.DirectorySeparatorChar)).
                 Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
 
         var produceExecutable =
@@ -184,12 +188,12 @@ public sealed class Assembler
             produceExecutable,
             debugSymbolType != DebugSymbolTypes.None);
 
-        foreach (var sourcePath in sourcePaths)
+        foreach (var sourceFullPath in sourceFullPaths)
         {
             this.AssembleFromSource(
                 parser,
                 baseSourcePath,
-                sourcePath);
+                sourceFullPath);
         }
 
         var allFinished = parser.Finish(
