@@ -417,6 +417,27 @@ public sealed class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task BrVaries4()
+    {
+        var actual = Run(@"
+            .function int32 main
+                br.s LEND1
+              LEND1:
+                ldc.i4.1
+                br.s LEND2
+              LEND2:
+                ret
+            .function int32 foo
+                br.s LEND1
+              LEND1:
+                ldc.i4.1
+                br.s LEND2
+              LEND2:
+                ret");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
