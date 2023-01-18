@@ -10,11 +10,13 @@ This repository and [chibicc-cil](https://github.com/kekyo/chibicc-cil) will be 
 
 ## How to use
 
-Install via nuget [chibias-cli]().
+Install via nuget package [chibias-cli](https://www.nuget.org/packages/chibias-cli).
 
 ```bash
 $ dotnet tool install -g chibias-cli
 ```
+
+Then:
 
 ```bash
 $ chibias
