@@ -22,7 +22,6 @@
   .ver 1:0:0:0
 }
 .module output.dll
-// MVID: {D84195CB-B89E-4F59-A866-ECBA67F5AD24}
 .imagebase 0x00400000
 .file alignment 0x00000200
 .stackreserve 0x00100000

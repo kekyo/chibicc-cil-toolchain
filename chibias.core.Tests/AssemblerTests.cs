@@ -7,130 +7,16 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using chibias.Internal;
 using NUnit.Framework;
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
+
 using static VerifyNUnit.Verifier;
 
 namespace chibias.core.Tests;
 
 [TestFixture]
-public sealed class AssemblerTests
+public sealed partial class AssemblerTests
 {
-    private readonly string id =
-        $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{Guid.NewGuid():N}";
-
-    private string Run(
-        string chibiasSourceCode,
-        AssemblyTypes assemblyType = AssemblyTypes.Dll,
-        [CallerMemberName] string memberName = null!)
-    {
-        var basePath = Path.GetFullPath(
-            Path.Combine(
-                "tests",
-                id,
-                memberName));
-
-        Directory.CreateDirectory(basePath);
-
-        var logPath = Path.Combine(basePath, "log.txt");
-
-        var disassembledSourceCode = new StringBuilder();
-        using (var logfs = new FileStream(
-            logPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
-        {
-            var logtw = new StreamWriter(
-                logfs, Encoding.UTF8);
-            var logger = new TextWriterLogger(
-                LogLevels.Debug, logtw);
-
-            try
-            {
-                var sourcePath = Path.Combine(
-                    basePath, "source.s");
-                using (var tw = File.CreateText(sourcePath))
-                {
-                    tw.Write(chibiasSourceCode);
-                    tw.Flush();
-                }
-
-                var tmp2Path = Path.GetFullPath("tmp2.dll");
-                var tmp2BasePath = Utilities.GetDirectoryPath(tmp2Path);
-
-                var assember = new Assembler(
-                    logger,
-                    tmp2BasePath);
-
-                var outputAssemblyPath =
-                    Path.Combine(basePath, "output.dll");
-                var succeeded = assember.Assemble(
-                    new[] { sourcePath },
-                    outputAssemblyPath,
-                    new[] { tmp2Path },
-                    assemblyType,
-                    DebugSymbolTypes.Embedded,
-                    AssembleOptions.Deterministic,
-                    new Version(1, 0, 0),
-                    "net48");
-
-                var disassembledPath =
-                    Path.Combine(basePath, "output.il");
-
-                var psi = new ProcessStartInfo()
-                {
-                    // Testing expected content is required MS's ILDAsm format,
-                    // so unfortunately runs on Windows...
-                    FileName = Path.GetFullPath("ildasm.exe"),
-                    Arguments = $"-utf8 -out={disassembledPath} {outputAssemblyPath}"
-                };
-
-                using (var ildasm = Process.Start(psi)!)
-                {
-                    ildasm.WaitForExit();
-                }
-
-                if (!succeeded)
-                {
-                    throw new FormatException($"Failed assembling, see {basePath}");
-                }
-
-                using var disassembledReader = File.OpenText(disassembledPath);
-                while (true)
-                {
-                    var line = disassembledReader.ReadLine();
-                    if (line == null)
-                    {
-                        break;
-                    }
-                    if (!line.StartsWith("// Image base:"))
-                    {
-                        disassembledSourceCode.AppendLine(line);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                logger.Error(ex);
-                throw;
-            }
-            finally
-            {
-                logtw.Flush();
-            }
-        }
-
-        Directory.Delete(basePath, true);
-
-        return disassembledSourceCode.ToString();
-    }
-
-    /////////////////////////////////////////////////////////
-
     [Test]
     public Task SimpleOpCodeMainFunction()
     {
@@ -413,6 +299,27 @@ public sealed class AssemblerTests
             .function int32 foo
                 br.s LEND
               LEND:
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task BrVaries4()
+    {
+        var actual = Run(@"
+            .function int32 main
+                br.s LEND1
+              LEND1:
+                ldc.i4.1
+                br.s LEND2
+              LEND2:
+                ret
+            .function int32 foo
+                br.s LEND1
+              LEND1:
+                ldc.i4.1
+                br.s LEND2
+              LEND2:
                 ret");
         return Verify(actual);
     }
@@ -827,6 +734,159 @@ public sealed class AssemblerTests
             .function int32[][] foo
                 ldc.i4.4
                 newarr int32[]
+                ret");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task MaxStackSize1()
+    {
+        var actual = Run(@"
+            .function int32 main
+                .maxstack 100   ; Applied CIL Fat method header when size > 8
+                ldc.i4.1
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize2()
+    {
+        // 
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 6
+                ldc.i4.1    ; 7
+                ldc.i4.1    ; 8  ----- Boundary
+                ldc.i4.1    ; 9    |
+                ldc.i4.1    ; 10   | Applied CIL Fat method header
+                pop         ; 9    v
+                pop         ; 8
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize3()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 7
+                ldc.i4.1    ; 8
+                br L1       ; 8
+            L1:
+                ldc.i4.1    ; 9
+                ldc.i4.1    ; 10
+                pop         ; 9
+                pop         ; 8
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize4()
+    {
+        // Invalid program, but testable.
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 8
+                brtrue L1   ; 7 ----+
+                ldc.i4.1    ; 8     |
+                ldc.i4.1    ; 9     |
+            L1:             ;       v
+                ldc.i4.1    ; 10    8
+                ldc.i4.1    ; 11    9
+                pop         ; 10    8
+                pop         ; 9     7
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize5()
+    {
+        // Invalid program, but testable.
+        var actual = Run(@"
+            .function int32 main
+            L1:
+                ldc.i4.1    ;       +--> 10
+                ldc.i4.1    ;       |    11
+                ldc.i4.1    ;       |    12
+                ldc.i4.1    ;       |    :
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ; 10    |
+                brtrue L1   ; 9 ----+
+                pop
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize6()
+    {
+        // Invalid program, but testable.
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 8
+                brfalse L1  ; 7 ----+
+                ldc.i4.1    ; 8     |
+                ldc.i4.1    ; 9     |
+            L1:             ;       v
+                ldc.i4.1    ; 10    8
+                ldc.i4.1    ; 11    9
+                pop         ; 10    8
+                pop         ; 9     7
+                pop
+                pop
                 ret");
         return Verify(actual);
     }

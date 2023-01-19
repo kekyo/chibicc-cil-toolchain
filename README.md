@@ -1,16 +1,26 @@
 ﻿# The specialized backend CIL assembler for chibicc-cil
 
-This is a porting C language compiler implementation derived from [chibicc](https://github.com/rui314/chibicc) on .NET CIL/CLR.
+[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+
+This is a CIL/MSIL assembler, backend for porting C language compiler implementation derived from [chibicc](https://github.com/rui314/chibicc) on .NET CIL/CLR.
 It is WIP and broadcasting side-by-side GIT commit portion on [YouTube (In Japanese)](https://bit.ly/3XbqPSQ).
 
-This repository and [chibicc-cil](https://github.com/kekyo/chibicc-cil) will be made available as the porting progresses to some extent, please wait.
+[chibicc-cil](https://github.com/kekyo/chibicc-cil) will be made available as the porting progresses to some extent, please wait.
+
+
+### NuGet
+
+| Package  | NuGet                                                                                                                |
+|:---------|:---------------------------------------------------------------------------------------------------------------------|
+| chibias-cli (dotnet CLI) | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibias-cli.svg?style=flat)](https://www.nuget.org/packages/chibias-cli) |
+| chibias.core (Core library) | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
 
 
 ----
 
 ## How to use
 
-Install via nuget package [chibias-cli](https://www.nuget.org/packages/chibias-cli).
+Install CLI via nuget package [chibias-cli](https://www.nuget.org/packages/chibias-cli). (NOT 'chibias-cil' :)
 
 ```bash
 $ dotnet tool install -g chibias-cli
@@ -21,7 +31,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.0.1,net6.0]
+chibias [0.0.4,net6.0]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -44,6 +54,9 @@ usage: chibias [options] <source path> [<source path> ...]
   -h, --help                 Show this help
 ```
 
+* chibias will combine multiple source code in command line pointed into one assembly.
+* Reference assembly paths evaluates last-to-first order, same as `ld` looking up.
+  This feature applies to duplicated symbols (function/global variables).
 
 ----
 
@@ -56,13 +69,13 @@ To check the syntax, you should look at [the test code](https://github.com/kekyo
 
 ```
 .function int32 main
-    ldc.i4 123  // This is comment.
+    ldc.i4 123    ; This is comment.
     ret
 ```
 
 * The line both pre-whitespaces and post-whitespaces are ignored.
   * That is, indentation is simply ignored.
-* The double slashes ('//') starts comment, ignores all words at end of line.
+* The semicolon (';') starts comment, ignores all words at end of line.
 * Begin with dot ('.') declaration is "Assembler directives."
   * `.function` directive is beginning function body with return type and function name.
   * The function body continues until the next function directive appears.
@@ -106,7 +119,7 @@ Label name requires unique in the function scope.
 |`typeref`|`System.TypedReference`| |
 
 You can combine array/pointer/refernces.
-Separated with white space is not allowed:
+(Separated with white space is not allowed.)
 
 * `int[]`
 * `int[][]`
@@ -127,9 +140,8 @@ Separated with white space is not allowed:
     ret
 ```
 
-We can declare local variables with `.local` directive.
+We can declare local variables with `.local` directive inside function body.
 The local directive could have optional variable name.
-However, variable names cannot be used with CIL OpCode because they are part of debugging information.
 
 ### Call another function
 
@@ -187,7 +199,7 @@ $ chibias -r test.dll main.s
 ```
 
 The functions (.NET CIL methods) are placed into single class named `C.module`.
-That pseudo illustrated is:
+That mapping is:
 
 * `int32 main` --> `public static int32 C.module::main()`
 * `int32 add2 a:int32 b:int32` --> `public static int32 C.module::add2(int32 a, int32 b)`
@@ -199,8 +211,7 @@ namespace C;
 
 public static class module
 {
-    public static int add2(int a, int b) =>
-        a + b;
+    public static int add2(int a, int b) => a + b;
 }
 ```
 
@@ -214,14 +225,16 @@ namespace C;
 
 public static class module
 {
-    public static int main() =>
-        test_module::add2(1, 2);
+    public static int main() => test_module::add2(1, 2);
 }
 ```
 
 This is named "CABI (chibicc application binary interface) specification."
 
 ### Global variables
+
+Global variable directive format is same as local variable directive,
+However, excludes declarations outside function body:
 
 ```
 .function int32 main
@@ -250,11 +263,23 @@ public static class module
 }
 ```
 
+### Override maximum evaluation stack size
+
+```
+.function int32 main
+    .maxstack 100
+    ldc.i4 123
+    ret
+```
+
+chibias will try calculation for using maximum evaluation stack by static execution flow analysis.
+It is not perfectly working, so it will override when this directive is declared.
+
 ### Location information
 
 ```
 .function int32 main
-    .location 10 /home/kouji/Projects/test.c c
+    .location 10 "/home/kouji/Projects/test.c" c
     ldc.i4 123
     ldc.i4 456
     add
@@ -284,17 +309,30 @@ Will produce debugging information with CIL source file itself when does not app
 
 ----
 
-## TODO:
+## TODO
+
+Might be implemented:
+
+* `OperandType`
+  * InlineSwitch
+* Handling for target framework moniker.
+  * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
+* Better handling for line-based number information.
+* Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
+* Custom command line parser.
+* MSBuild scriptable packaging.
+* And chibicc-cil specific requirements...
+
+Might not be implemented:
 
 * `OperandType`
   * InlinePhi,
   * InlineSig
-  * InlineSwitch
   * InlineTok
-* Handling for target framework moniker.
-  * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
-* Better handling for line-based number information.
-* Custom command line parser.
+* Handling multi-dimensional array types.
+* Handling parameter/variable names in operand.
+* Exception handling.
+* And NOT chibicc-cil specific requirements.
 
 
 ----
@@ -317,6 +355,10 @@ Initially I used [ILAsm.Managed](https://github.com/kekyo/ILAsm.Managed), but th
   * Managed debugging information is in "MDB" format, which is not suitable for the current situation.
     So it is necessary to be able to realize "Portable PDB" or "Embedded."
     * This could be solved by using the ILAsm provided by MS, but we have decided not to use it because of [another problem](https://github.com/kekyo/ILAsm.Managed#background).
+* ILAsm has complex and redundant syntax rules.
+  * Want to eliminate excessive block-quote syntax.
+  * Want to eliminate unusual optional member attributes.
+  * Want to eliminate chatty namespace/type member prefixes.
 
 These were considered difficult to work around and led us to implement our own assembler with the minimum required functionality.
 

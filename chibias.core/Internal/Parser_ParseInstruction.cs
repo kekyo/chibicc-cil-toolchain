@@ -370,6 +370,7 @@ partial class Parser
                 {
                     this.labelTargets.Add(labelName, instruction);
                 }
+                this.willApplyLabelingNames.Clear();
 
                 if (this.queuedLocation is { } queuedLocation)
                 {
