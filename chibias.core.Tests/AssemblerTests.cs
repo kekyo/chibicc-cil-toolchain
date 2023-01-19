@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////////////
+﻿/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibias-cil - The specialized backend CIL assembler for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -734,6 +734,159 @@ public sealed partial class AssemblerTests
             .function int32[][] foo
                 ldc.i4.4
                 newarr int32[]
+                ret");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task MaxStackSize1()
+    {
+        var actual = Run(@"
+            .function int32 main
+                .maxstack 100
+                ldc.i4.1
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize2()
+    {
+        // 
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 6
+                ldc.i4.1    ; 7
+                ldc.i4.1    ; 8  ----- Boundary
+                ldc.i4.1    ; 9    |
+                ldc.i4.1    ; 10   v Applied CIL Fat method header
+                pop         ; 9
+                pop         ; 8
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize3()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 7
+                ldc.i4.1    ; 8
+                br L1       ; 8
+            L1:
+                ldc.i4.1    ; 9
+                ldc.i4.1    ; 10
+                pop         ; 9
+                pop         ; 8
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize4()
+    {
+        // Invalid program, but testable.
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 8
+                brtrue L1   ; 7 ----+
+                ldc.i4.1    ; 8     |
+                ldc.i4.1    ; 9     |
+            L1:             ;       v
+                ldc.i4.1    ; 10    8
+                ldc.i4.1    ; 11    9
+                pop         ; 10    8
+                pop         ; 9     7
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize5()
+    {
+        // Invalid program, but testable.
+        var actual = Run(@"
+            .function int32 main
+            L1:
+                ldc.i4.1    ;       +--> 10
+                ldc.i4.1    ;       |    11
+                ldc.i4.1    ;       |    12
+                ldc.i4.1    ;       |    :
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ;       |
+                ldc.i4.1    ; 10    |
+                brtrue L1   ; 9 ----+
+                pop
+                pop
+                pop
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MaxStackSize6()
+    {
+        // Invalid program, but testable.
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1
+                ldc.i4.1    ; 8
+                brfalse L1  ; 7 ----+
+                ldc.i4.1    ; 8     |
+                ldc.i4.1    ; 9     |
+            L1:             ;       v
+                ldc.i4.1    ; 10    8
+                ldc.i4.1    ; 11    9
+                pop         ; 10    8
+                pop         ; 9     7
+                pop
+                pop
                 ret");
         return Verify(actual);
     }

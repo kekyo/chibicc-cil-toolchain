@@ -342,12 +342,12 @@ internal sealed partial class Parser
                     else
                     {
                         // Produce calculation for maximum evaluation stack size.
-                        // https://github.com/jbevain/cecil/issues/577
                         // TODO: Misreads complex flow (looping with stack remains).
-                        static void AnalyzeExecutionFlow(
+                        static int AnalyzeExecutionFlow(
                             int currentSize,
-                            Instruction instruction, HashSet<Instruction> touched,
-                            ref int maxStackSize)
+                            int currentMaxStackSize,
+                            Instruction instruction,
+                            HashSet<Instruction> touched)
                         {
                             if (touched.Add(instruction))
                             {
@@ -357,50 +357,46 @@ internal sealed partial class Parser
                                     instruction.OpCode.StackBehaviourPush);
 
                                 var thisSize = currentSize + popNegativeSize + pushPositiveSize;
-                                maxStackSize = Math.Max(maxStackSize, thisSize);
+                                currentMaxStackSize = Math.Max(currentMaxStackSize, thisSize);
 
                                 switch (instruction.OpCode.FlowControl)
                                 {
                                     case FlowControl.Return:
                                     case FlowControl.Throw:
-                                        break;
+                                        return currentMaxStackSize;
                                     case FlowControl.Branch:
-                                        AnalyzeExecutionFlow(
-                                            thisSize, (Instruction)instruction.Operand, touched, ref maxStackSize);
-                                        break;
+                                        return AnalyzeExecutionFlow(
+                                            thisSize, currentMaxStackSize, (Instruction)instruction.Operand, touched);
                                     case FlowControl.Cond_Branch:
-                                        AnalyzeExecutionFlow(
-                                            thisSize, (Instruction)instruction.Operand, touched, ref maxStackSize);
-                                        AnalyzeExecutionFlow(
-                                            thisSize, instruction.Next, touched, ref maxStackSize);
-                                        break;
+                                        var targetMaxStackSize = AnalyzeExecutionFlow(
+                                            thisSize, currentMaxStackSize, (Instruction)instruction.Operand, new(touched));
+                                        return AnalyzeExecutionFlow(
+                                            thisSize, targetMaxStackSize, instruction.Next, new(touched));
                                     case FlowControl.Call:
                                         var method = (MethodReference)instruction.Operand;
                                         thisSize -= method.HasThis ? 1 : 0;
                                         thisSize -= method.Parameters.Count;
                                         thisSize += method.ReturnType.FullName == "System.Void" ? 0 : 1;
-                                        AnalyzeExecutionFlow(
-                                            thisSize, instruction.Next, touched, ref maxStackSize);
-                                        break;
+                                        return AnalyzeExecutionFlow(
+                                            thisSize, currentMaxStackSize, instruction.Next, touched);
                                     default:
-                                        AnalyzeExecutionFlow(
-                                            thisSize, instruction.Next, touched, ref maxStackSize);
-                                        break;
+                                        return AnalyzeExecutionFlow(
+                                            thisSize, currentMaxStackSize, instruction.Next, touched);
                                 }
+                            }
+                            else
+                            {
+                                return currentMaxStackSize;
                             }
                         }
 
-                        var initialStackSize =
-                            (method.ReturnType.FullName == "System.Void" ? 0 : 1);
-                        maxStackSize = initialStackSize;
-                        AnalyzeExecutionFlow(
-                            initialStackSize,
-                            method.Body.Instructions[0], new(),
-                            ref maxStackSize);
+                        maxStackSize = AnalyzeExecutionFlow(
+                            0, 0, method.Body.Instructions[0], new());
 
                         this.OutputTrace($"{method.Name}: maxStackSize={maxStackSize} (calculated)");
                     }
 
+                    // https://github.com/jbevain/cecil/issues/577
                     method.Body.MaxStackSize = maxStackSize;
                 }
             }
