@@ -20,7 +20,7 @@ It is WIP and broadcasting side-by-side GIT commit portion on [YouTube (In Japan
 
 ## How to use
 
-Install CLI via nuget package [chibias-cli](https://www.nuget.org/packages/chibias-cli).
+Install CLI via nuget package [chibias-cli](https://www.nuget.org/packages/chibias-cli). (NOT 'chibias-cil' :)
 
 ```bash
 $ dotnet tool install -g chibias-cli
@@ -69,13 +69,13 @@ To check the syntax, you should look at [the test code](https://github.com/kekyo
 
 ```
 .function int32 main
-    ldc.i4 123  // This is comment.
+    ldc.i4 123    ; This is comment.
     ret
 ```
 
 * The line both pre-whitespaces and post-whitespaces are ignored.
   * That is, indentation is simply ignored.
-* The double slashes ('//') starts comment, ignores all words at end of line.
+* The semicolon (';') starts comment, ignores all words at end of line.
 * Begin with dot ('.') declaration is "Assembler directives."
   * `.function` directive is beginning function body with return type and function name.
   * The function body continues until the next function directive appears.
@@ -309,20 +309,30 @@ Will produce debugging information with CIL source file itself when does not app
 
 ----
 
-## TODO:
+## TODO
+
+Might be implemented:
+
+* `OperandType`
+  * InlineSwitch
+* Handling for target framework moniker.
+  * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
+* Better handling for line-based number information.
+* Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
+* Custom command line parser.
+* MSBuild scriptable packaging.
+* And chibicc-cil specific requirements...
+
+Might not be implemented:
 
 * `OperandType`
   * InlinePhi,
   * InlineSig
-  * InlineSwitch
   * InlineTok
 * Handling multi-dimensional array types.
 * Handling parameter/variable names in operand.
-* Makes better calculation for maximum evaluation stack size.
-* Handling for target framework moniker.
-  * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
-* Better handling for line-based number information.
-* Custom command line parser.
+* Exception handling.
+* And NOT chibicc-cil specific requirements.
 
 
 ----
