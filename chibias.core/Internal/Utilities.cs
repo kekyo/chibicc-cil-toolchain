@@ -26,7 +26,39 @@ internal static class Utilities
         Select(field => (OpCode)field.GetValue(null)!).
         ToDictionary(opCode => opCode.Name.Replace('_', '.').ToLowerInvariant());
 
-    public static readonly char[] Separators = new[] { ' ', '\t' };
+    public static int GetOpCodeStackSize(StackBehaviour sb) =>
+        sb switch
+        {
+            StackBehaviour.Pop0 => 0,
+            StackBehaviour.Pop1 => -1,
+            StackBehaviour.Pop1_pop1 => -2,
+            StackBehaviour.Popi => -1,
+            StackBehaviour.Popi_pop1 => -2,
+            StackBehaviour.Popi_popi => -2,
+            StackBehaviour.Popi_popi8 => -2,
+            StackBehaviour.Popi_popi_popi => -3,
+            StackBehaviour.Popi_popr4 => -2,
+            StackBehaviour.Popi_popr8 => -2,
+            StackBehaviour.Popref => -1,
+            StackBehaviour.Popref_pop1 => -2,
+            StackBehaviour.Popref_popi => -2,
+            StackBehaviour.Popref_popi_popi => -3,
+            StackBehaviour.Popref_popi_popi8 => -3,
+            StackBehaviour.Popref_popi_popr4 => -3,
+            StackBehaviour.Popref_popi_popr8 => -3,
+            StackBehaviour.Popref_popi_popref => -3,
+            StackBehaviour.Varpop => -1,
+            StackBehaviour.Push0 => 0,
+            StackBehaviour.Push1 => 1,
+            StackBehaviour.Push1_push1 => 2,
+            StackBehaviour.Pushi => 1,
+            StackBehaviour.Pushi8 => 1,
+            StackBehaviour.Pushr4 => 1,
+            StackBehaviour.Pushr8 => 1,
+            StackBehaviour.Pushref => 1,
+            StackBehaviour.Varpush => 1,
+            _ => 0,
+        };
 
     public static string GetDirectoryPath(string path) =>
         Path.GetDirectoryName(path) is { } d ?

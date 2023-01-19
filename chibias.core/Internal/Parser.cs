@@ -60,6 +60,7 @@ internal sealed partial class Parser
     private readonly List<Action> delayedLookupBranchTargetActions = new();
     private readonly List<Action> delayedLookupLocalMemberActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
+    private readonly Dictionary<string, int> maxEvaluationStackSizes = new();
 
     private string relativePath = "unknown.s";
     private Location? queuedLocation;
@@ -86,7 +87,6 @@ internal sealed partial class Parser
         this.cabiSpecificSymbols = cabiSpecificSymbols;
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
-        this.isProducedOriginalSourceCodeLocation = true;
 
         // Known types
         this.knownTypes.Add("void", module.TypeSystem.Void);
@@ -135,6 +135,8 @@ internal sealed partial class Parser
         this.lastLocation = null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private void OutputError(Token token, string message)
     {
         this.caughtError = true;
@@ -146,6 +148,9 @@ internal sealed partial class Parser
         this.caughtError = true;
         this.logger.Error($"{location.RelativePath}({location.StartLine + 1},{location.StartColumn + 1}): {message}");
     }
+
+    private void OutputTrace(string message) =>
+        this.logger.Trace($"{message}");
 
     private bool TryGetType(string typeName, out TypeReference type)
     {
@@ -329,6 +334,74 @@ internal sealed partial class Parser
                             }
                         }
                     }
+
+                    if (this.maxEvaluationStackSizes.TryGetValue(method.Name, out var maxStackSize))
+                    {
+                        this.OutputTrace($"{method.Name}: maxStackSize={maxStackSize}");
+                    }
+                    else
+                    {
+                        // Produce calculation for maximum evaluation stack size.
+                        // https://github.com/jbevain/cecil/issues/577
+                        // TODO: Misreads complex flow (looping with stack remains).
+                        static void AnalyzeExecutionFlow(
+                            int currentSize,
+                            Instruction instruction, HashSet<Instruction> touched,
+                            ref int maxStackSize)
+                        {
+                            if (touched.Add(instruction))
+                            {
+                                var popNegativeSize = Utilities.GetOpCodeStackSize(
+                                    instruction.OpCode.StackBehaviourPop);
+                                var pushPositiveSize = Utilities.GetOpCodeStackSize(
+                                    instruction.OpCode.StackBehaviourPush);
+
+                                var thisSize = currentSize + popNegativeSize + pushPositiveSize;
+                                maxStackSize = Math.Max(maxStackSize, thisSize);
+
+                                switch (instruction.OpCode.FlowControl)
+                                {
+                                    case FlowControl.Return:
+                                    case FlowControl.Throw:
+                                        break;
+                                    case FlowControl.Branch:
+                                        AnalyzeExecutionFlow(
+                                            thisSize, (Instruction)instruction.Operand, touched, ref maxStackSize);
+                                        break;
+                                    case FlowControl.Cond_Branch:
+                                        AnalyzeExecutionFlow(
+                                            thisSize, (Instruction)instruction.Operand, touched, ref maxStackSize);
+                                        AnalyzeExecutionFlow(
+                                            thisSize, instruction.Next, touched, ref maxStackSize);
+                                        break;
+                                    case FlowControl.Call:
+                                        var method = (MethodReference)instruction.Operand;
+                                        thisSize -= method.HasThis ? 1 : 0;
+                                        thisSize -= method.Parameters.Count;
+                                        thisSize += method.ReturnType.FullName == "System.Void" ? 0 : 1;
+                                        AnalyzeExecutionFlow(
+                                            thisSize, instruction.Next, touched, ref maxStackSize);
+                                        break;
+                                    default:
+                                        AnalyzeExecutionFlow(
+                                            thisSize, instruction.Next, touched, ref maxStackSize);
+                                        break;
+                                }
+                            }
+                        }
+
+                        var initialStackSize =
+                            (method.ReturnType.FullName == "System.Void" ? 0 : 1);
+                        maxStackSize = initialStackSize;
+                        AnalyzeExecutionFlow(
+                            initialStackSize,
+                            method.Body.Instructions[0], new(),
+                            ref maxStackSize);
+
+                        this.OutputTrace($"{method.Name}: maxStackSize={maxStackSize} (calculated)");
+                    }
+
+                    method.Body.MaxStackSize = maxStackSize;
                 }
             }
         }
