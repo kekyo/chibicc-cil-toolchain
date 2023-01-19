@@ -745,7 +745,7 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .function int32 main
-                .maxstack 100
+                .maxstack 100   ; Applied CIL Fat method header when size > 8
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -766,8 +766,8 @@ public sealed partial class AssemblerTests
                 ldc.i4.1    ; 7
                 ldc.i4.1    ; 8  ----- Boundary
                 ldc.i4.1    ; 9    |
-                ldc.i4.1    ; 10   v Applied CIL Fat method header
-                pop         ; 9
+                ldc.i4.1    ; 10   | Applied CIL Fat method header
+                pop         ; 9    v
                 pop         ; 8
                 pop
                 pop

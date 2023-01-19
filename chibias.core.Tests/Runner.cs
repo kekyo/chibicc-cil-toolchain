@@ -100,7 +100,8 @@ partial class AssemblerTests
                     {
                         break;
                     }
-                    if (!line.StartsWith("// Image base:"))
+                    if (!line.StartsWith("// Image base:") &&
+                        !line.StartsWith("// MVID:"))
                     {
                         disassembledSourceCode.AppendLine(line);
                     }

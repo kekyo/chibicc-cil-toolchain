@@ -28,11 +28,24 @@
 {
   .method public static int32  main() cil managed
   {
-    // Code size       3 (0x3)
-    .maxstack  8
-    IL_0000:  br.s       IL_0002
+    // Code size       19 (0x13)
+    .maxstack  10
+    IL_0000:  ldc.i4.1
+    IL_0001:  ldc.i4.1
+    IL_0002:  ldc.i4.1
+    IL_0003:  ldc.i4.1
+    IL_0004:  ldc.i4.1
+    IL_0005:  ldc.i4.1
+    IL_0006:  ldc.i4.1
+    IL_0007:  ldc.i4.1
+    IL_0008:  ldc.i4.1
+    IL_0009:  ldc.i4.1
+    IL_000a:  brtrue     IL_0000
 
-    IL_0002:  ret
+    IL_000f:  pop
+    IL_0010:  pop
+    IL_0011:  pop
+    IL_0012:  ret
   } // end of method module::main
 
 } // end of class C.module
