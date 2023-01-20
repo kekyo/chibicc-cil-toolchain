@@ -1,0 +1,47 @@
+﻿
+//  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
+
+
+
+// Metadata version: v4.0.30319
+.assembly extern mscorlib
+{
+  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
+  .ver 4:0:0:0
+}
+.assembly output
+{
+  .ver 1:0:0:0
+}
+.module output.dll
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class public abstract auto ansi sealed beforefieldinit C.module
+       extends [mscorlib]System.Object
+{
+  .method public static string  foo() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldstr      bytearray (61 00 62 00 63 00 07 00 64 00 65 00 66 00 08 00   // a.b.c...d.e.f...
+                                    67 00 68 00 69 00 0C 00 6A 00 6B 00 6C 00 0A 00   // g.h.i...j.k.l...
+                                    6D 00 6E 00 6F 00 0D 00 70 00 71 00 72 00 09 00   // m.n.o...p.q.r...
+                                    73 00 74 00 75 00 0B 00 76 00 77 00 78 00 22 00   // s.t.u...v.w.x.".
+                                    79 00 7A 00 41 00 7F 00 42 00 43 00 44 00 AB 12   // y.z.A...B.C.D...
+                                    45 00 46 00 47 00 )                               // E.F.G.
+    IL_0005:  ret
+  } // end of method module::foo
+
+} // end of class C.module
+
+
+// =============================================================
+
+// *********** DISASSEMBLY COMPLETE ***********************

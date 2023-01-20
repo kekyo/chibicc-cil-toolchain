@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace chibias.Internal;
@@ -49,12 +50,23 @@ internal sealed class Token
 
 internal sealed class Tokenizer
 {
+    private enum EscapeStates
+    {
+        NonEscape,
+        First,
+        Byte3,
+        Byte2,
+        Byte1,
+        Byte0,
+    }
+
     private int lineIndex;
 
-    public Token[] TokenizeLine(
-        string line)
+    public Token[] TokenizeLine(string line)
     {
         var tokens = new List<Token>();
+        var hex = new StringBuilder();
+        var sb = new StringBuilder();
 
         for (var index = 0; index < line.Length; index++)
         {
@@ -89,30 +101,94 @@ internal sealed class Tokenizer
                 {
                     index++;
                     var start = index;
-                    var escaped = false;
-                    var sb = new StringBuilder();
+                    var escapeState = EscapeStates.NonEscape;
                     while (index < line.Length)
                     {
                         inch = line[index];
-                        if (!escaped)
+                        switch (escapeState)
                         {
-                            if (inch == '\\')
-                            {
-                                escaped = true;
-                            }
-                            else if (inch == '"')
-                            {
+                            case EscapeStates.NonEscape:
+                                if (inch == '\\')
+                                {
+                                    escapeState = EscapeStates.First;
+                                }
+                                else if (inch == '"')
+                                {
+                                    break;
+                                }
+                                else
+                                {
+                                    sb.Append(inch);
+                                }
                                 break;
-                            }
-                            else
-                            {
-                                sb.Append(inch);
-                            }
-                        }
-                        else
-                        {
-                            sb.Append(inch);
-                            escaped = false;
+                            case EscapeStates.First:
+                                switch (inch)
+                                {
+                                    case 'a':
+                                        sb.Append('\a');
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                    case 'b':
+                                        sb.Append('\b');
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                    case 'f':
+                                        sb.Append('\f');
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                    case 'n':
+                                        sb.Append('\n');
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                    case 'r':
+                                        sb.Append('\r');
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                    case 't':
+                                        sb.Append('\t');
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                    case 'u':
+                                        escapeState = EscapeStates.Byte3;
+                                        break;
+                                    case 'v':
+                                        sb.Append('\v');
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                    case 'x':
+                                        escapeState = EscapeStates.Byte1;
+                                        break;
+                                    default:
+                                        sb.Append(inch);
+                                        escapeState = EscapeStates.NonEscape;
+                                        break;
+                                }
+                                break;
+                            case EscapeStates.Byte3:
+                                hex.Append(inch);
+                                escapeState = EscapeStates.Byte2;
+                                break;
+                            case EscapeStates.Byte2:
+                                hex.Append(inch);
+                                escapeState = EscapeStates.Byte1;
+                                break;
+                            case EscapeStates.Byte1:
+                                hex.Append(inch);
+                                escapeState = EscapeStates.Byte0;
+                                break;
+                            case EscapeStates.Byte0:
+                                hex.Append(inch);
+                                if (ushort.TryParse(
+                                    hex.ToString(),
+                                    NumberStyles.AllowHexSpecifier,
+                                    CultureInfo.InvariantCulture,
+                                    out var rawValue))
+                                {
+                                    sb.Append((char)rawValue);
+                                }
+                                hex.Clear();
+                                escapeState = EscapeStates.NonEscape;
+                                break;
                         }
                         index++;
                     }
@@ -122,6 +198,8 @@ internal sealed class Tokenizer
                         this.lineIndex,
                         start,
                         index - 1));
+                    hex.Clear();
+                    sb.Clear();
                 }
                 else
                 {

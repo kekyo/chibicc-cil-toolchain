@@ -342,7 +342,6 @@ internal sealed partial class Parser
                     else
                     {
                         // Produce calculation for maximum evaluation stack size.
-                        // TODO: Misreads complex flow (looping with stack remains).
                         static int AnalyzeExecutionFlow(
                             int currentSize,
                             int currentMaxStackSize,
