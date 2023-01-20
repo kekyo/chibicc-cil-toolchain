@@ -73,6 +73,7 @@ To check the syntax, you should look at [the test code](https://github.com/kekyo
     ret
 ```
 
+* Source code decoding with UTF-8.
 * The line both pre-whitespaces and post-whitespaces are ignored.
   * That is, indentation is simply ignored.
 * The semicolon (';') starts comment, ignores all words at end of line.
@@ -80,6 +81,24 @@ To check the syntax, you should look at [the test code](https://github.com/kekyo
   * `.function` directive is beginning function body with return type and function name.
   * The function body continues until the next function directive appears.
 * Automatic apply entry point when using `main` function name and assemble with `--exe` option.
+
+### Literals
+```
+.function int32 main
+    ldc.i4 123
+    ldc.r8 1.234
+    ldstr "abc\"def\"ghi"
+    pop
+    pop
+    ret
+```
+
+* Numeric literal formats are compatible with .NET Format provider.
+  * Integer literal: `System.Int32.Parse()` and suitable types with `InvariantCulture`.
+  * Floating point number literal: `System.Double.Parse()` and suitable types with `InvariantCulture`.
+* String literal is double-quoted ('"').
+  * Escape character is ('\'), same as C language specification except trigraph chars.
+  * Hex number ('\xnn') and UTF-16 ('\unnnn') numbers are acceptable.
 
 ### Labels
 
@@ -315,6 +334,10 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
+  * InlineTok (?)
+* Handling variable arguments.
+* Handling value type declaration.
+* Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Handling for target framework moniker.
   * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
 * Better handling for line-based number information.
@@ -328,7 +351,6 @@ Might not be implemented:
 * `OperandType`
   * InlinePhi,
   * InlineSig
-  * InlineTok
 * Handling multi-dimensional array types.
 * Handling parameter/variable names in operand.
 * Exception handling.

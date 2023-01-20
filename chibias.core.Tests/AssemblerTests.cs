@@ -94,6 +94,29 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task StringLiteral1()
+    {
+        var actual = Run(@"
+            .function string foo
+                ldstr ""abc""
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task StringLiteral2()
+    {
+        var actual = Run(@"
+            .function string foo
+                ldstr ""abc\adef\bghi\fjkl\nmno\rpqr\tstu\vvwx\""yzA\x7fBCD\u12abEFG""
+                ret");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
