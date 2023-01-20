@@ -133,42 +133,36 @@ partial class Parser
                         directive,
                         $"Too many operands.");
                 }
+                else if (this.TryGetType(tokens[1].Text, out var localType))
+                {
+                    var variable = new VariableDefinition(
+                        this.module.ImportReference(localType));
+                    this.body!.Variables.Add(variable);
+
+                    if (tokens.Length == 3)
+                    {
+                        var localName = tokens[2].Text;
+                        var variableDebugInformation = new VariableDebugInformation(
+                            variable, localName);
+
+                        if (!this.variableDebugInformationLists.TryGetValue(
+                            this.method!.Name,
+                            out var list))
+                        {
+                            list = new();
+                            this.variableDebugInformationLists.Add(
+                                this.method!.Name,
+                                list);
+                        }
+
+                        list.Add(variableDebugInformation);
+                    }
+                }
                 else
                 {
-                    var localTypeName = tokens[1].Text;
-                    if (this.knownTypes.TryGetValue(
-                        localTypeName,
-                        out var localType))
-                    {
-                        var variable = new VariableDefinition(
-                            this.module.ImportReference(localType));
-                        this.body!.Variables.Add(variable);
-
-                        if (tokens.Length == 3)
-                        {
-                            var localName = tokens[2].Text;
-                            var variableDebugInformation = new VariableDebugInformation(
-                                variable, localName);
-
-                            if (!this.variableDebugInformationLists.TryGetValue(
-                                this.method!.Name,
-                                out var list))
-                            {
-                                list = new();
-                                this.variableDebugInformationLists.Add(
-                                    this.method!.Name,
-                                    list);
-                            }
-
-                            list.Add(variableDebugInformation);
-                        }
-                    }
-                    else
-                    {
-                        this.OutputError(
-                            tokens[1],
-                            $"Invalid local variable type name: {localTypeName}");
-                    }
+                    this.OutputError(
+                        tokens[1],
+                        $"Invalid local variable type name: {tokens[1].Text}");
                 }
                 break;
             // Location directive:
