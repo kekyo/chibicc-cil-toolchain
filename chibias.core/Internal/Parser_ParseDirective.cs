@@ -228,37 +228,6 @@ partial class Parser
                     }
                 }
                 break;
-            // Maximum evaluation stack directive:
-            case "maxstack":
-                if (this.instructions == null)
-                {
-                    this.OutputError(
-                        directive,
-                        $"Function directive is not defined.");
-                }
-                else if (tokens.Length <= 1)
-                {
-                    this.OutputError(
-                        directive,
-                        $"Missing maximum evaluation stack operand.");
-                }
-                else if (this.maxEvaluationStackSizes.ContainsKey(this.method!.Name))
-                {
-                    this.OutputError(
-                        directive,
-                        $"Duplicated maximum evaluation stack directive.");
-                }
-                else if (!int.TryParse(tokens[1].Text, out var maxStackSize))
-                {
-                    this.OutputError(
-                        tokens[1],
-                        $"Invalid size: {tokens[1].Text}");
-                }
-                else
-                {
-                    this.maxEvaluationStackSizes.Add(this.method.Name, maxStackSize);
-                }
-                break;
             // Other, invalid assembler directive.
             default:
                 this.OutputError(

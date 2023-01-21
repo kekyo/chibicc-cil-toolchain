@@ -282,18 +282,6 @@ public static class module
 }
 ```
 
-### Override maximum evaluation stack size
-
-```
-.function int32 main
-    .maxstack 100
-    ldc.i4 123
-    ret
-```
-
-chibias will try calculation for using maximum evaluation stack by static execution flow analysis.
-It is not perfectly working, so it will override when this directive is declared.
-
 ### Location information
 
 ```
