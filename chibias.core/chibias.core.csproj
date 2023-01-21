@@ -10,24 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
-    <!--<PackageReference Include="Mono.Cecil" Version="0.11.4" />-->
-    <PackageReference Include="Compat" Version="0.2.0" />
-  </ItemGroup>
-
-  <!-- https://github.com/jbevain/cecil/pull/892 -->
-  <ItemGroup>
-    <Reference Include="Mono.Cecil">
-      <HintPath>lib\netstandard2.0\Mono.Cecil.dll</HintPath>	  
-    </Reference>
-    <Reference Include="Mono.Cecil.Pdb">
-      <HintPath>lib\netstandard2.0\Mono.Cecil.Pdb.dll</HintPath>	  
-    </Reference>
-    <Reference Include="Mono.Cecil.Mdb">
-      <HintPath>lib\netstandard2.0\Mono.Cecil.Mdb.dll</HintPath>	  
-    </Reference>
-    <Reference Include="Mono.Cecil.Rocks">
-      <HintPath>lib\netstandard2.0\Mono.Cecil.Rocks.dll</HintPath>	  
-    </Reference>
+    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
   </ItemGroup>
 
 </Project>

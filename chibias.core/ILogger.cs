@@ -76,16 +76,21 @@ public abstract class LoggerBase : ILogger
         static string GetLogLevelString(LogLevels logLevel) =>
             logLevel != LogLevels.Information ? $" {logLevel.ToString().ToLowerInvariant()}:" : "";
 
-        switch (message, ex)
+        if (message is { } && ex is { })
         {
-            case ({ }, { }):
-                return $"chibias:{GetLogLevelString(logLevel)} {message}, {ex}";
-            case ({ }, null):
-                return $"chibias:{GetLogLevelString(logLevel)} {message}";
-            case (null, { }):
-                return $"chibias:{GetLogLevelString(logLevel)} {ex}";
-            default:
-                return null;
+            return $"chibias:{GetLogLevelString(logLevel)} {message}, {ex}";
+        }
+        else if (message is { })
+        {
+            return $"chibias:{GetLogLevelString(logLevel)} {message}";
+        }
+        else if (ex is { })
+        {
+            return $"chibias:{GetLogLevelString(logLevel)} {ex}";
+        }
+        else
+        {
+            return null;
         }
     }
 
