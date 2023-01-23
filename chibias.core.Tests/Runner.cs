@@ -62,7 +62,8 @@ partial class AssemblerTests
 
                 var referenceBasePaths = new[]
                 {
-                    corlibPath, tmp2Path,
+                    //corlibPath,
+                    tmp2Path,
                 }.
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
                     Select(Utilities.GetDirectoryPath).
@@ -70,7 +71,8 @@ partial class AssemblerTests
                     ToArray();
                 var referencePaths = new[]
                 {
-                    corlibPath, tmp2Path,
+                    //corlibPath,
+                    tmp2Path,
                 }.
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
                     ToArray();

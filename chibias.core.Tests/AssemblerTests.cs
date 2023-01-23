@@ -783,7 +783,23 @@ public sealed partial class AssemblerTests
         var actual = Run(@"
             .function void main
                 ldstr ""Hello world""
-                call System.Console.WriteLine System.String
+                call System.Console.WriteLine string
+                ret",
+            AssemblyTypes.Exe,
+            new[] { typeof(System.Console).Assembly.Location });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CallDotNetAssemblyMethod2()
+    {
+        var actual = Run(@"
+            .function void main
+                ldc.i4.1
+                box int32
+                ldc.i4.3
+                call System.Runtime.InteropServices.GCHandle.Alloc object System.Runtime.InteropServices.GCHandleType
+                pop
                 ret",
             AssemblyTypes.Exe,
             new[] { typeof(System.Console).Assembly.Location });

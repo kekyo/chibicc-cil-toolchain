@@ -13,6 +13,8 @@ using Mono.Cecil.Cil;
 using Mono.Cecil.Pdb;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -56,15 +58,94 @@ public sealed class Assembler
             referenceAssemblyBasePaths);
     }
 
-    private TypeDefinition[] LoadPublicTypesFrom(string[] referenceAssemblyPaths) =>
-        referenceAssemblyPaths.
+    private sealed class AssemblyDefinitionComparer : IEqualityComparer<AssemblyDefinition>
+    {
+        public bool Equals(AssemblyDefinition? x, AssemblyDefinition? y) =>
+            x!.Name == y!.Name;
+
+        public int GetHashCode(AssemblyDefinition obj) =>
+            obj.Name.GetHashCode();
+
+        public static readonly AssemblyDefinitionComparer Instance = new();
+    }
+
+    private sealed class AssemblyNameReferenceComparer : IEqualityComparer<AssemblyNameReference>
+    {
+        public bool Equals(AssemblyNameReference? x, AssemblyNameReference? y) =>
+            x!.Name == y!.Name;
+
+        public int GetHashCode(AssemblyNameReference obj) =>
+            obj.Name.GetHashCode();
+
+        public static readonly AssemblyNameReferenceComparer Instance = new();
+    }
+
+    private sealed class ExportedTypeComparer : IEqualityComparer<ExportedType>
+    {
+        public bool Equals(ExportedType? x, ExportedType? y) =>
+            x!.FullName == y!.FullName;
+
+        public int GetHashCode(ExportedType obj) =>
+            obj.FullName.GetHashCode();
+
+        public static readonly ExportedTypeComparer Instance = new();
+    }
+
+    private sealed class TypeDefinitionComparer : IEqualityComparer<TypeDefinition>
+    {
+        public bool Equals(TypeDefinition? x, TypeDefinition? y) =>
+            x!.FullName == y!.FullName;
+
+        public int GetHashCode(TypeDefinition obj) =>
+            obj.FullName.GetHashCode();
+
+        public static readonly TypeDefinitionComparer Instance = new();
+    }
+
+    private TypeDefinition[] LoadPublicTypesFrom(string[] referenceAssemblyPaths)
+    {
+        var assemblies = referenceAssemblyPaths.
+            Distinct().
             Select(this.assemblyResolver.ReadAssemblyFrom).
+            ToArray();
+
+        IEnumerable<AssemblyDefinition> ResolveDescendants(
+            AssemblyNameReference anr, HashSet<AssemblyNameReference> saved)
+        {
+            if (saved.Add(anr) &&
+                this.assemblyResolver.Resolve(anr) is { } assembly)
+            {
+                return new[] { assembly }.
+                    Concat(assembly.Modules.
+                        SelectMany(module => module.AssemblyReferences).
+                        SelectMany(anr => ResolveDescendants(anr, saved)));
+            }
+            else
+            {
+                return Array.Empty<AssemblyDefinition>();
+            }
+        }
+
+        var saved = new HashSet<AssemblyNameReference>(
+            AssemblyNameReferenceComparer.Instance);
+
+        var corlibAssemblies = assemblies.
+            Collect(assembly => assembly.MainModule.TypeSystem.CoreLibrary as AssemblyNameReference).
+            SelectMany(anr => ResolveDescendants(anr, saved)).
+            ToArray();
+
+        return corlibAssemblies.
+            Concat(assemblies).
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
-            Where(type => type.IsPublic &&
+            Distinct(TypeDefinitionComparer.Instance).
+            Collect(type => type?.Resolve()).
+            Where(type =>
+                type.IsPublic &&
                 (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
                 type.GenericParameters.Count == 0).
             ToArray();
+    }
 
     private Dictionary<string, IMemberDefinition> AggregateCAbiSpecificSymbols(
         TypeDefinition[] referenceTypes)
