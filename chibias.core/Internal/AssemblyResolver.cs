@@ -19,7 +19,7 @@ namespace chibias.Internal;
 internal sealed class AssemblyResolver : DefaultAssemblyResolver
 {
     private readonly ILogger logger;
-    private readonly HashSet<string> loaded = new();
+    private readonly Dictionary<string, AssemblyDefinition> loadedAssemblies = new();
     private readonly SymbolReaderProvider symbolReaderProvider;
 
     public AssemblyResolver(ILogger logger, string[] referenceBasePaths)
@@ -37,55 +37,49 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
 
     public override AssemblyDefinition Resolve(AssemblyNameReference name)
     {
-        var parameters = new ReaderParameters()
+        if (!this.loadedAssemblies.TryGetValue(name.Name, out var assmebly))
         {
-            ReadWrite = false,
-            InMemory = true,
-            AssemblyResolver = this,
-            SymbolReaderProvider = this.symbolReaderProvider,
-            ReadSymbols = true,
-        };
-        var ad = base.Resolve(name, parameters);
-        if (loaded.Add(ad.MainModule.FileName))
-        {
-            this.logger.Trace($"Assembly loaded: {ad.MainModule.FileName}");
+            var parameters = new ReaderParameters()
+            {
+                ReadWrite = false,
+                InMemory = true,
+                AssemblyResolver = this,
+                SymbolReaderProvider = this.symbolReaderProvider,
+                ReadSymbols = true,
+            };
+            try
+            {
+                assmebly = base.Resolve(name, parameters);
+                this.logger.Trace($"Assembly loaded: {assmebly.MainModule.FileName}");
+            }
+            catch
+            {
+            }
         }
-        return ad;
+        return assmebly!;
     }
 
     public AssemblyDefinition ReadAssemblyFrom(string assemblyName)
     {
-        var parameters = new ReaderParameters()
+        if (!this.loadedAssemblies.TryGetValue(assemblyName, out var assmebly))
         {
-            ReadWrite = false,
-            InMemory = true,
-            AssemblyResolver = this,
-            SymbolReaderProvider = this.symbolReaderProvider,
-            ReadSymbols = true,
-        };
-        var ad = AssemblyDefinition.ReadAssembly(assemblyName, parameters);
-        if (loaded.Add(ad.MainModule.FileName))
-        {
-            this.logger.Trace($"Assembly loaded: {ad.MainModule.FileName}");
+            var parameters = new ReaderParameters()
+            {
+                ReadWrite = false,
+                InMemory = true,
+                AssemblyResolver = this,
+                SymbolReaderProvider = this.symbolReaderProvider,
+                ReadSymbols = true,
+            };
+            try
+            {
+                assmebly = AssemblyDefinition.ReadAssembly(assemblyName, parameters);
+                this.logger.Trace($"Assembly loaded: {assmebly.MainModule.FileName}");
+            }
+            catch
+            {
+            }
         }
-        return ad;
-    }
-
-    public ModuleDefinition ReadModuleFrom(string modulePath)
-    {
-        var parameters = new ReaderParameters()
-        {
-            ReadWrite = false,
-            InMemory = true,
-            AssemblyResolver = this,
-            SymbolReaderProvider = this.symbolReaderProvider,
-            ReadSymbols = true,
-        };
-        var md = ModuleDefinition.ReadModule(modulePath, parameters);
-        if (loaded.Add(md.FileName))
-        {
-            this.logger.Trace($"Module loaded: {md.FileName}");
-        }
-        return md;
+        return assmebly!;
     }
 }
