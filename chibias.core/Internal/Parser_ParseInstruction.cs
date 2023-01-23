@@ -11,6 +11,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Linq;
+using System.Xml.Linq;
 
 namespace chibias.Internal;
 
@@ -247,48 +248,58 @@ partial class Parser
                     }
                     break;
                 case OperandType.InlineMethod:
-                    if (FetchOperand0() is { } mop)
+                    if (tokens.Length <= 1)
                     {
-                        if (this.cabiSpecificSymbols.TryGetValue(mop.Text, out var member))
+                        this.OutputError(
+                            tokens.Last(),
+                            $"Missing operand.");
+                    }
+                    else if (this.cabiSpecificSymbols.TryGetValue(tokens[1].Text, out var member) &&
+                        member is MethodDefinition method &&
+                        tokens.Length == 2)
+                    {
+                        instruction = Instruction.Create(
+                            opCode, this.module.ImportReference(method));
+                    }
+                    else if (this.TryGetMethod(
+                        tokens[1].Text,
+                        tokens.Skip(2).Select(token => token.Text),
+                        out var method2))
+                    {
+                        instruction = Instruction.Create(
+                            opCode, this.module.ImportReference(method2));
+                    }
+                    else if (tokens.Length >= 3)
+                    {
+                        this.OutputError(
+                            tokens[1],
+                            $"Could not find method: {tokens[1].Text}");
+                    }
+                    else
+                    {
+                        var dummyMethod = new MethodDefinition(
+                            "_dummy",
+                            MethodAttributes.Private | MethodAttributes.Abstract,
+                            this.module.TypeSystem.Void);
+                        instruction = Instruction.Create(
+                            opCode, dummyMethod);
+
+                        var functionName = tokens[1].Text;
+                        var capturedLocation = currentLocation;
+                        this.delayedLookupLocalMemberActions.Add(() =>
                         {
-                            if (!(member is MethodReference method))
+                            if (this.cabiSpecificModuleType.Methods.
+                                FirstOrDefault(method => method.Name == functionName) is { } method)
                             {
-                                this.OutputError(
-                                    mop,
-                                    $"Could not find function: {mop.Text}");
+                                instruction.Operand = method;
                             }
                             else
                             {
-                                instruction = Instruction.Create(
-                                    opCode, this.module.ImportReference(method));
+                                this.OutputError(
+                                    capturedLocation,
+                                    $"Could not find function: {functionName}");
                             }
-                        }
-                        else
-                        {
-                            var dummyMethod = new MethodDefinition(
-                                "_dummy",
-                                MethodAttributes.Private | MethodAttributes.Abstract,
-                                this.module.TypeSystem.Void);
-                            instruction = Instruction.Create(
-                                opCode, dummyMethod);
-
-                            var functionName = mop.Text;
-                            var capturedLocation = currentLocation;
-                            this.delayedLookupLocalMemberActions.Add(() =>
-                            {
-                                if (this.cabiSpecificModuleType.Methods.
-                                    FirstOrDefault(method => method.Name == functionName) is { } method)
-                                {
-                                    instruction.Operand = method;
-                                }
-                                else
-                                {
-                                    this.OutputError(
-                                        capturedLocation,
-                                        $"Could not find function: {functionName}");
-                                }
-                            });
-                        }
+                        });
                     }
                     break;
                 case OperandType.InlineField:
