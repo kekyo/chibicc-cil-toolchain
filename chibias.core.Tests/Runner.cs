@@ -9,8 +9,10 @@
 
 using chibias.Internal;
 using System;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -24,6 +26,7 @@ partial class AssemblerTests
     private string Run(
         string chibiasSourceCode,
         AssemblyTypes assemblyType = AssemblyTypes.Dll,
+        string[]? additionalReferencePaths = null,
         [CallerMemberName] string memberName = null!)
     {
         var basePath = Path.GetFullPath(
@@ -54,19 +57,34 @@ partial class AssemblerTests
                     tw.Flush();
                 }
 
+                var corlibPath = typeof(object).Assembly.Location;
                 var tmp2Path = Path.GetFullPath("tmp2.dll");
-                var tmp2BasePath = Utilities.GetDirectoryPath(tmp2Path);
+
+                var referenceBasePaths = new[]
+                {
+                    corlibPath, tmp2Path,
+                }.
+                    Concat(additionalReferencePaths ?? Array.Empty<string>()).
+                    Select(Utilities.GetDirectoryPath).
+                    Distinct().
+                    ToArray();
+                var referencePaths = new[]
+                {
+                    corlibPath, tmp2Path,
+                }.
+                    Concat(additionalReferencePaths ?? Array.Empty<string>()).
+                    ToArray();
 
                 var assember = new Assembler(
                     logger,
-                    tmp2BasePath);
+                    referenceBasePaths);
 
                 var outputAssemblyPath =
                     Path.Combine(basePath, "output.dll");
                 var succeeded = assember.Assemble(
                     new[] { sourcePath },
                     outputAssemblyPath,
-                    new[] { tmp2Path },
+                    referencePaths,
                     assemblyType,
                     DebugSymbolTypes.Embedded,
                     AssembleOptions.Deterministic,

@@ -56,21 +56,22 @@ public sealed class Assembler
             referenceAssemblyBasePaths);
     }
 
-    private Dictionary<string, IMemberDefinition> AggregateCAbiSpecificSymbols(
-        string[] referenceAssemblyPaths)
-    {
-        var referenceAssemblies = referenceAssemblyPaths.
+    private TypeDefinition[] LoadPublicTypesFrom(string[] referenceAssemblyPaths) =>
+        referenceAssemblyPaths.
             Select(this.assemblyResolver.ReadAssemblyFrom).
-            ToArray();
-        var referenceModules = referenceAssemblies.
             SelectMany(assembly => assembly.Modules).
-            ToDictionary(module => module.Name);
+            SelectMany(module => module.Types).
+            Where(type => type.IsPublic &&
+                (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
+                type.GenericParameters.Count == 0).
+            ToArray();
 
-        return referenceModules.
-            SelectMany(module => module.Value.Types).
-            AsParallel().
+    private Dictionary<string, IMemberDefinition> AggregateCAbiSpecificSymbols(
+        TypeDefinition[] referenceTypes)
+    {
+        return referenceTypes.
             Where(type =>
-                type.IsClass && type.IsPublic && type.IsAbstract && type.IsSealed &&
+                type.IsClass && type.IsAbstract && type.IsSealed &&
                 type.FullName == "C.module").
             SelectMany(type =>
             {
@@ -141,8 +142,11 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
+        var referenceTypes = this.LoadPublicTypesFrom(
             referenceAssemblyPaths);
+
+        var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
+            referenceTypes);
 
         //////////////////////////////////////////////////////////////
 
@@ -185,6 +189,7 @@ public sealed class Assembler
             module,
             cabiSpecificModuleType,
             cabiSpecificSymbols,
+            referenceTypes,
             produceExecutable,
             debugSymbolType != DebugSymbolTypes.None);
 

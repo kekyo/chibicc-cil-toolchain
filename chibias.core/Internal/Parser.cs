@@ -51,6 +51,7 @@ internal sealed partial class Parser
     private readonly ModuleDefinition module;
     private readonly TypeDefinition cabiSpecificModuleType;
     private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
+    private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
     private readonly bool produceExecutable;
     private readonly bool produceDebuggingInformation;
     private readonly Dictionary<string, TypeReference> knownTypes = new();
@@ -78,6 +79,7 @@ internal sealed partial class Parser
         ModuleDefinition module,
         TypeDefinition cabiSpecificModuleType,
         Dictionary<string, IMemberDefinition> cabiSpecificSymbols,
+        TypeDefinition[] referenceTypes,
         bool produceExecutable,
         bool produceDebuggingInformation)
     {
@@ -85,6 +87,8 @@ internal sealed partial class Parser
         this.module = module;
         this.cabiSpecificModuleType = cabiSpecificModuleType;
         this.cabiSpecificSymbols = cabiSpecificSymbols;
+        this.referenceTypes = new(() => referenceTypes.
+            ToDictionary(type => type.FullName));
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
 
@@ -152,12 +156,16 @@ internal sealed partial class Parser
     private void OutputTrace(string message) =>
         this.logger.Trace($"{message}");
 
-    private bool TryGetType(string typeName, out TypeReference type)
+    /////////////////////////////////////////////////////////////////////
+
+    private bool TryGetType(
+        string name,
+        out TypeReference type)
     {
-        switch (typeName[typeName.Length - 1])
+        switch (name[name.Length - 1])
         {
             case '*':
-                if (this.TryGetType(typeName.Substring(0, typeName.Length - 1), out var preType1))
+                if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType1))
                 {
                     type = new PointerType(
                         this.module.ImportReference(preType1));
@@ -169,7 +177,7 @@ internal sealed partial class Parser
                     return false;
                 }
             case '&':
-                if (this.TryGetType(typeName.Substring(0, typeName.Length - 1), out var preType2))
+                if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType2))
                 {
                     type = new ByReferenceType(
                         this.module.ImportReference(preType2));
@@ -180,8 +188,8 @@ internal sealed partial class Parser
                     type = null!;
                     return false;
                 }
-            case ']' when typeName.Length >= 2 && typeName[typeName.Length - 2] == '[':
-                if (this.TryGetType(typeName.Substring(0, typeName.Length - 2), out var preType3))
+            case ']' when name.Length >= 2 && name[name.Length - 2] == '[':
+                if (this.TryGetType(name.Substring(0, name.Length - 2), out var preType3))
                 {
                     type = new ArrayType(
                         this.module.ImportReference(preType3));
@@ -193,7 +201,54 @@ internal sealed partial class Parser
                     return false;
                 }
             default:
-                return this.knownTypes.TryGetValue(typeName, out type!);
+                return this.knownTypes.TryGetValue(name, out type!);
+        }
+    }
+
+    private bool TryGetMethod(
+        string name,
+        IEnumerable<string> parameterTypeNames,
+        out MethodReference method)
+    {
+        var methodNameIndex = name.LastIndexOf('.');
+        if (methodNameIndex <= 0)
+        {
+            method = null!;
+            return false;
+        }
+
+        var typeName = name.Substring(0, methodNameIndex);
+        var methodName = name.Substring(methodNameIndex + 1);
+
+        if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
+        {
+            method = null!;
+            return false;
+        }
+
+        var strictParameterTypeNames = parameterTypeNames.
+            Select(parameterTypeName => this.TryGetType(parameterTypeName, out var type) ? type.FullName : string.Empty).
+            ToArray();
+
+        if (strictParameterTypeNames.Contains(string.Empty))
+        {
+            method = null!;
+            return false;
+        }
+
+        if (type.Methods.FirstOrDefault(method => 
+            method.IsPublic && !method.IsConstructor && !method.IsAbstract &&
+            method.Name == methodName &&
+            strictParameterTypeNames.SequenceEqual(
+                method.Parameters.Select(p => p.ParameterType.FullName))) is { } m)
+        {
+            method = m;
+            return true;
+        }
+        else
+        {
+            method = null!;
+            return false;
         }
     }
 

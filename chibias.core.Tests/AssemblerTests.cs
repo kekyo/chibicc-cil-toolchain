@@ -774,4 +774,19 @@ public sealed partial class AssemblerTests
             .global int32 givalue");
         return Verify(actual);
     }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task CallDotNetAssemblyMethod()
+    {
+        var actual = Run(@"
+            .function void main
+                ldstr ""Hello world""
+                call System.Console.WriteLine string
+                ret",
+            AssemblyTypes.Exe,
+            new[] { typeof(System.Console).Assembly.Location });
+        return Verify(actual);
+    }
 }

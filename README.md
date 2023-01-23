@@ -250,6 +250,25 @@ public static class module
 
 This is named "CABI (chibicc application binary interface) specification."
 
+### Call external method
+
+Simply specify a method with full name and parameter types:
+
+```
+.function void main
+    ldstr "Hello world"
+    call System.Console.WriteLine string
+    ret
+```
+
+The method you specify must be public, and could not refer method with any generic parameters.
+Instance methods can also be specified, but of course `this` reference must be pushed onto the evaluation stack.
+
+A list of parameter types is used to identify overloads.
+
+You have to give it containing assembly on command line option `-r`.
+This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
+
 ### Global variables
 
 Global variable directive format is same as local variable directive,
