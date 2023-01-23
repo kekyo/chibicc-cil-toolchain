@@ -42,6 +42,8 @@ partial class AssemblerTests
             var logger = new TextWriterLogger(
                 LogLevels.Debug, logtw);
 
+            logger.Information($"Test runnner BasePath={basePath}");
+
             try
             {
                 var sourcePath = Path.Combine(
@@ -89,7 +91,12 @@ partial class AssemblerTests
 
                 if (!succeeded)
                 {
-                    throw new FormatException($"Failed assembling, see {basePath}");
+                    logger.Error($"Failed to run assembler.");
+
+                    logtw.Flush();
+                    logfs.Close();
+
+                    return File.ReadAllText(logPath);
                 }
 
                 using var disassembledReader = File.OpenText(disassembledPath);
@@ -114,7 +121,13 @@ partial class AssemblerTests
             }
             finally
             {
-                logtw.Flush();
+                try
+                {
+                    logtw.Flush();
+                }
+                catch
+                {
+                }
             }
         }
 

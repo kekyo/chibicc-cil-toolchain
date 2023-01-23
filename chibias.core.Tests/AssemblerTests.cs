@@ -760,4 +760,18 @@ public sealed partial class AssemblerTests
                 ret");
         return Verify(actual);
     }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task Initializer()
+    {
+        var actual = Run(@"
+            .initializer
+                ldc.i4 123
+                stsfld givalue
+                ret
+            .global int32 givalue");
+        return Verify(actual);
+    }
 }

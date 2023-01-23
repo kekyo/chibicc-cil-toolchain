@@ -282,6 +282,25 @@ public static class module
 }
 ```
 
+### Global initializer
+
+The Initializer directive is the same as the Function directive except that there is no return type, function name, or parameters.
+This is used to write custom code to initialize global variables:
+
+```
+.initializer
+    ldc.i4 123
+    stsfld foo
+    ret
+.global int32 foo
+```
+
+Initializer directives may be used any number of times in the source code.
+They are called from the real type initializer of the `C.module` class.
+
+However, the order cannot be specified.
+The relationship of one Initializer depending on the other is not taken into account.
+
 ### Location information
 
 ```

@@ -9,12 +9,44 @@
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using System;
 using System.Linq;
 
 namespace chibias.Internal;
 
 partial class Parser
 {
+    private MethodDefinition SetupFunctionBodyDirective(
+        string functionName,
+        TypeReference returnType,
+        ParameterDefinition[] parameters,
+        bool isPublic)
+    {
+        this.FinishCurrentFunction();
+
+        this.method = new MethodDefinition(
+            functionName,
+            isPublic ?
+                (MethodAttributes.Public | MethodAttributes.Static) :
+                (MethodAttributes.Private | MethodAttributes.Static),
+            this.module.ImportReference(returnType));
+        this.method.HasThis = false;
+
+        foreach (var parameter in parameters)
+        {
+            this.method.Parameters.Add(parameter);
+        }
+
+        this.cabiSpecificModuleType.Methods.Add(this.method);
+
+        this.body = this.method.Body;
+        this.body.InitLocals = false;   // Derived C behavior.
+
+        this.instructions = this.body.Instructions;
+
+        return this.method;
+    }
+
     private void ParseDirective(Token directive, Token[] tokens)
     {
         switch (directive.Text)
@@ -31,65 +63,77 @@ partial class Parser
                 }
                 else
                 {
-                    this.FinishCurrentFunction();
-
                     var functionName = tokens[2].Text;
-                    this.method = new MethodDefinition(
-                        functionName,
-                        MethodAttributes.Public | MethodAttributes.Static,
-                        this.module.ImportReference(returnType));
-                    this.method.HasThis = false;
-
-                    foreach (var parameterToken in tokens.Skip(3))
-                    {
-                        var splitted = parameterToken.Text.Split(':');
-                        if (splitted.Length >= 3)
+                    var parameters = tokens.Skip(3).
+                        Collect(parameterToken =>
                         {
-                            this.OutputError(
-                                parameterToken,
-                                $"Invalid parameter: {parameterToken.Text}");
-                        }
-                        else
-                        {
-                            var parameterTypeName = splitted.Last();
-                            if (this.TryGetType(parameterTypeName, out var parameterType))
-                            {
-                                if (splitted.Length == 2)
-                                {
-                                    var parameterName = splitted[0];
-                                    this.method.Parameters.Add(
-                                        new ParameterDefinition(
-                                            parameterName,
-                                            ParameterAttributes.None,
-                                            parameterType));
-                                }
-                                else
-                                {
-                                    this.method.Parameters.Add(
-                                        new ParameterDefinition(parameterType));
-                                }
-                            }
-                            else
+                            var splitted = parameterToken.Text.Split(':');
+                            if (splitted.Length >= 3)
                             {
                                 this.OutputError(
                                     parameterToken,
                                     $"Invalid parameter: {parameterToken.Text}");
+                                return null;
                             }
-                        }
-                    }
+                            else
+                            {
+                                var parameterTypeName = splitted.Last();
+                                if (this.TryGetType(parameterTypeName, out var parameterType))
+                                {
+                                    if (splitted.Length == 2)
+                                    {
+                                        var parameterName = splitted[0];
+                                        return new ParameterDefinition(
+                                            parameterName,
+                                            ParameterAttributes.None,
+                                            parameterType);
+                                    }
+                                    else
+                                    {
+                                        return new ParameterDefinition(parameterType);
+                                    }
+                                }
+                                else
+                                {
+                                    this.OutputError(
+                                        parameterToken,
+                                        $"Invalid parameter: {parameterToken.Text}");
+                                }
+                                return null;
+                            }
+                        }).
+                        ToArray();
 
-                    this.cabiSpecificModuleType.Methods.Add(this.method);
-
-                    this.body = this.method.Body;
-                    this.body.InitLocals = false;   // Derived C behavior.
-
-                    this.instructions = this.body.Instructions;
+                    this.SetupFunctionBodyDirective(
+                        functionName,
+                        returnType,
+                        parameters,
+                        true);
 
                     if (this.produceExecutable &&
                         functionName == "main")
                     {
                         this.module.EntryPoint = method;
                     }
+                }
+                break;
+            // Initializer directive:
+            case "initializer":
+                if (tokens.Length >= 2)
+                {
+                    this.OutputError(directive, $"Too many operands.");
+                }
+                else
+                {
+                    var functionName = $"<initializer>_${this.initializers.Count}";
+
+                    var initializer = this.SetupFunctionBodyDirective(
+                        functionName,
+                        this.module.TypeSystem.Void,
+                        Array.Empty<ParameterDefinition>(),
+                        false);
+
+                    this.initializers.Add(initializer);
                 }
                 break;
             // Global variable directive:
