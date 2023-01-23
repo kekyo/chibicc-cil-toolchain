@@ -201,7 +201,20 @@ internal sealed partial class Parser
                     return false;
                 }
             default:
-                return this.knownTypes.TryGetValue(name, out type!);
+                if (this.knownTypes.TryGetValue(name, out type!))
+                {
+                    return true;
+                }
+                else if (this.referenceTypes.Value.TryGetValue(name, out var td))
+                {
+                    type = td;
+                    return true;
+                }
+                else
+                {
+                    type = null!;
+                    return false;
+                }
         }
     }
 

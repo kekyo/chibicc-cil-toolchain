@@ -783,10 +783,22 @@ public sealed partial class AssemblerTests
         var actual = Run(@"
             .function void main
                 ldstr ""Hello world""
-                call System.Console.WriteLine string
+                call System.Console.WriteLine System.String
                 ret",
             AssemblyTypes.Exe,
             new[] { typeof(System.Console).Assembly.Location });
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task SizeOfByType()
+    {
+        var actual = Run(@"
+            .function int32 foo
+                sizeof int32
+                ret");
         return Verify(actual);
     }
 }
