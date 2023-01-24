@@ -303,6 +303,7 @@ partial class Parser
                     }
                     break;
                 case OperandType.InlineField:
+                case OperandType.InlineTok:
                     if (FetchOperand0() is { } fop)
                     {
                         if (this.cabiSpecificSymbols.TryGetValue(fop.Text, out var member))

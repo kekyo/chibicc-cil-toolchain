@@ -817,4 +817,18 @@ public sealed partial class AssemblerTests
                 ret");
         return Verify(actual);
     }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task RawData()
+    {
+        var actual = Run(@"
+            .function intptr foo
+                ldtoken bar
+                conv.i
+                ret
+            .constant bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+        return Verify(actual);
+    }
 }

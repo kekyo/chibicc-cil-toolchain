@@ -158,8 +158,6 @@ partial class Parser
                         FieldAttributes.Public | FieldAttributes.Static,
                         this.module.ImportReference(globalType));
 
-                    // TODO: initializer
-
                     this.cabiSpecificModuleType.Fields.Add(field);
                 }
                 break;
@@ -207,6 +205,53 @@ partial class Parser
                     this.OutputError(
                         tokens[1],
                         $"Invalid local variable type name: {tokens[1].Text}");
+                }
+                break;
+            // Constant directive:
+            case "constant":
+                if (tokens.Length <= 2)
+                {
+                    this.OutputError(directive, $"Missing data operand.");
+                }
+                else
+                {
+                    this.FinishCurrentFunction();
+
+                    var data = tokens.Skip(2).
+                        Select(token =>
+                        {
+                            if (Utilities.TryParseUInt8(token.Text, out var value))
+                            {
+                                return value;
+                            }
+                            else
+                            {
+                                this.OutputError(token, $"Invalid data operand.");
+                                return (byte)0;
+                            }
+                        }).
+                        ToArray();
+
+                    var dataName = tokens[1].Text;
+                    var dataTypeName = $"<constant>_${dataName}";
+
+                    var dataType = new TypeDefinition(
+                        "",
+                        dataTypeName,
+                        TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
+                        this.valueType.Value);
+                    dataType.PackingSize = 1;
+                    dataType.ClassSize = data.Length;
+
+                    this.cabiSpecificModuleType.NestedTypes.Add(dataType);
+
+                    var field = new FieldDefinition(
+                        dataName,
+                        FieldAttributes.Private | FieldAttributes.Static | FieldAttributes.InitOnly,
+                        dataType);
+                    field.InitialValue = data;
+
+                    this.cabiSpecificModuleType.Fields.Add(field);
                 }
                 break;
             // Location directive:
