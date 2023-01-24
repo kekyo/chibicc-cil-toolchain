@@ -320,6 +320,31 @@ They are called from the real type initializer of the `C.module` class.
 However, the order cannot be specified.
 The relationship of one Initializer depending on the other is not taken into account.
 
+### Constant data
+
+The Constant directive places fixed data in the assembly that will not change:
+
+```
+.function uint8[] foo
+    ldc.i4.6
+    newarr uint8
+    dup
+    ldtoken bar
+    call System.Runtime.CompilerServices.RuntimeHelpers.InitializeArray System.Array System.RuntimeFieldHandle
+    ret
+.constant bar 0x01 0x02 0x31 0x32 0xb1 0xb2
+```
+
+Placed fixed data is placed directly into a dedicated hidden structure type and can be referenced by `ldtoken` opcode.
+The standard scenario is to have an array of initial values as shown above.
+
+Elements placed in a constant directive are similar to global variables, but differ in several ways:
+
+* Because it is marked as private, it can only be accessed by CABI members in the same assembly.
+  It cannot be referenced from outside the assembly.
+* Symbol names (`bar` in the above example) are treated like global variables and can be referenced by `ldsfld` opcode and likes.
+  However, since the type of the retrieved instance will be of its own value type, and should be handled with care.
+
 ### Location information
 
 ```

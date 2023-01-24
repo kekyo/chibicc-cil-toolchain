@@ -62,6 +62,7 @@ internal sealed partial class Parser
     private readonly List<Action> delayedLookupBranchTargetActions = new();
     private readonly List<Action> delayedLookupLocalMemberActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
+    private readonly Lazy<TypeReference> valueType;
 
     private string relativePath = "unknown.s";
     private Location? queuedLocation;
@@ -91,6 +92,9 @@ internal sealed partial class Parser
             ToDictionary(type => type.FullName));
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
+        this.valueType = new(() =>
+            this.module.ImportReference(
+                this.referenceTypes.Value["System.ValueType"]));
 
         // Known types
         this.knownTypes.Add("void", module.TypeSystem.Void);
