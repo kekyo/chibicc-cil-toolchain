@@ -269,6 +269,40 @@ internal sealed partial class Parser
         }
     }
 
+    private bool TryGetField(
+        string name,
+        out FieldReference field)
+    {
+        var fieldNameIndex = name.LastIndexOf('.');
+        if (fieldNameIndex <= 0)
+        {
+            field = null!;
+            return false;
+        }
+
+        var typeName = name.Substring(0, fieldNameIndex);
+        var fieldName = name.Substring(fieldNameIndex + 1);
+
+        if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
+        {
+            field = null!;
+            return false;
+        }
+
+        if (type.Fields.FirstOrDefault(field =>
+            field.IsPublic &&
+            field.Name == fieldName) is { } f)
+        {
+            field = f;
+            return true;
+        }
+        else
+        {
+            field = null!;
+            return false;
+        }
+    }
+
     /////////////////////////////////////////////////////////////////////
 
     private void ParseLabel(Token token)

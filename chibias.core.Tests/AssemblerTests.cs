@@ -498,6 +498,16 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task AccessExternalAssemblyField()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldsfld System.Int32.MaxValue
+                ret");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]

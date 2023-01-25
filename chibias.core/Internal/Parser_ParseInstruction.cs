@@ -258,54 +258,58 @@ partial class Parser
                 tokens.Last(),
                 $"Missing operand.");
         }
-        else if (this.cabiSpecificSymbols.TryGetValue(tokens[1].Text, out var member) &&
-            member is MethodDefinition method &&
-            tokens.Length == 2)
-        {
-            return Instruction.Create(
-                opCode, this.module.ImportReference(method));
-        }
-        else if (this.TryGetMethod(
-            tokens[1].Text,
-            tokens.Skip(2).Select(token => token.Text),
-            out var method2))
-        {
-            return Instruction.Create(
-                opCode, this.module.ImportReference(method2));
-        }
-        else if (tokens.Length >= 3)
-        {
-            this.OutputError(
-                tokens[1],
-                $"Could not find method: {tokens[1].Text}");
-        }
         else
         {
-            var dummyMethod = new MethodDefinition(
-                "_dummy",
-                MethodAttributes.Private | MethodAttributes.Abstract,
-                this.module.TypeSystem.Void);
-            var instruction = Instruction.Create(
-                opCode, dummyMethod);
-
-            var functionName = tokens[1].Text;
-            var capturedLocation = currentLocation;
-            this.delayedLookupLocalMemberActions.Add(() =>
+            if (this.cabiSpecificSymbols.TryGetValue(
+                tokens[1].Text, out var member) &&
+                member is MethodDefinition method &&
+                tokens.Length == 2)
             {
-                if (this.cabiSpecificModuleType.Methods.
-                    FirstOrDefault(method => method.Name == functionName) is { } method)
-                {
-                    instruction.Operand = method;
-                }
-                else
-                {
-                    this.OutputError(
-                        capturedLocation,
-                        $"Could not find function: {functionName}");
-                }
-            });
+                return Instruction.Create(
+                    opCode, this.module.ImportReference(method));
+            }
+            else if (this.TryGetMethod(
+                tokens[1].Text,
+                tokens.Skip(2).Select(token => token.Text),
+                out var method2))
+            {
+                return Instruction.Create(
+                    opCode, this.module.ImportReference(method2));
+            }
+            else if (tokens.Length >= 3)
+            {
+                this.OutputError(
+                    tokens[1],
+                    $"Could not find method: {tokens[1].Text}");
+            }
+            else
+            {
+                var dummyMethod = new MethodDefinition(
+                    "_dummy",
+                    MethodAttributes.Private | MethodAttributes.Abstract,
+                    this.module.TypeSystem.Void);
+                var instruction = Instruction.Create(
+                    opCode, dummyMethod);
 
-            return instruction;
+                var functionName = tokens[1].Text;
+                var capturedLocation = currentLocation;
+                this.delayedLookupLocalMemberActions.Add(() =>
+                {
+                    if (this.cabiSpecificModuleType.Methods.
+                        FirstOrDefault(method => method.Name == functionName) is { } method)
+                    {
+                        instruction.Operand = method;
+                    }
+                    else
+                    {
+                        this.OutputError(
+                            capturedLocation,
+                            $"Could not find function: {functionName}");
+                    }
+                });
+
+                return instruction;
+            }
         }
 
         return null;
@@ -316,19 +320,18 @@ partial class Parser
     {
         if (FetchOperand0(tokens) is { } fop)
         {
-            if (this.cabiSpecificSymbols.TryGetValue(fop.Text, out var member))
+            if (this.cabiSpecificSymbols.TryGetValue(fop.Text, out var member) &&
+                member is FieldReference field)
             {
-                if (!(member is FieldReference field))
-                {
-                    this.OutputError(
-                        fop,
-                        $"Could not find global variable: {fop.Text}");
-                }
-                else
-                {
-                    return Instruction.Create(
-                        opCode, this.module.ImportReference(field));
-                }
+                return Instruction.Create(
+                    opCode, this.module.ImportReference(field));
+            }
+            else if (this.TryGetField(
+                tokens[1].Text,
+                out var field2))
+            {
+                return Instruction.Create(
+                    opCode, this.module.ImportReference(field2));
             }
             else
             {
