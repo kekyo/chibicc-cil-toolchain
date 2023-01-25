@@ -173,25 +173,16 @@ public sealed class Assembler
 
     private void AssembleFromSource(
         Parser parser,
-        string baseSourcePath,
-        string sourcePath)
+        TextReader reader,
+        string relativeSourcePath)
     {
-        using var fs = new FileStream(
-            sourcePath,
-            FileMode.Open, FileAccess.Read, FileShare.Read);
-        var tr = new StreamReader(
-            fs,
-            true);
-
-        var relativeSourcePath = sourcePath.
-            Substring(baseSourcePath.Length + 1);
         parser.SetSourceFile(relativeSourcePath);
 
         var tokenizer = new Tokenizer();
 
         while (true)
         {
-            var line = tr.ReadLine();
+            var line = reader.ReadLine();
             if (line == null)
             {
                 break;
@@ -202,27 +193,16 @@ public sealed class Assembler
         }
     }
 
-    public bool Assemble(
-        string[] sourcePaths,
+    private bool Run(
         string outputAssemblyPath,
         string[] referenceAssemblyPaths,
         AssemblyTypes assemblyType,
         DebugSymbolTypes debugSymbolType,
         AssembleOptions options,
         Version version,
-        string targetFrameworkMoniker)
+        string targetFrameworkMoniker,
+        Action<Parser> runner)
     {
-        if (sourcePaths.Length == 0)
-        {
-            return false;
-        }
-
-        var sourceFullPaths = sourcePaths.
-            Select(Path.GetFullPath).
-            ToArray();
-
-        //////////////////////////////////////////////////////////////
-
         var referenceTypes = this.LoadPublicTypesFrom(
             referenceAssemblyPaths);
 
@@ -256,12 +236,6 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        var baseSourcePath = sourceFullPaths.Length == 1 ?
-            Utilities.GetDirectoryPath(sourceFullPaths[0]) :           
-            Path.Combine(sourceFullPaths.
-                Select(path => path.Split(Path.DirectorySeparatorChar)).
-                Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
-
         var produceExecutable =
             assemblyType != AssemblyTypes.Dll;
 
@@ -274,13 +248,7 @@ public sealed class Assembler
             produceExecutable,
             debugSymbolType != DebugSymbolTypes.None);
 
-        foreach (var sourceFullPath in sourceFullPaths)
-        {
-            this.AssembleFromSource(
-                parser,
-                baseSourcePath,
-                sourceFullPath);
-        }
+        runner(parser);
 
         var allFinished = parser.Finish(
             options.HasFlag(AssembleOptions.ApplyOptimization));
@@ -308,5 +276,62 @@ public sealed class Assembler
         }
 
         return allFinished;
+    }
+
+    public bool Assemble(
+        string[] sourcePaths,
+        string outputAssemblyPath,
+        string[] referenceAssemblyPaths,
+        AssemblyTypes assemblyType,
+        DebugSymbolTypes debugSymbolType,
+        AssembleOptions options,
+        Version version,
+        string targetFrameworkMoniker)
+    {
+        if (sourcePaths.Length == 0)
+        {
+            return false;
+        }
+
+        var sourceFullPaths = sourcePaths.
+            Select(Path.GetFullPath).
+            ToArray();
+
+        var baseSourcePath = sourceFullPaths.Length == 1 ?
+            Utilities.GetDirectoryPath(sourceFullPaths[0]) :           
+            Path.Combine(sourceFullPaths.
+                Select(path => path.Split(Path.DirectorySeparatorChar)).
+                Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
+
+        //////////////////////////////////////////////////////////////
+
+        return this.Run(
+            outputAssemblyPath,
+            referenceAssemblyPaths,
+            assemblyType,
+            debugSymbolType,
+            options,
+            version,
+            targetFrameworkMoniker,
+            parser =>
+            {
+                foreach (var sourceFullPath in sourceFullPaths)
+                {
+                    using var fs = new FileStream(
+                        sourceFullPath,
+                        FileMode.Open, FileAccess.Read, FileShare.Read);
+                    var reader = new StreamReader(
+                        fs,
+                        true);
+
+                    var relativeSourcePath = sourceFullPath.
+                        Substring(baseSourcePath.Length + 1);
+
+                    this.AssembleFromSource(
+                        parser,
+                        reader,
+                        relativeSourcePath);
+                }
+            });
     }
 }
