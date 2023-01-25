@@ -375,6 +375,100 @@ partial class Parser
         return null;
     }
 
+    private Instruction? ParseInlineToken(
+        OpCode opCode, Token[] tokens, Location currentLocation)
+    {
+        if (tokens.Length <= 1)
+        {
+            this.OutputError(
+                tokens.Last(),
+                $"Missing operand.");
+        }
+        else
+        {
+            Instruction? GetMember(
+                string memberName, string[] functionParameterTypeNames,
+                Func<FieldReference, Instruction> foundField,
+                Func<MethodReference, Instruction> foundMethod,
+                Func<TypeReference, Instruction> foundType)
+            {
+                if (this.TryGetMethod(
+                    memberName, functionParameterTypeNames, out var method))
+                {
+                    return foundMethod(this.module.ImportReference(method));
+                }
+                else if (this.TryGetField(
+                    memberName, out var field))
+                {
+                    return foundField(this.module.ImportReference(field));
+                }
+                else if (this.TryGetType(
+                    memberName, out var type))
+                {
+                    return foundType(this.module.ImportReference(type));
+                }
+                else
+                {
+                    return null;
+                }
+            }
+
+            var memberName = tokens[1].Text;
+            var functionParameterTypeNames =
+                tokens.Skip(2).Select(token => token.Text).ToArray();
+
+            if (GetMember(
+                memberName, functionParameterTypeNames,
+                fr => Instruction.Create(opCode, fr),
+                mr => Instruction.Create(opCode, mr),
+                tr => Instruction.Create(opCode, tr)) is { } instruction)
+            {
+                return instruction;
+            }
+            else if (functionParameterTypeNames.Length >= 1)
+            {
+                this.OutputError(
+                    tokens[1],
+                    $"Could not find member: {memberName}");
+            }
+            else
+            {
+                var dummyField = new FieldDefinition(
+                    "_dummy",
+                    FieldAttributes.Private | FieldAttributes.Literal,
+                    this.module.TypeSystem.Int32);
+                instruction = Instruction.Create(
+                    opCode, dummyField);
+
+                var capturedLocation = currentLocation;
+                this.delayedLookupLocalMemberActions.Add(() =>
+                {
+                    Instruction SetInstruction<T>(T member)
+                        where T : MemberReference
+                    {
+                        instruction.Operand = member;
+                        return instruction;
+                    }
+
+                    if (GetMember(
+                        memberName, functionParameterTypeNames,
+                        SetInstruction,
+                        SetInstruction,
+                        SetInstruction) == null)
+                    {
+                        this.OutputError(
+                            capturedLocation,
+                            $"Could not find global variable: {memberName}");
+                    }
+                });
+
+                return instruction;
+            }
+        }
+
+        return null;
+    }
+
     private Instruction? ParseInlineString(
         OpCode opCode, Token[] tokens)
     {
@@ -470,7 +564,7 @@ partial class Parser
                 OperandType.InlineField =>
                     this.ParseInlineField(opCode, tokens, currentLocation),
                 OperandType.InlineTok =>
-                    this.ParseInlineField(opCode, tokens, currentLocation),
+                    this.ParseInlineToken(opCode, tokens, currentLocation),
                 OperandType.InlineType =>
                     this.ParseInlineType(opCode, tokens),
                 OperandType.InlineString =>

@@ -385,7 +385,6 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
-  * InlineTok (?)
 * Handling variable arguments.
 * Handling value type declaration.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
