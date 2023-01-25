@@ -98,19 +98,28 @@ public static class Program
             var assembler = new Assembler(
                 logger,
                 referenceAssemblyBasePaths);
-            assembler.Assemble(
-                sourcePaths,
+
+            if (assembler.Assemble(
                 outputAssemblyPath,
-                referenceAssemblyPaths.ToArray(),
-                assemblyType,
-                debugSymbolType,
-                assembleOptions,
-                version,
-                targetFrameworkMoniker);
-
-            logger.Trace($"Finished.");
-
-            return 0;
+                new()
+                {
+                    ReferenceAssemblyPaths = referenceAssemblyPaths.ToArray(),
+                    AssemblyType = assemblyType,
+                    DebugSymbolType = debugSymbolType,
+                    Options = assembleOptions,
+                    Version = version,
+                    TargetFrameworkMoniker = targetFrameworkMoniker,
+                },
+                sourcePaths))
+            {
+                logger.Trace($"Finished.");
+                return 0;
+            }
+            else
+            {
+                logger.Trace($"Failed assembling.");
+                return 2;
+            }
         }
         catch (OptionException)
         {

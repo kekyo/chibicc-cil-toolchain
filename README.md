@@ -385,6 +385,7 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
+  * InlineSig
 * Handling variable arguments.
 * Handling value type declaration.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
@@ -399,8 +400,7 @@ Might be implemented:
 Might not be implemented:
 
 * `OperandType`
-  * InlinePhi,
-  * InlineSig
+  * InlinePhi
 * Handling multi-dimensional array types.
 * Handling parameter/variable names in operand.
 * Exception handling.

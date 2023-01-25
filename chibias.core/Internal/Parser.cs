@@ -135,7 +135,7 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    public void SetSourceFile(string relativePath)
+    public void SetSourcePathDebuggerHint(string relativePath)
     {
         this.relativePath = relativePath;
         this.isProducedOriginalSourceCodeLocation = true;
