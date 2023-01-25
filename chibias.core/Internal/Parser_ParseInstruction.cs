@@ -388,6 +388,33 @@ partial class Parser
         return null;
     }
 
+    private void AppendInstruction(
+        Instruction instruction, Location currentLocation)
+    {
+        this.instructions!.Add(instruction);
+
+        foreach (var labelName in this.willApplyLabelingNames)
+        {
+            this.labelTargets.Add(labelName, instruction);
+        }
+        this.willApplyLabelingNames.Clear();
+
+        if (this.queuedLocation is { } queuedLocation)
+        {
+            this.queuedLocation = null;
+            this.lastLocation = queuedLocation;
+            this.locationByInstructions.Add(
+                instruction,
+                queuedLocation);
+        }
+        else if (this.isProducedOriginalSourceCodeLocation)
+        {
+            this.locationByInstructions.Add(
+                instruction,
+                currentLocation);
+        }
+    }
+
     private void ParseInstruction(OpCode opCode, Token[] tokens)
     {
         // Reached when undeclared function directive.
@@ -412,78 +439,49 @@ partial class Parser
                     DocumentLanguage.Cil);
 
             // Will fetch valid operand types:
-            Instruction? instruction = null;
-            switch (opCode.OperandType)
+            var instruction = opCode.OperandType switch
             {
-                case OperandType.InlineNone:
-                    instruction = ParseInlineNone(opCode, tokens);
-                    break;
-                case OperandType.InlineI:
-                    instruction = ParseInlineI(opCode, tokens);
-                    break;
-                case OperandType.ShortInlineI:
-                    instruction = ParseShortInlineI(opCode, tokens);
-                    break;
-                case OperandType.InlineI8:
-                    instruction = ParseInlineI8(opCode, tokens);
-                    break;
-                case OperandType.InlineR:
-                    instruction = ParseInlineR(opCode, tokens);
-                    break;
-                case OperandType.ShortInlineR:
-                    instruction = ParseShortInlineR(opCode, tokens);
-                    break;
-                case OperandType.InlineBrTarget:
-                case OperandType.ShortInlineBrTarget:
-                    instruction = ParseInlineBrTarget(opCode, tokens);
-                    break;
-                case OperandType.InlineVar:
-                case OperandType.ShortInlineVar:
-                    instruction = ParseInlineVar(opCode, tokens);
-                    break;
-                case OperandType.InlineArg:
-                case OperandType.ShortInlineArg:
-                    instruction = ParseInlineArg(opCode, tokens);
-                    break;
-                case OperandType.InlineMethod:
-                    instruction = ParseInlineMethod(opCode, tokens, currentLocation);
-                    break;
-                case OperandType.InlineField:
-                case OperandType.InlineTok:
-                    instruction = ParseInlineField(opCode, tokens, currentLocation);
-                    break;
-                case OperandType.InlineType:
-                    instruction = ParseInlineType(opCode, tokens);
-                    break;
-                case OperandType.InlineString:
-                    instruction = ParseInlineString(opCode, tokens);
-                    break;
-            }
+                OperandType.InlineNone =>
+                    this.ParseInlineNone(opCode, tokens),
+                OperandType.InlineI =>
+                    this.ParseInlineI(opCode, tokens),
+                OperandType.ShortInlineI =>
+                    this.ParseShortInlineI(opCode, tokens),
+                OperandType.InlineI8 =>
+                    this.ParseInlineI8(opCode, tokens),
+                OperandType.InlineR =>
+                    this.ParseInlineR(opCode, tokens),
+                OperandType.ShortInlineR =>
+                    this.ParseShortInlineR(opCode, tokens),
+                OperandType.InlineBrTarget =>
+                    this.ParseInlineBrTarget(opCode, tokens),
+                OperandType.ShortInlineBrTarget =>
+                    this.ParseInlineBrTarget(opCode, tokens),
+                OperandType.InlineVar =>
+                    this.ParseInlineVar(opCode, tokens),
+                OperandType.ShortInlineVar =>
+                    this.ParseInlineVar(opCode, tokens),
+                OperandType.InlineArg =>
+                    this.ParseInlineArg(opCode, tokens),
+                OperandType.ShortInlineArg =>
+                    this.ParseInlineArg(opCode, tokens),
+                OperandType.InlineMethod =>
+                    this.ParseInlineMethod(opCode, tokens, currentLocation),
+                OperandType.InlineField =>
+                    this.ParseInlineField(opCode, tokens, currentLocation),
+                OperandType.InlineTok =>
+                    this.ParseInlineField(opCode, tokens, currentLocation),
+                OperandType.InlineType =>
+                    this.ParseInlineType(opCode, tokens),
+                OperandType.InlineString =>
+                    this.ParseInlineString(opCode, tokens),
+                _ =>
+                    null,
+            };
 
             if (instruction != null)
             {
-                this.instructions.Add(instruction);
-
-                foreach (var labelName in this.willApplyLabelingNames)
-                {
-                    this.labelTargets.Add(labelName, instruction);
-                }
-                this.willApplyLabelingNames.Clear();
-
-                if (this.queuedLocation is { } queuedLocation)
-                {
-                    this.queuedLocation = null;
-                    this.lastLocation = queuedLocation;
-                    this.locationByInstructions.Add(
-                        instruction,
-                        queuedLocation);
-                }
-                else if (this.isProducedOriginalSourceCodeLocation)
-                {
-                    this.locationByInstructions.Add(
-                        instruction,
-                        currentLocation);
-                }
+                this.AppendInstruction(instruction, currentLocation);
             }
         }
     }
