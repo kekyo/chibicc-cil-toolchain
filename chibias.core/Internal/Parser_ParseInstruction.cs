@@ -469,6 +469,51 @@ partial class Parser
         return null;
     }
 
+    private Instruction? ParseInlineSig(
+        OpCode opCode, Token[] tokens)
+    {
+        if (tokens.Length <= 1)
+        {
+            this.OutputError(
+                tokens.Last(),
+                $"Missing operand.");
+        }
+        else
+        {
+            var returnTypeName = tokens[1].Text;
+            var parameterTypeNames =
+                tokens.Skip(2).Select(token => token.Text).ToArray();
+
+            if (!this.TryGetType(returnTypeName, out var returnType))
+            {
+                this.OutputError(
+                    tokens[1],
+                    $"Could not find type: {returnTypeName}");
+            }
+            else
+            {
+                var callSite = new CallSite(returnType);
+                foreach (var parameterTypeToken in tokens.Skip(2))
+                {
+                    if (this.TryGetType(parameterTypeToken.Text, out var parameterType))
+                    {
+                        callSite.Parameters.Add(new(parameterType));
+                    }
+                    else
+                    {
+                        this.OutputError(
+                            parameterTypeToken,
+                            $"Could not find type: {parameterTypeToken.Text}");
+                    }
+                }
+
+                return Instruction.Create(
+                    opCode, callSite);
+            }
+        }
+        return null;
+    }
+
     private Instruction? ParseInlineString(
         OpCode opCode, Token[] tokens)
     {
@@ -563,10 +608,12 @@ partial class Parser
                     this.ParseInlineMethod(opCode, tokens, currentLocation),
                 OperandType.InlineField =>
                     this.ParseInlineField(opCode, tokens, currentLocation),
-                OperandType.InlineTok =>
-                    this.ParseInlineToken(opCode, tokens, currentLocation),
                 OperandType.InlineType =>
                     this.ParseInlineType(opCode, tokens),
+                OperandType.InlineTok =>
+                    this.ParseInlineToken(opCode, tokens, currentLocation),
+                OperandType.InlineSig =>
+                    this.ParseInlineSig(opCode, tokens),
                 OperandType.InlineString =>
                     this.ParseInlineString(opCode, tokens),
                 _ =>

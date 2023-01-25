@@ -902,4 +902,18 @@ public sealed partial class AssemblerTests
                 ret");
         return Verify(actual);
     }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task CallIndirectWithSignature()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldstr ""123""
+                ldftn System.Int32.Parse string
+                calli int32 string
+                ret");
+        return Verify(actual);
+    }
 }
