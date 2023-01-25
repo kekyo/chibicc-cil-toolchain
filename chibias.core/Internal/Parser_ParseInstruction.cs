@@ -260,19 +260,21 @@ partial class Parser
         }
         else
         {
+            var functionName = tokens[1].Text;
+            var functionParameterTypeNames =
+                tokens.Skip(2).Select(token => token.Text).ToArray();
+
             if (this.TryGetMethod(
-                tokens[1].Text,
-                tokens.Skip(2).Select(token => token.Text).ToArray(),
-                out var method2))
+                functionName, functionParameterTypeNames, out var method))
             {
                 return Instruction.Create(
-                    opCode, this.module.ImportReference(method2));
+                    opCode, this.module.ImportReference(method));
             }
             else if (tokens.Length >= 3)
             {
                 this.OutputError(
                     tokens[1],
-                    $"Could not find method: {tokens[1].Text}");
+                    $"Could not find method: {functionName}");
             }
             else
             {
@@ -283,14 +285,13 @@ partial class Parser
                 var instruction = Instruction.Create(
                     opCode, dummyMethod);
 
-                var functionName = tokens[1].Text;
                 var capturedLocation = currentLocation;
                 this.delayedLookupLocalMemberActions.Add(() =>
                 {
-                    if (this.cabiSpecificModuleType.Methods.
-                        FirstOrDefault(method => method.Name == functionName) is { } method)
+                    if (this.TryGetMethod(
+                        functionName, functionParameterTypeNames, out var method2))
                     {
-                        instruction.Operand = method;
+                        instruction.Operand = method2;
                     }
                     else
                     {
@@ -312,12 +313,13 @@ partial class Parser
     {
         if (FetchOperand0(tokens) is { } fop)
         {
+            var fieldName = fop.Text;
+
             if (this.TryGetField(
-                tokens[1].Text,
-                out var field2))
+                fieldName, out var field))
             {
                 return Instruction.Create(
-                    opCode, this.module.ImportReference(field2));
+                    opCode, this.module.ImportReference(field));
             }
             else
             {
@@ -328,20 +330,19 @@ partial class Parser
                 var instruction = Instruction.Create(
                     opCode, dummyField);
 
-                var globalName = fop.Text;
                 var capturedLocation = currentLocation;
                 this.delayedLookupLocalMemberActions.Add(() =>
                 {
-                    if (this.cabiSpecificModuleType.Fields.
-                        FirstOrDefault(field => field.Name == globalName) is { } field)
+                    if (this.TryGetField(
+                        fieldName, out var field2))
                     {
-                        instruction.Operand = field;
+                        instruction.Operand = field2;
                     }
                     else
                     {
                         this.OutputError(
                             capturedLocation,
-                            $"Could not find global variable: {globalName}");
+                            $"Could not find global variable: {fieldName}");
                     }
                 });
 
@@ -357,11 +358,13 @@ partial class Parser
     {
         if (FetchOperand0(tokens) is { } top)
         {
-            if (!this.TryGetType(top.Text, out var type))
+            var typeName = top.Text;
+
+            if (!this.TryGetType(typeName, out var type))
             {
                 this.OutputError(
                     top,
-                    $"Could not find type: {top.Text}");
+                    $"Could not find type: {typeName}");
             }
             else
             {
