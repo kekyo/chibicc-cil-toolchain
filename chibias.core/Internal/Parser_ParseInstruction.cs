@@ -260,17 +260,9 @@ partial class Parser
         }
         else
         {
-            if (this.cabiSpecificSymbols.TryGetValue(
-                tokens[1].Text, out var member) &&
-                member is MethodDefinition method &&
-                tokens.Length == 2)
-            {
-                return Instruction.Create(
-                    opCode, this.module.ImportReference(method));
-            }
-            else if (this.TryGetMethod(
+            if (this.TryGetMethod(
                 tokens[1].Text,
-                tokens.Skip(2).Select(token => token.Text),
+                tokens.Skip(2).Select(token => token.Text).ToArray(),
                 out var method2))
             {
                 return Instruction.Create(
@@ -320,13 +312,7 @@ partial class Parser
     {
         if (FetchOperand0(tokens) is { } fop)
         {
-            if (this.cabiSpecificSymbols.TryGetValue(fop.Text, out var member) &&
-                member is FieldReference field)
-            {
-                return Instruction.Create(
-                    opCode, this.module.ImportReference(field));
-            }
-            else if (this.TryGetField(
+            if (this.TryGetField(
                 tokens[1].Text,
                 out var field2))
             {

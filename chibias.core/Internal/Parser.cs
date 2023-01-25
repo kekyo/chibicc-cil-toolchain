@@ -223,19 +223,36 @@ internal sealed partial class Parser
     }
 
     private bool TryGetMethod(
-        string name,
-        IEnumerable<string> parameterTypeNames,
-        out MethodReference method)
+        string name, string[] parameterTypeNames, out MethodReference method)
     {
         var methodNameIndex = name.LastIndexOf('.');
+        var methodName = name.Substring(methodNameIndex + 1);
         if (methodNameIndex <= 0)
         {
-            method = null!;
-            return false;
+            if (this.cabiSpecificSymbols.TryGetValue(
+                methodName, out var member) &&
+                member is MethodDefinition m &&
+                parameterTypeNames.Length == 0)
+            {
+                method = m;
+                return true;
+            }
+            else if (this.cabiSpecificModuleType.Methods.
+                FirstOrDefault(method => method.Name == methodName) is { } m2)
+            {
+                // In this case, we do not check matching any parameter types.
+                // Because this is in CABI specific.
+                method = m2;
+                return true;
+            }
+            else
+            {
+                method = null!;
+                return false;
+            }
         }
 
         var typeName = name.Substring(0, methodNameIndex);
-        var methodName = name.Substring(methodNameIndex + 1);
 
         if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
         {
@@ -253,13 +270,13 @@ internal sealed partial class Parser
             return false;
         }
 
-        if (type.Methods.FirstOrDefault(method => 
-            method.IsPublic && !method.IsConstructor && !method.IsAbstract &&
-            method.Name == methodName &&
+        // Take only public method at imported.
+        if (type.Methods.FirstOrDefault(method =>
+            method.IsPublic && method.Name == methodName &&
             strictParameterTypeNames.SequenceEqual(
-                method.Parameters.Select(p => p.ParameterType.FullName))) is { } m)
+                method.Parameters.Select(p => p.ParameterType.FullName))) is { } m3)
         {
-            method = m;
+            method = m3;
             return true;
         }
         else
@@ -270,18 +287,33 @@ internal sealed partial class Parser
     }
 
     private bool TryGetField(
-        string name,
-        out FieldReference field)
+        string name, out FieldReference field)
     {
         var fieldNameIndex = name.LastIndexOf('.');
+        var fieldName = name.Substring(fieldNameIndex + 1);
         if (fieldNameIndex <= 0)
         {
-            field = null!;
-            return false;
+            if (this.cabiSpecificSymbols.TryGetValue(
+                name, out var member) &&
+                member is FieldDefinition f)
+            {
+                field = f;
+                return true;
+            }
+            else if (this.cabiSpecificModuleType.Fields.
+                FirstOrDefault(field => field.Name == fieldName) is { } f2)
+            {
+                field = f2;
+                return true;
+            }
+            else
+            {
+                field = null!;
+                return false;
+            }
         }
 
         var typeName = name.Substring(0, fieldNameIndex);
-        var fieldName = name.Substring(fieldNameIndex + 1);
 
         if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
         {
@@ -289,11 +321,11 @@ internal sealed partial class Parser
             return false;
         }
 
+        // Take only public field at imported.
         if (type.Fields.FirstOrDefault(field =>
-            field.IsPublic &&
-            field.Name == fieldName) is { } f)
+            field.IsPublic && field.Name == fieldName) is { } f3)
         {
-            field = f;
+            field = f3;
             return true;
         }
         else
