@@ -498,6 +498,16 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task AccessExternalAssemblyField()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldsfld System.Int32.MaxValue
+                ret");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
@@ -829,6 +839,81 @@ public sealed partial class AssemblerTests
                 conv.i
                 ret
             .constant bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task GlobalVariableToken()
+    {
+        var actual = Run(@"
+            .function intptr foo
+                ldtoken bar
+                conv.i
+                ret
+            .global int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FieldToken()
+    {
+        var actual = Run(@"
+            .function intptr foo
+                ldtoken System.Int32.MaxValue
+                conv.i
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionToken()
+    {
+        var actual = Run(@"
+            .function intptr foo
+                ldtoken bar
+                conv.i
+                ret
+            .function int32 bar
+                ldc.i4.1
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MethodToken()
+    {
+        var actual = Run(@"
+            .function intptr foo
+                ldtoken System.Int32.Parse string
+                conv.i
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TypeToken()
+    {
+        var actual = Run(@"
+            .function intptr foo
+                ldtoken System.Int32
+                conv.i
+                ret");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task CallIndirectWithSignature()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldstr ""123""
+                ldftn System.Int32.Parse string
+                calli int32 string
+                ret");
         return Verify(actual);
     }
 }

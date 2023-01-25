@@ -49,18 +49,10 @@ partial class AssemblerTests
 
             try
             {
-                var sourcePath = Path.Combine(
-                    basePath, "source.s");
-                using (var tw = File.CreateText(sourcePath))
-                {
-                    tw.Write(chibiasSourceCode);
-                    tw.Flush();
-                }
-
                 var corlibPath = typeof(object).Assembly.Location;
                 var tmp2Path = Path.GetFullPath("tmp2.dll");
 
-                var referenceBasePaths = new[]
+                var referenceAssemblyBasePaths = new[]
                 {
                     //corlibPath,
                     tmp2Path,
@@ -69,7 +61,7 @@ partial class AssemblerTests
                     Select(Utilities.GetDirectoryPath).
                     Distinct().
                     ToArray();
-                var referencePaths = new[]
+                var referenceAssemblyPaths = new[]
                 {
                     //corlibPath,
                     tmp2Path,
@@ -79,19 +71,20 @@ partial class AssemblerTests
 
                 var assember = new Assembler(
                     logger,
-                    referenceBasePaths);
+                    referenceAssemblyBasePaths);
 
                 var outputAssemblyPath =
                     Path.Combine(basePath, "output.dll");
                 var succeeded = assember.Assemble(
-                    new[] { sourcePath },
                     outputAssemblyPath,
-                    referencePaths,
-                    assemblyType,
-                    DebugSymbolTypes.Embedded,
-                    AssembleOptions.Deterministic,
-                    new Version(1, 0, 0),
-                    "net48");
+                    new()
+                    {
+                        ReferenceAssemblyPaths = referenceAssemblyPaths,
+                        AssemblyType = assemblyType,
+                        TargetFrameworkMoniker = "net48",
+                    },
+                    "source.s",
+                    new StringReader(chibiasSourceCode));
 
                 var disassembledPath =
                     Path.Combine(basePath, "output.il");

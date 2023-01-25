@@ -13,8 +13,6 @@ using Mono.Cecil.Cil;
 using Mono.Cecil.Pdb;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -58,51 +56,8 @@ public sealed class Assembler
             referenceAssemblyBasePaths);
     }
 
-    private sealed class AssemblyDefinitionComparer : IEqualityComparer<AssemblyDefinition>
-    {
-        public bool Equals(AssemblyDefinition? x, AssemblyDefinition? y) =>
-            x!.Name == y!.Name;
-
-        public int GetHashCode(AssemblyDefinition obj) =>
-            obj.Name.GetHashCode();
-
-        public static readonly AssemblyDefinitionComparer Instance = new();
-    }
-
-    private sealed class AssemblyNameReferenceComparer : IEqualityComparer<AssemblyNameReference>
-    {
-        public bool Equals(AssemblyNameReference? x, AssemblyNameReference? y) =>
-            x!.Name == y!.Name;
-
-        public int GetHashCode(AssemblyNameReference obj) =>
-            obj.Name.GetHashCode();
-
-        public static readonly AssemblyNameReferenceComparer Instance = new();
-    }
-
-    private sealed class ExportedTypeComparer : IEqualityComparer<ExportedType>
-    {
-        public bool Equals(ExportedType? x, ExportedType? y) =>
-            x!.FullName == y!.FullName;
-
-        public int GetHashCode(ExportedType obj) =>
-            obj.FullName.GetHashCode();
-
-        public static readonly ExportedTypeComparer Instance = new();
-    }
-
-    private sealed class TypeDefinitionComparer : IEqualityComparer<TypeDefinition>
-    {
-        public bool Equals(TypeDefinition? x, TypeDefinition? y) =>
-            x!.FullName == y!.FullName;
-
-        public int GetHashCode(TypeDefinition obj) =>
-            obj.FullName.GetHashCode();
-
-        public static readonly TypeDefinitionComparer Instance = new();
-    }
-
-    private TypeDefinition[] LoadPublicTypesFrom(string[] referenceAssemblyPaths)
+    private TypeDefinition[] LoadPublicTypesFrom(
+        string[] referenceAssemblyPaths)
     {
         var assemblies = referenceAssemblyPaths.
             Distinct().
@@ -173,25 +128,16 @@ public sealed class Assembler
 
     private void AssembleFromSource(
         Parser parser,
-        string baseSourcePath,
-        string sourcePath)
+        string sourcePathDebuggerHint,
+        TextReader sourceCodeReader)
     {
-        using var fs = new FileStream(
-            sourcePath,
-            FileMode.Open, FileAccess.Read, FileShare.Read);
-        var tr = new StreamReader(
-            fs,
-            true);
-
-        var relativeSourcePath = sourcePath.
-            Substring(baseSourcePath.Length + 1);
-        parser.SetSourceFile(relativeSourcePath);
+        parser.SetSourcePathDebuggerHint(sourcePathDebuggerHint);
 
         var tokenizer = new Tokenizer();
 
         while (true)
         {
-            var line = tr.ReadLine();
+            var line = sourceCodeReader.ReadLine();
             if (line == null)
             {
                 break;
@@ -202,29 +148,13 @@ public sealed class Assembler
         }
     }
 
-    public bool Assemble(
-        string[] sourcePaths,
+    private bool Run(
         string outputAssemblyPath,
-        string[] referenceAssemblyPaths,
-        AssemblyTypes assemblyType,
-        DebugSymbolTypes debugSymbolType,
-        AssembleOptions options,
-        Version version,
-        string targetFrameworkMoniker)
+        AssemblerOptions options,
+        Action<Parser> runner)
     {
-        if (sourcePaths.Length == 0)
-        {
-            return false;
-        }
-
-        var sourceFullPaths = sourcePaths.
-            Select(Path.GetFullPath).
-            ToArray();
-
-        //////////////////////////////////////////////////////////////
-
         var referenceTypes = this.LoadPublicTypesFrom(
-            referenceAssemblyPaths);
+            options.ReferenceAssemblyPaths);
 
         var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
             referenceTypes);
@@ -233,11 +163,11 @@ public sealed class Assembler
 
         var assemblyName = new AssemblyNameDefinition(
             Path.GetFileNameWithoutExtension(outputAssemblyPath),
-            version);
+            options.Version);
         var assembly = AssemblyDefinition.CreateAssembly(
             assemblyName,
             Path.GetFileName(outputAssemblyPath),
-            assemblyType switch
+            options.AssemblyType switch
             {
                 AssemblyTypes.Dll => ModuleKind.Dll,
                 AssemblyTypes.WinExe => ModuleKind.Windows,
@@ -256,14 +186,8 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        var baseSourcePath = sourceFullPaths.Length == 1 ?
-            Utilities.GetDirectoryPath(sourceFullPaths[0]) :           
-            Path.Combine(sourceFullPaths.
-                Select(path => path.Split(Path.DirectorySeparatorChar)).
-                Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
-
         var produceExecutable =
-            assemblyType != AssemblyTypes.Dll;
+            options.AssemblyType != AssemblyTypes.Dll;
 
         var parser = new Parser(
             this.logger,
@@ -272,18 +196,12 @@ public sealed class Assembler
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,
-            debugSymbolType != DebugSymbolTypes.None);
+            options.DebugSymbolType != DebugSymbolTypes.None);
 
-        foreach (var sourceFullPath in sourceFullPaths)
-        {
-            this.AssembleFromSource(
-                parser,
-                baseSourcePath,
-                sourceFullPath);
-        }
+        runner(parser);
 
         var allFinished = parser.Finish(
-            options.HasFlag(AssembleOptions.ApplyOptimization));
+            options.Options.HasFlag(AssembleOptions.ApplyOptimization));
 
         //////////////////////////////////////////////////////////////
 
@@ -294,10 +212,10 @@ public sealed class Assembler
                 new()
                 {
                     DeterministicMvid =
-                        options.HasFlag(AssembleOptions.Deterministic),
+                        options.Options.HasFlag(AssembleOptions.Deterministic),
                     WriteSymbols =
-                        debugSymbolType != DebugSymbolTypes.None,
-                    SymbolWriterProvider = debugSymbolType switch
+                        options.DebugSymbolType != DebugSymbolTypes.None,
+                    SymbolWriterProvider = options.DebugSymbolType switch
                     {
                         DebugSymbolTypes.None => null!,
                         DebugSymbolTypes.Embedded => new EmbeddedPortablePdbWriterProvider(),
@@ -308,5 +226,65 @@ public sealed class Assembler
         }
 
         return allFinished;
+    }
+
+    public bool Assemble(
+        string outputAssemblyPath,
+        AssemblerOptions options,
+        string sourcePathDebuggerHint,
+        TextReader sourceCodeReader) =>
+        this.Run(
+            outputAssemblyPath,
+            options,
+            parser => this.AssembleFromSource(
+                parser,
+                sourcePathDebuggerHint,
+                sourceCodeReader));
+
+    public bool Assemble(
+        string outputAssemblyPath,
+        AssemblerOptions options,
+        params string[] SourcePaths)
+    {
+        if (SourcePaths.Length == 0)
+        {
+            return false;
+        }
+
+        var sourceFullPaths = SourcePaths.
+            Select(Path.GetFullPath).
+            ToArray();
+
+        var baseSourcePath = sourceFullPaths.Length == 1 ?
+            Utilities.GetDirectoryPath(sourceFullPaths[0]) :
+            Path.Combine(sourceFullPaths.
+                Select(path => path.Split(Path.DirectorySeparatorChar)).
+                Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
+
+        //////////////////////////////////////////////////////////////
+
+        return this.Run(
+            outputAssemblyPath,
+            options,
+            parser =>
+            {
+                foreach (var sourceFullPath in sourceFullPaths)
+                {
+                    using var fs = new FileStream(
+                        sourceFullPath,
+                        FileMode.Open, FileAccess.Read, FileShare.Read);
+                    var reader = new StreamReader(
+                        fs,
+                        true);
+
+                    var sourcePathDebuggerHint = sourceFullPath.
+                        Substring(baseSourcePath.Length + 1);
+
+                    this.AssembleFromSource(
+                        parser,
+                        sourcePathDebuggerHint,
+                        reader);
+                }
+            });
     }
 }
