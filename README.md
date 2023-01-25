@@ -269,6 +269,20 @@ A list of parameter types is used to identify overloads.
 You have to give it containing assembly on command line option `-r`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
 
+### Call site syntax
+
+The call site is the signature descriptor of the target method that must be indicated by the `calli` opcode:
+
+```
+.function int32 main
+    ldstr "123"
+    ldftn System.Int32.Parse string
+    calli int32 string
+    ret
+```
+
+The call site specifies the return type and a list of parameter types.
+
 ### Global variables
 
 Global variable directive format is same as local variable directive,
