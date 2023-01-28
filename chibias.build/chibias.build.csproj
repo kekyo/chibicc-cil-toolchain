@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp2.2;netcoreapp3.1;net5.0;net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>net40;netcoreapp2.2;netcoreapp3.1;net5.0;net6.0;net7.0</TargetFrameworks>
     <AssemblyName>chibias</AssemblyName>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <IsPackable>true</IsPackable>
-    <PackageId>chibias-cli</PackageId>
-    <PackAsTool>true</PackAsTool>
+    <PackageId>chibias.build</PackageId>
+    <NuSpecFile>chibias.build.nuspec</NuSpecFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +21,11 @@
 
   <ItemGroup>
     <!-- <None Include="..\Images\chibias.100.png" Pack="true" PackagePath="" /> -->
+    <Compile Include="..\chibias\*.cs" BaseLink="." />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="build\" />
   </ItemGroup>
 
 </Project>

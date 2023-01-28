@@ -56,7 +56,7 @@ partial class Parser
         }
         else if (count == 0)
         {
-            return Array.Empty<Token>();
+            return Utilities.Empty<Token>();
         }
         else
         {

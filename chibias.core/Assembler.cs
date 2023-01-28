@@ -77,7 +77,7 @@ public sealed class Assembler
             }
             else
             {
-                return Array.Empty<AssemblyDefinition>();
+                return Utilities.Empty<AssemblyDefinition>();
             }
         }
 

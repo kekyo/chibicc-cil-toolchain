@@ -7,13 +7,14 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using System;
 
 namespace chibias;
 
 public sealed class AssemblerOptions
 {
-    public string[] ReferenceAssemblyPaths = Array.Empty<string>();
+    public string[] ReferenceAssemblyPaths = Utilities.Empty<string>();
     public AssemblyTypes AssemblyType = AssemblyTypes.Exe;
     public DebugSymbolTypes DebugSymbolType = DebugSymbolTypes.Portable;
     public AssembleOptions Options = AssembleOptions.Deterministic;

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>chibias.build</id>
+    <version>$PackageVersion$</version>
+    <authors>Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <!-- <icon>chibias.100.png</icon> -->
+    <projectUrl>https://github.com/kekyo/chibias-cil.git</projectUrl>
+    <description>The specialized backend CIL assembler for chibicc-cil</description>
+    <releaseNotes>$PackageReleaseNotes$</releaseNotes>
+    <copyright>Copyright (c) Kouji Matsui</copyright>
+    <tags>chibicc chibias cil msil ilasm</tags>
+    <repository type="git" url="https://github.com/kekyo/chibias-cil.git" branch="$RepositoryBranch$" commit="$RepositoryCommit$" />
+    <developmentDependency>true</developmentDependency>
+  </metadata>
+  <files>
+    <!-- <file src="..\Images\chibias.100.png" target="/" /> -->
+    <file src="build\*.*" target="build" />
+    <file src="buildMultiTargeting\*.*" target="buildMultiTargeting" />
+    <file src="bin\$Configuration$\net40\**\*.*" target="tools/net40" />
+    <file src="bin\$Configuration$\netcoreapp2.2\**\*.*" target="tools/netcoreapp2.2" />
+    <file src="bin\$Configuration$\netcoreapp3.1\**\*.*" target="tools/netcoreapp3.1" />
+    <file src="bin\$Configuration$\net5.0\**\*.*" target="tools/net5.0" />
+    <file src="bin\$Configuration$\net6.0\**\*.*" target="tools/net6.0" />
+    <file src="bin\$Configuration$\net7.0\**\*.*" target="tools/net7.0" />
+  </files>
+</package>

@@ -25,32 +25,32 @@ public enum LogLevels
 public interface ILogger
 {
     void OutputLog(
-        LogLevels logLevel, FormattableString? message, Exception? ex);
+        LogLevels logLevel, string? message, Exception? ex);
 }
 
 public static class LoggerExtension
 {
-    public static void Debug(this ILogger logger, FormattableString message) =>
+    public static void Debug(this ILogger logger, string message) =>
         logger.OutputLog(LogLevels.Debug, message, null);
 
-    public static void Trace(this ILogger logger, FormattableString message) =>
+    public static void Trace(this ILogger logger, string message) =>
         logger.OutputLog(LogLevels.Trace, message, null);
 
-    public static void Information(this ILogger logger, FormattableString message) =>
+    public static void Information(this ILogger logger, string message) =>
         logger.OutputLog(LogLevels.Information, message, null);
 
-    public static void Warning(this ILogger logger, FormattableString message) =>
+    public static void Warning(this ILogger logger, string message) =>
         logger.OutputLog(LogLevels.Warning, message, null);
     public static void Warning(this ILogger logger, Exception ex) =>
         logger.OutputLog(LogLevels.Warning, null, ex);
-    public static void Warning(this ILogger logger, Exception ex, FormattableString message) =>
+    public static void Warning(this ILogger logger, Exception ex, string message) =>
         logger.OutputLog(LogLevels.Warning, message, ex);
 
-    public static void Error(this ILogger logger, FormattableString message) =>
+    public static void Error(this ILogger logger, string message) =>
         logger.OutputLog(LogLevels.Error, message, null);
     public static void Error(this ILogger logger, Exception ex) =>
         logger.OutputLog(LogLevels.Error, null, ex);
-    public static void Error(this ILogger logger, Exception ex, FormattableString message) =>
+    public static void Error(this ILogger logger, Exception ex, string message) =>
         logger.OutputLog(LogLevels.Error, message, ex);
 }
 
@@ -62,7 +62,7 @@ public abstract class LoggerBase : ILogger
         this.BaseLevel = baseLevel;
 
     public void OutputLog(
-        LogLevels logLevel, FormattableString? message, Exception? ex)
+        LogLevels logLevel, string? message, Exception? ex)
     {
         if (logLevel >= this.BaseLevel)
         {
@@ -71,7 +71,7 @@ public abstract class LoggerBase : ILogger
     }
 
     protected virtual string? ToString(
-        string? header, LogLevels logLevel, FormattableString? message, Exception? ex)
+        string? header, LogLevels logLevel, string? message, Exception? ex)
     {
         static string GetLogLevelString(LogLevels logLevel) =>
             logLevel != LogLevels.Information ? $" {logLevel.ToString().ToLowerInvariant()}:" : "";
@@ -95,7 +95,7 @@ public abstract class LoggerBase : ILogger
     }
 
     protected abstract void OnOutputLog(
-        LogLevels logLevel, FormattableString? message, Exception? ex);
+        LogLevels logLevel, string? message, Exception? ex);
 }
 
 public sealed class TextWriterLogger : LoggerBase, IDisposable
@@ -115,7 +115,7 @@ public sealed class TextWriterLogger : LoggerBase, IDisposable
         this.Writer.Flush();
 
     protected override void OnOutputLog(
-        LogLevels logLevel, FormattableString? message, Exception? ex)
+        LogLevels logLevel, string? message, Exception? ex)
     {
         if (base.ToString(this.header, logLevel, message, ex) is { } formatted)
         {
