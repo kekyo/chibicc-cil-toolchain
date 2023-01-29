@@ -304,7 +304,7 @@ partial class Parser
                             // (1 based index)
                             this.relativePath = tokens[2].Text;
                             this.queuedLocation = new(
-                                this.relativePath, lineIndex - 1, 0, lineIndex - 1, 255, null);
+                                this.relativePath, lineIndex - 1, 0, lineIndex - 1, 255, language);
                             this.isProducedOriginalSourceCodeLocation = false;
                         }
                         else
