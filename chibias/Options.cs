@@ -48,14 +48,16 @@ internal sealed class Options
                         case 'o':
                             if (arg.Length >= 3)
                             {
-                                options.OutputAssemblyPath =
+                                var outputAssemblyPath =
                                     Path.GetFullPath(arg.Substring(2));
+                                options.OutputAssemblyPath = outputAssemblyPath;
                                 continue;
                             }
                             else if (args.Length >= index)
                             {
-                                options.OutputAssemblyPath =
+                                var outputAssemblyPath =
                                     Path.GetFullPath(args[++index]);
+                                options.OutputAssemblyPath = outputAssemblyPath;
                                 continue;
                             }
                             break;
@@ -182,8 +184,9 @@ internal sealed class Options
                     throw new InvalidOptionException($"Invalid option: {arg}");
                 }
 
-                options.SourceCodePaths.Add(
-                    Path.GetFullPath(arg));
+                var sourceCodePath =
+                    arg != "-" ? Path.GetFullPath(arg) : arg;
+                options.SourceCodePaths.Add(sourceCodePath);
             }
             catch (InvalidOptionException)
             {
@@ -258,7 +261,7 @@ internal sealed class Options
         tw.WriteLine("      -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
-        tw.WriteLine("  -v <version>      Apply assembly version");
+        tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFramework})");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent]");
         tw.WriteLine("  -h, --help        Show this help");

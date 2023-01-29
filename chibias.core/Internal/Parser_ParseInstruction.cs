@@ -582,6 +582,7 @@ partial class Parser
                 this.queuedLocation ??
                 this.lastLocation ??
                 new Location(
+                    this.basePath,
                     this.relativePath,
                     tokens[0].Line,
                     tokens[0].StartColumn,

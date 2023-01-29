@@ -105,10 +105,13 @@ public sealed class Assembler
 
     private void AssembleFromSource(
         Parser parser,
+        string? baseSourcePath,
         string sourcePathDebuggerHint,
         TextReader sourceCodeReader)
     {
-        parser.SetSourcePathDebuggerHint(sourcePathDebuggerHint);
+        parser.SetSourcePathDebuggerHint(
+            baseSourcePath,
+            sourcePathDebuggerHint);
 
         var tokenizer = new Tokenizer();
 
@@ -223,6 +226,7 @@ public sealed class Assembler
 
                 this.AssembleFromSource(
                     parser,
+                    null,
                     sourcePathDebuggerHint,
                     sourceCodeReader);
             });
@@ -238,7 +242,7 @@ public sealed class Assembler
         }
 
         var sourceFullPaths = sourcePaths.
-            Select(Path.GetFullPath).
+            Select(path => path != "-" ? Path.GetFullPath(path) : path).
             ToArray();
 
         var baseSourcePath = sourceFullPaths.Length == 1 ?
@@ -258,22 +262,36 @@ public sealed class Assembler
             {
                 foreach (var sourceFullPath in sourceFullPaths)
                 {
-                    using var fs = new FileStream(
-                        sourceFullPath,
-                        FileMode.Open, FileAccess.Read, FileShare.Read);
-                    var reader = new StreamReader(
-                        fs,
-                        true);
+                    if (sourceFullPath != "-")
+                    {
+                        using var fs = new FileStream(
+                            sourceFullPath,
+                            FileMode.Open, FileAccess.Read, FileShare.Read);
+                        var reader = new StreamReader(
+                            fs,
+                            true);
 
-                    var sourcePathDebuggerHint = sourceFullPath.
-                        Substring(baseSourcePath.Length + 1);
+                        var sourcePathDebuggerHint = sourceFullPath.
+                            Substring(baseSourcePath.Length + 1);
 
-                    this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
+                        this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
 
-                    this.AssembleFromSource(
-                        parser,
-                        sourcePathDebuggerHint,
-                        reader);
+                        this.AssembleFromSource(
+                            parser,
+                            baseSourcePath,
+                            sourcePathDebuggerHint,
+                            reader);
+                    }
+                    else
+                    {
+                        this.logger.Information("Assembling: <stdin>");
+
+                        this.AssembleFromSource(
+                            parser,
+                            null,
+                            "<stdin>",
+                            Console.In);
+                    }
                 }
             });
     }

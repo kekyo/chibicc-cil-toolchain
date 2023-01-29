@@ -59,9 +59,9 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
                 ms.Position = 0;
 
                 var sr = provider.GetSymbolReader(module, ms);
-                if (loaded.Add(path))
+                if (this.loaded.Add(path))
                 {
-                    this.logger.Trace($"Symbol loaded from: {path}");
+                    this.logger.Debug($"Symbol loaded from: {path}");
                 }
                 return sr;
             }
@@ -87,9 +87,9 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
                 try
                 {
                     var sr = embeddedProvider.GetSymbolReader(module, fullPath);
-                    if (loaded.Add(fullPath))
+                    if (this.loaded.Add(fullPath))
                     {
-                        this.logger.Trace($"Embedded symbol loaded from: {fullPath}");
+                        this.logger.Debug($"Embedded symbol loaded from: {fullPath}");
                     }
                     return sr;
                 }
@@ -98,16 +98,16 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
                     this.logger.Warning(ex);
                 }
             }
-            else if (TryGetSymbolReader(mdbProvider, module, fullPath, ".dll.mdb") is { } sr1)
+            else if (this.TryGetSymbolReader(mdbProvider, module, fullPath, ".dll.mdb") is { } sr1)
             {
                 return sr1;
             }
-            else if (TryGetSymbolReader(pdbProvider, module, fullPath, ".pdb") is { } sr3)
+            else if (this.TryGetSymbolReader(pdbProvider, module, fullPath, ".pdb") is { } sr3)
             {
                 return sr3;
             }
 
-            if (notFound.Add(fileName))
+            if (this.notFound.Add(fileName))
             {
                 this.logger.Trace($"Symbol not found: {fileName}");
             }

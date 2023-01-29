@@ -31,7 +31,7 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
         {
             var fullPath = Path.GetFullPath(referenceBasePath);
             base.AddSearchDirectory(fullPath);
-            this.logger.Trace($"Reference base path: {fullPath}");
+            this.logger.Debug($"Reference base path: {fullPath}");
         }
     }
 
@@ -50,7 +50,8 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
             try
             {
                 assmebly = base.Resolve(name, parameters);
-                this.logger.Trace($"Assembly loaded: {assmebly.MainModule.FileName}");
+                this.loadedAssemblies.Add(name.Name, assmebly);
+                this.logger.Information($"Assembly read: {assmebly.MainModule.FileName}");
             }
             catch
             {
@@ -74,7 +75,8 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
             try
             {
                 assmebly = AssemblyDefinition.ReadAssembly(assemblyName, parameters);
-                this.logger.Trace($"Assembly loaded: {assmebly.MainModule.FileName}");
+                this.loadedAssemblies.Add(assemblyName, assmebly);
+                this.logger.Information($"Assembly read: {assmebly.MainModule.FileName}");
             }
             catch
             {

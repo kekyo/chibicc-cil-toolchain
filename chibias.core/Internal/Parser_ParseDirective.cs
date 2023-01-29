@@ -10,6 +10,7 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
+using System.IO;
 using System.Linq;
 
 namespace chibias.Internal;
@@ -106,12 +107,6 @@ partial class Parser
                 returnType,
                 parameters,
                 true);
-
-            if (this.produceExecutable &&
-                functionName == "main")
-            {
-                this.module.EntryPoint = method;
-            }
         }
     }
 
@@ -238,22 +233,26 @@ partial class Parser
                 ToArray();
 
             var dataName = tokens[1].Text;
-            var dataTypeName = $"<constant>_${dataName}";
 
-            var dataType = new TypeDefinition(
-                "",
-                dataTypeName,
-                TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
-                this.valueType.Value);
-            dataType.PackingSize = 1;
-            dataType.ClassSize = data.Length;
+            if (!this.constantTypes.TryGetValue(data.Length, out var constantType))
+            {
+                var constantTypeName = $"<constant_type>_${data.Length}";
+                constantType = new TypeDefinition(
+                    "",
+                    constantTypeName,
+                    TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
+                    this.valueType.Value);
+                constantType.PackingSize = 1;
+                constantType.ClassSize = data.Length;
 
-            this.cabiSpecificModuleType.NestedTypes.Add(dataType);
+                this.cabiSpecificModuleType.NestedTypes.Add(constantType);
+                this.constantTypes.Add(data.Length, constantType);
+            }
 
             var field = new FieldDefinition(
                 dataName,
                 FieldAttributes.Private | FieldAttributes.Static | FieldAttributes.InitOnly,
-                dataType);
+                constantType);
             field.InitialValue = data;
 
             this.cabiSpecificModuleType.Fields.Add(field);
@@ -289,9 +288,9 @@ partial class Parser
                 {
                     // Only line index:
                     case 2:
-                        // (1 based index)
                         this.queuedLocation = new(
-                            this.relativePath, lineIndex - 1, 0, lineIndex - 1, 255, null);
+                            this.basePath, this.relativePath,
+                            lineIndex - 1, 0, lineIndex - 1, 255, null);
                         this.isProducedOriginalSourceCodeLocation = false;
                         break;
                     case 3:
@@ -303,10 +302,12 @@ partial class Parser
                     case 4:
                         if (Utilities.TryParseEnum<DocumentLanguage>(tokens[3].Text, out var language))
                         {
-                            // (1 based index)
-                            this.relativePath = tokens[2].Text;
+                            // NOT Utilities.GetDirectoryPath()
+                            this.basePath = Path.GetDirectoryName(tokens[2].Text);
+                            this.relativePath = Path.GetFileName(tokens[2].Text);
                             this.queuedLocation = new(
-                                this.relativePath, lineIndex - 1, 0, lineIndex - 1, 255, null);
+                                this.basePath, this.relativePath,
+                                lineIndex - 1, 0, lineIndex - 1, 255, language);
                             this.isProducedOriginalSourceCodeLocation = false;
                         }
                         else
