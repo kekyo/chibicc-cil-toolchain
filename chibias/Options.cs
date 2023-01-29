@@ -48,14 +48,16 @@ internal sealed class Options
                         case 'o':
                             if (arg.Length >= 3)
                             {
-                                options.OutputAssemblyPath =
+                                var outputAssemblyPath =
                                     Path.GetFullPath(arg.Substring(2));
+                                options.OutputAssemblyPath = outputAssemblyPath;
                                 continue;
                             }
                             else if (args.Length >= index)
                             {
-                                options.OutputAssemblyPath =
+                                var outputAssemblyPath =
                                     Path.GetFullPath(args[++index]);
+                                options.OutputAssemblyPath = outputAssemblyPath;
                                 continue;
                             }
                             break;
@@ -182,8 +184,9 @@ internal sealed class Options
                     throw new InvalidOptionException($"Invalid option: {arg}");
                 }
 
-                options.SourceCodePaths.Add(
-                    Path.GetFullPath(arg));
+                var sourceCodePath =
+                    arg != "-" ? Path.GetFullPath(arg) : arg;
+                options.SourceCodePaths.Add(sourceCodePath);
             }
             catch (InvalidOptionException)
             {
