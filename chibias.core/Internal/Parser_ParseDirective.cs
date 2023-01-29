@@ -129,7 +129,7 @@ partial class Parser
             var initializer = this.SetupFunctionBodyDirective(
                 functionName,
                 this.module.TypeSystem.Void,
-                Array.Empty<ParameterDefinition>(),
+                Utilities.Empty<ParameterDefinition>(),
                 false);
 
             this.initializers.Add(initializer);

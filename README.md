@@ -14,6 +14,7 @@ It is WIP and broadcasting side-by-side GIT commit portion on [YouTube (In Japan
 |:---------|:---------------------------------------------------------------------------------------------------------------------|
 | chibias-cli (dotnet CLI) | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibias-cli.svg?style=flat)](https://www.nuget.org/packages/chibias-cli) |
 | chibias.core (Core library) | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
+| chibias.build (MSBuild scripting) | [![NuGet chibias.build](https://img.shields.io/nuget/v/chibias.build.svg?style=flat)](https://www.nuget.org/packages/chibias.build) |
 
 
 ----
@@ -31,32 +32,97 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.0.4,net6.0]
+chibias [0.13.0,net6.0]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
 License under MIT
 
 usage: chibias [options] <source path> [<source path> ...]
-  -o=VALUE                   Output assembly path
-  -c, --dll                  Produce dll assembly
-      --exe                  Produce executable assembly (defaulted)
-      --winexe               Produce Windows executable assembly
-  -r, --reference=VALUE      Reference assembly path
-  -g, --g1, --portable       Produce portable debug symbol file (defaulted)
-      --g0, --no-debug       Omit debug symbol file
-      --g2, --embedded       Produce embedded debug symbol
-  -O                         Apply optimization
-      --O0                   Disable optimization (defaulted)
-      --asm-version=VALUE    Apply assembly version
-      --tfm=VALUE            Target framework moniker (defaulted: net6.0)
-      --log=VALUE            Log level [debug|trace|information|warning|error|silent]
-  -h, --help                 Show this help
+  -o <path>         Output assembly path
+  -c, --dll         Produce dll assembly
+      --exe         Produce executable assembly (defaulted)
+      --winexe      Produce Windows executable assembly
+  -r                Reference assembly path
+  -g, -g2           Produce embedded debug symbol (defaulted)
+      -g1           Produce portable debug symbol file
+      -g0           Omit debug symbol file
+  -O, -O1           Apply optimization
+      -O0           Disable optimization (defaulted)
+  -v <version>      Apply assembly version
+  -f <tfm>          Target framework moniker (defaulted: net6.0)
+      --log <level> Log level [debug|trace|information|warning|error|silent]
+  -h, --help        Show this help
 ```
 
 * chibias will combine multiple source code in command line pointed into one assembly.
 * Reference assembly paths evaluates last-to-first order, same as `ld` looking up.
   This feature applies to duplicated symbols (function/global variables).
+  
+----
+
+## Hello world
+
+Let's play "Hello world" with chibias.
+You should create a new source code file `hello.s` with the contents only need 4 lines:
+
+```
+.function void main
+    ldstr "Hello world with chibias!"
+    call System.Console.WriteLine string
+    ret
+```
+
+Then invoke chibias with:
+
+```bash
+$ chibias -r /mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/mscorlib.dll -o hello.exe hello.s
+```
+
+Run it:
+
+```bash
+$ ./hello.exe
+Hello world with chibias!
+```
+
+Yes, this example uses the `System.Console.WriteLine()` defined in the `mscorlib` assembly file in the
+Windows environment (WSL). But now you know how to reference assemblies from chibias.
+
+Linux and other operating systems can be used in the same way, by adding references you need.
+Or, if you have assembled code that is purely computational, you do not need any references to other assemblies:
+
+```
+.function int32 main
+    ldc.i4.1
+    ldc.i4.2
+    add
+    ret
+```
+
+```bash
+$ chibias -o adder.exe adder.s
+$ ./adder.exe
+$ echo $?
+3
+```
+
+### FYI: How to get mscorlib or others?
+
+If you want to obtain `mscorlib.dll` legally,
+you can use the [ReferenceAssemblies (net45)](https://www.nuget.org/packages/microsoft.netframework.referenceassemblies.net45) package.
+
+This package is provided by MS under the MIT license, so you are free to use it.
+The `nupkg` file is in zip format, so you can use `unzip` to extract the contents.
+
+It is important to note that all of the assemblies included in this package do not have any code bodies.
+It is possible to reference them with chibias, but it is not possible to run them.
+If you want to run it in a Linux environment or others, you will need a runtime such as mono/.NET Core.
+
+```bash
+$ mono ./hello.exe
+Hello world with chibias!
+```
 
 ----
 
@@ -162,6 +228,16 @@ You can combine array/pointer/refernces.
 We can declare local variables with `.local` directive inside function body.
 The local directive could have optional variable name.
 
+We can refer with variable name in operand:
+
+```
+.function void foo
+    .local int32 abc
+    ldc.i4 1
+    stloc abc
+    ret
+```
+
 ### Call another function
 
 ```
@@ -170,9 +246,9 @@ The local directive could have optional variable name.
     ldc.i4 2
     call add2
     ret
-.function int32 add2 a:int32 b:int32
+.function int32 add2 x:int32 y:int32
     ldarg 0
-    ldarg 1
+    ldarg y   ; We can refer by parameter name
     add
     ret
 ```
@@ -180,7 +256,7 @@ The local directive could have optional variable name.
 The parameters are optional. Formats are:
 
 * `int32`: Only type name.
-* `a:int32`: Type name with parameter name.
+* `x:int32`: Type name with parameter name.
 
 The function name both forward and backaward references are accepted.
 
@@ -406,8 +482,6 @@ Might be implemented:
   * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
 * Better handling for line-based number information.
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
-* Custom command line parser.
-* MSBuild scriptable packaging.
 * And chibicc-cil specific requirements...
 
 Might not be implemented:
@@ -415,7 +489,6 @@ Might not be implemented:
 * `OperandType`
   * InlinePhi
 * Handling multi-dimensional array types.
-* Handling parameter/variable names in operand.
 * Exception handling.
 * And NOT chibicc-cil specific requirements.
 

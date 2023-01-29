@@ -1,0 +1,48 @@
+﻿<!--
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// chibias-cil - The specialized backend CIL assembler for chibicc-cil
+// Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
+//
+// Licensed under MIT: https://opensource.org/licenses/MIT
+//
+/////////////////////////////////////////////////////////////////////////////////////
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Common (internal) -->
+    
+  <PropertyGroup Condition="('$(MSBuildRuntimeType)' == 'Core') AND ('$(MicrosoftNETBuildTasksTFM)' != '')">
+    <_chibias_build_PlatformName>$(MicrosoftNETBuildTasksTFM)</_chibias_build_PlatformName>
+  </PropertyGroup>
+  <PropertyGroup Condition="('$(MSBuildRuntimeType)' == 'Core') AND ('$(MicrosoftNETBuildTasksTFM)' == '') AND ('$(BundledNETCoreAppTargetFrameworkVersion)' != '')">
+    <_chibias_build_PlatformName Condition="$(BundledNETCoreAppTargetFrameworkVersion) &gt;= 5.0">net$(BundledNETCoreAppTargetFrameworkVersion)</_chibias_build_PlatformName>
+    <_chibias_build_PlatformName Condition="$(BundledNETCoreAppTargetFrameworkVersion) &lt; 5.0">netcoreapp$(BundledNETCoreAppTargetFrameworkVersion)</_chibias_build_PlatformName>
+  </PropertyGroup>
+  <PropertyGroup Condition="('$(MSBuildRuntimeType)' == 'Core') AND ('$(MicrosoftNETBuildTasksTFM)' == '') AND ('$(BundledNETCoreAppTargetFrameworkVersion)' == '')">
+    <_chibias_build_PlatformName>netcoreapp2.2</_chibias_build_PlatformName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' != 'Core'">
+    <_chibias_build_PlatformName>net40</_chibias_build_PlatformName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <_chibias_build_ToolingDir>$([System.IO.Path]::Combine('$(_chibias_build_ScriptBaseDir)','..','tools','$(_chibias_build_PlatformName)'))</_chibias_build_ToolingDir>
+  </PropertyGroup>
+        
+  <!-- ====================================================================== -->
+
+  <!-- Common -->
+
+  <PropertyGroup>
+    <chibiasBuildToolingRuntimeName Condition="'$(chibiasBuildToolingRuntimeName)' == ''">$(_chibias_build_RuntimeName)</chibiasBuildToolingRuntimeName>
+    <chibiasBuildToolingDir Condition="'$(chibiasBuildToolingDir)' == ''">$([System.IO.Path]::GetFullPath('$(_chibias_build_ToolingDir)'))</chibiasBuildToolingDir>
+    <chibiasBuildToolingPath Condition="'$(chibiasBuildToolingPath)' == ''">$([System.IO.Path]::Combine('$(chibiasBuildToolingDir)','$(_chibias_build_ExecutableName)'))</chibiasBuildToolingPath>
+  </PropertyGroup>
+    
+  <!-- Usage:
+  <Exec WorkingDirectory="$(chibiasBuildToolingDir)"
+     Command="$(chibiasBuildToolingRuntimeName)&quot;$(chibiasBuildToolingPath)&quot; ...." />
+  -->
+
+</Project>

@@ -10,6 +10,7 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 namespace chibias.Internal;
@@ -56,7 +57,7 @@ partial class Parser
         }
         else if (count == 0)
         {
-            return Array.Empty<Token>();
+            return Utilities.Empty<Token>();
         }
         else
         {
@@ -219,6 +220,12 @@ partial class Parser
             {
                 return Instruction.Create(opCode, this.body!.Variables[vi]);
             }
+            else if (this.variableDebugInformationLists.TryGetValue(this.method!.Name, out var list) &&
+                list.FirstOrDefault(vdi => vdi.Name == vop.Text) is { } vdi)
+            {
+                vi = vdi.Index;
+                return Instruction.Create(opCode, this.body!.Variables[vi]);
+            }
             else
             {
                 this.OutputError(
@@ -238,6 +245,11 @@ partial class Parser
                 pi < this.method!.Parameters.Count)
             {
                 return Instruction.Create(opCode, this.method!.Parameters[pi]);
+            }
+            else if (this.method!.Parameters.
+                FirstOrDefault(p => p.Name == aop.Text) is { } parameter)
+            {
+                return Instruction.Create(opCode, parameter);
             }
             else
             {
