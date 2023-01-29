@@ -18,29 +18,6 @@ using System.Linq;
 
 namespace chibias;
 
-public enum AssemblyTypes
-{
-    Dll,
-    Exe,
-    WinExe,
-}
-
-public enum DebugSymbolTypes
-{
-    None,
-    Portable,
-    Embedded,
-    WindowsProprietary,
-}
-
-[Flags]
-public enum AssembleOptions
-{
-    None = 0x00,
-    ApplyOptimization = 0x01,
-    Deterministic = 0x02,
-}
-
 public sealed class Assembler
 {
     private readonly ILogger logger;
@@ -244,14 +221,14 @@ public sealed class Assembler
     public bool Assemble(
         string outputAssemblyPath,
         AssemblerOptions options,
-        params string[] SourcePaths)
+        params string[] sourcePaths)
     {
-        if (SourcePaths.Length == 0)
+        if (sourcePaths.Length == 0)
         {
             return false;
         }
 
-        var sourceFullPaths = SourcePaths.
+        var sourceFullPaths = sourcePaths.
             Select(Path.GetFullPath).
             ToArray();
 

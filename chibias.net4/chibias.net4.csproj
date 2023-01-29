@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
-    <PackageReference Include="Mono.Options" Version="6.12.0.148" />
     <PackageReference Include="ILRepack.FullAuto" Version="1.2.0" PrivateAssets="All" />
   </ItemGroup>
 

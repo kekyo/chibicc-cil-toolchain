@@ -71,7 +71,7 @@ public abstract class LoggerBase : ILogger
     }
 
     protected virtual string? ToString(
-        string? header, LogLevels logLevel, string? message, Exception? ex)
+        LogLevels logLevel, string? message, Exception? ex)
     {
         static string GetLogLevelString(LogLevels logLevel) =>
             logLevel != LogLevels.Information ? $" {logLevel.ToString().ToLowerInvariant()}:" : "";
@@ -102,14 +102,9 @@ public sealed class TextWriterLogger : LoggerBase, IDisposable
 {
     public readonly TextWriter Writer;
 
-    private readonly string? header;
-
-    public TextWriterLogger(LogLevels baseLevel, TextWriter tw, string? header = null) :
-        base(baseLevel)
-    {
+    public TextWriterLogger(LogLevels baseLevel, TextWriter tw) :
+        base(baseLevel) =>
         this.Writer = tw;
-        this.header = header;
-    }
 
     public void Dispose() =>
         this.Writer.Flush();
@@ -117,7 +112,7 @@ public sealed class TextWriterLogger : LoggerBase, IDisposable
     protected override void OnOutputLog(
         LogLevels logLevel, string? message, Exception? ex)
     {
-        if (base.ToString(this.header, logLevel, message, ex) is { } formatted)
+        if (base.ToString(logLevel, message, ex) is { } formatted)
         {
             this.Writer.WriteLine(formatted);
         }

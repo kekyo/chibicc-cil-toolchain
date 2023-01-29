@@ -32,27 +32,27 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.0.4,net6.0]
+chibias [0.13.0,net6.0]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
 License under MIT
 
 usage: chibias [options] <source path> [<source path> ...]
-  -o=VALUE                   Output assembly path
-  -c, --dll                  Produce dll assembly
-      --exe                  Produce executable assembly (defaulted)
-      --winexe               Produce Windows executable assembly
-  -r, --reference=VALUE      Reference assembly path
-  -g, --g1, --portable       Produce portable debug symbol file (defaulted)
-      --g0, --no-debug       Omit debug symbol file
-      --g2, --embedded       Produce embedded debug symbol
-  -O                         Apply optimization
-      --O0                   Disable optimization (defaulted)
-      --asm-version=VALUE    Apply assembly version
-      --tfm=VALUE            Target framework moniker (defaulted: net6.0)
-      --log=VALUE            Log level [debug|trace|information|warning|error|silent]
-  -h, --help                 Show this help
+  -o <path>         Output assembly path
+  -c, --dll         Produce dll assembly
+      --exe         Produce executable assembly (defaulted)
+      --winexe      Produce Windows executable assembly
+  -r                Reference assembly path
+  -g, -g2           Produce embedded debug symbol (defaulted)
+      -g1           Produce portable debug symbol file
+      -g0           Omit debug symbol file
+  -O, -O1           Apply optimization
+      -O0           Disable optimization (defaulted)
+  -v <version>      Apply assembly version
+  -f <tfm>          Target framework moniker (defaulted: net6.0)
+      --log <level> Log level [debug|trace|information|warning|error|silent]
+  -h, --help        Show this help
 ```
 
 * chibias will combine multiple source code in command line pointed into one assembly.
