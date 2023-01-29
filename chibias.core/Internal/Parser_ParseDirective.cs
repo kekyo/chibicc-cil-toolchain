@@ -238,22 +238,26 @@ partial class Parser
                 ToArray();
 
             var dataName = tokens[1].Text;
-            var dataTypeName = $"<constant>_${dataName}";
 
-            var dataType = new TypeDefinition(
-                "",
-                dataTypeName,
-                TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
-                this.valueType.Value);
-            dataType.PackingSize = 1;
-            dataType.ClassSize = data.Length;
+            if (!this.constantTypes.TryGetValue(data.Length, out var constantType))
+            {
+                var constantTypeName = $"<constant_type>_${data.Length}";
+                constantType = new TypeDefinition(
+                    "",
+                    constantTypeName,
+                    TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
+                    this.valueType.Value);
+                constantType.PackingSize = 1;
+                constantType.ClassSize = data.Length;
 
-            this.cabiSpecificModuleType.NestedTypes.Add(dataType);
+                this.cabiSpecificModuleType.NestedTypes.Add(constantType);
+                this.constantTypes.Add(data.Length, constantType);
+            }
 
             var field = new FieldDefinition(
                 dataName,
                 FieldAttributes.Private | FieldAttributes.Static | FieldAttributes.InitOnly,
-                dataType);
+                constantType);
             field.InitialValue = data;
 
             this.cabiSpecificModuleType.Fields.Add(field);

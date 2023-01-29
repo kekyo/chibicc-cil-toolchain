@@ -57,6 +57,7 @@ internal sealed partial class Parser
     private readonly Dictionary<string, TypeReference> knownTypes = new();
     private readonly Dictionary<string, Instruction> labelTargets = new();
     private readonly List<MethodDefinition> initializers = new();
+    private readonly Dictionary<int, TypeDefinition> constantTypes = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
     private readonly List<Action> delayedLookupBranchTargetActions = new();
@@ -506,6 +507,8 @@ internal sealed partial class Parser
         this.delayedLookupLocalMemberActions.Clear();
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();
+        this.initializers.Clear();
+        this.constantTypes.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
         this.relativePath = "unknown.s";
