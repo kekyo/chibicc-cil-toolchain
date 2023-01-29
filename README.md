@@ -49,7 +49,7 @@ usage: chibias [options] <source path> [<source path> ...]
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
-  -v <version>      Apply assembly version
+  -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
       --log <level> Log level [debug|trace|information|warning|error|silent]
   -h, --help        Show this help

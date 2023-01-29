@@ -261,7 +261,7 @@ internal sealed class Options
         tw.WriteLine("      -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
-        tw.WriteLine("  -v <version>      Apply assembly version");
+        tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFramework})");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent]");
         tw.WriteLine("  -h, --help        Show this help");
