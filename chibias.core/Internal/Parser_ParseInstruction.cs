@@ -246,6 +246,11 @@ partial class Parser
             {
                 return Instruction.Create(opCode, this.method!.Parameters[pi]);
             }
+            else if (this.method!.Parameters.
+                FirstOrDefault(p => p.Name == aop.Text) is { } parameter)
+            {
+                return Instruction.Create(opCode, parameter);
+            }
             else
             {
                 this.OutputError(

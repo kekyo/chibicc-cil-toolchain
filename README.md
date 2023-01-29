@@ -228,6 +228,16 @@ You can combine array/pointer/refernces.
 We can declare local variables with `.local` directive inside function body.
 The local directive could have optional variable name.
 
+We can refer with variable name in operand:
+
+```
+.function void foo
+    .local int32 abc
+    ldc.i4 1
+    stloc abc
+    ret
+```
+
 ### Call another function
 
 ```
@@ -236,9 +246,9 @@ The local directive could have optional variable name.
     ldc.i4 2
     call add2
     ret
-.function int32 add2 a:int32 b:int32
+.function int32 add2 x:int32 y:int32
     ldarg 0
-    ldarg 1
+    ldarg y   ; We can refer by parameter name
     add
     ret
 ```
@@ -246,7 +256,7 @@ The local directive could have optional variable name.
 The parameters are optional. Formats are:
 
 * `int32`: Only type name.
-* `a:int32`: Type name with parameter name.
+* `x:int32`: Type name with parameter name.
 
 The function name both forward and backaward references are accepted.
 
@@ -479,7 +489,6 @@ Might not be implemented:
 * `OperandType`
   * InlinePhi
 * Handling multi-dimensional array types.
-* Handling parameter/variable names in operand.
 * Exception handling.
 * And NOT chibicc-cil specific requirements.
 

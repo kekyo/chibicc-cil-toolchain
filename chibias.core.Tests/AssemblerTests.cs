@@ -484,6 +484,16 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task Argument6()
+    {
+        var actual = Run(@"
+            .function int32 foo abc:int32
+                ldarg abc
+                ret");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
