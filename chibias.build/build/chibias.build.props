@@ -25,7 +25,7 @@
 
   <PropertyGroup>
     <_chibias_build_ScriptBaseDir>$(MSBuildThisFileDirectory)</_chibias_build_ScriptBaseDir>
-    <chibiasBuildBuildEnable>True</chibiasBuildBuildEnable>
+    <chibiasBuildEnable>True</chibiasBuildEnable>
   </PropertyGroup>
 
 </Project>

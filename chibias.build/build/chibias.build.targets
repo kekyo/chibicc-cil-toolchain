@@ -35,14 +35,14 @@
   <!-- Common -->
 
   <PropertyGroup>
-    <chibiasBuildBuildToolingRuntimeName Condition="'$(chibiasBuildBuildToolingRuntimeName)' == ''">$(_chibias_build_RuntimeName)</chibiasBuildBuildToolingRuntimeName>
-    <chibiasBuildBuildToolingDir Condition="'$(chibiasBuildBuildToolingDir)' == ''">$([System.IO.Path]::GetFullPath('$(_chibias_build_ToolingDir)'))</chibiasBuildBuildToolingDir>
-    <chibiasBuildBuildToolingPath Condition="'$(chibiasBuildBuildToolingPath)' == ''">$([System.IO.Path]::Combine('$(chibiasBuildBuildToolingDir)','$(_chibias_build_ExecutableName)'))</chibiasBuildBuildToolingPath>
+    <chibiasBuildToolingRuntimeName Condition="'$(chibiasBuildToolingRuntimeName)' == ''">$(_chibias_build_RuntimeName)</chibiasBuildToolingRuntimeName>
+    <chibiasBuildToolingDir Condition="'$(chibiasBuildToolingDir)' == ''">$([System.IO.Path]::GetFullPath('$(_chibias_build_ToolingDir)'))</chibiasBuildToolingDir>
+    <chibiasBuildToolingPath Condition="'$(chibiasBuildToolingPath)' == ''">$([System.IO.Path]::Combine('$(chibiasBuildToolingDir)','$(_chibias_build_ExecutableName)'))</chibiasBuildToolingPath>
   </PropertyGroup>
     
   <!-- Usage:
-  <Exec WorkingDirectory="$(chibiasBuildBuildToolingDir)"
-     Command="$(chibiasBuildBuildToolingRuntimeName)&quot;$(chibiasBuildBuildToolingPath)&quot; ...." />
+  <Exec WorkingDirectory="$(chibiasBuildToolingDir)"
+     Command="$(chibiasBuildToolingRuntimeName)&quot;$(chibiasBuildToolingPath)&quot; ...." />
   -->
 
 </Project>
