@@ -58,6 +58,71 @@ usage: chibias [options] <source path> [<source path> ...]
 * chibias will combine multiple source code in command line pointed into one assembly.
 * Reference assembly paths evaluates last-to-first order, same as `ld` looking up.
   This feature applies to duplicated symbols (function/global variables).
+  
+----
+
+## Hello world
+
+Let's play "Hello world" with chibias.
+You should create a new source code file `hello.s` with the contents only need 4 lines:
+
+```
+.function void main
+    ldstr "Hello world with chibias!"
+    call System.Console.WriteLine string
+    ret
+```
+
+Then invoke chibias with:
+
+```bash
+$ chibias -r /mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/mscorlib.dll -o hello.exe hello.s
+```
+
+Run it:
+
+```bash
+$ ./hello.exe
+Hello world with chibias!
+```
+
+Yes, this example uses the `System.Console.WriteLine()` defined in the `mscorlib` assembly file in the
+Windows environment (WSL). But now you know how to reference assemblies from chibias.
+
+Linux and other operating systems can be used in the same way, by adding references you need.
+Or, if you have assembled code that is purely computational, you do not need any references to other assemblies:
+
+```
+.function int32 main
+    ldc.i4.1
+    ldc.i4.2
+    add
+    ret
+```
+
+```bash
+$ chibias -o adder.exe adder.s
+$ ./adder.exe
+$ echo $?
+3
+```
+
+### FYI: How to get mscorlib or others?
+
+If you want to obtain `mscorlib.dll` legally,
+you can use the [ReferenceAssemblies (net45)](https://www.nuget.org/packages/microsoft.netframework.referenceassemblies.net45) package.
+
+This package is provided by MS under the MIT license, so you are free to use it.
+The `nupkg` file is in zip format, so you can use `unzip` to extract the contents.
+
+It is important to note that all of the assemblies included in this package do not have any code bodies.
+It is possible to reference them with chibias, but it is not possible to run them.
+If you want to run it in a Linux environment or others, you will need a runtime such as mono/.NET Core.
+
+```bash
+$ mono ./hello.exe
+Hello world with chibias!
+```
 
 ----
 
