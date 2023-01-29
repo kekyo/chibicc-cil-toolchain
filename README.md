@@ -472,7 +472,6 @@ Might be implemented:
   * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
 * Better handling for line-based number information.
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
-* MSBuild scriptable packaging.
 * And chibicc-cil specific requirements...
 
 Might not be implemented:

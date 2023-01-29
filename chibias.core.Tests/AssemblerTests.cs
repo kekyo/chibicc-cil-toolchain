@@ -417,6 +417,19 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task LocalVariable6()
+    {
+        var actual = Run(@"
+            .function int32 main
+                .local int32 abc
+                ldc.i4.1
+                stloc abc
+                ldc.i4.0
+                ret");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]

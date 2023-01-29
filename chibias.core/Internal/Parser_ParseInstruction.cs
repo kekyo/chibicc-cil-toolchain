@@ -10,6 +10,7 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 namespace chibias.Internal;
@@ -217,6 +218,12 @@ partial class Parser
             if (Utilities.TryParseInt32(vop.Text, out var vi) &&
                 vi < this.body!.Variables.Count)
             {
+                return Instruction.Create(opCode, this.body!.Variables[vi]);
+            }
+            else if (this.variableDebugInformationLists.TryGetValue(this.method!.Name, out var list) &&
+                list.FirstOrDefault(vdi => vdi.Name == vop.Text) is { } vdi)
+            {
+                vi = vdi.Index;
                 return Instruction.Create(opCode, this.body!.Variables[vi]);
             }
             else
