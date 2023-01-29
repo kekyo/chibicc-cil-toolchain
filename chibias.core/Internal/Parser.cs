@@ -406,6 +406,21 @@ internal sealed partial class Parser
     {
         this.FinishCurrentFunction();
 
+        // main entry point lookup.
+        if (this.produceExecutable)
+        {
+            if (this.cabiSpecificModuleType.Methods.
+                FirstOrDefault(m => m.Name == "main") is { } main)
+            {
+                this.module.EntryPoint = main;
+            }
+            else
+            {
+                this.caughtError = true;
+                this.logger.Error($"{this.relativePath}(1,1): Could not find main entry point.");
+            }
+        }
+
         if (!this.caughtError)
         {
             // Append type initializer

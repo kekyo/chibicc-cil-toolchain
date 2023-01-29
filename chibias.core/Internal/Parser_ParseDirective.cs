@@ -106,12 +106,6 @@ partial class Parser
                 returnType,
                 parameters,
                 true);
-
-            if (this.produceExecutable &&
-                functionName == "main")
-            {
-                this.module.EntryPoint = method;
-            }
         }
     }
 
