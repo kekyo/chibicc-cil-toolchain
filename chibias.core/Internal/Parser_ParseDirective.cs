@@ -10,6 +10,7 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
+using System.IO;
 using System.Linq;
 
 namespace chibias.Internal;
@@ -287,9 +288,9 @@ partial class Parser
                 {
                     // Only line index:
                     case 2:
-                        // (1 based index)
                         this.queuedLocation = new(
-                            this.relativePath, lineIndex - 1, 0, lineIndex - 1, 255, null);
+                            this.basePath, this.relativePath,
+                            lineIndex - 1, 0, lineIndex - 1, 255, null);
                         this.isProducedOriginalSourceCodeLocation = false;
                         break;
                     case 3:
@@ -301,10 +302,12 @@ partial class Parser
                     case 4:
                         if (Utilities.TryParseEnum<DocumentLanguage>(tokens[3].Text, out var language))
                         {
-                            // (1 based index)
-                            this.relativePath = tokens[2].Text;
+                            // NOT Utilities.GetDirectoryPath()
+                            this.basePath = Path.GetDirectoryName(tokens[2].Text);
+                            this.relativePath = Path.GetFileName(tokens[2].Text);
                             this.queuedLocation = new(
-                                this.relativePath, lineIndex - 1, 0, lineIndex - 1, 255, language);
+                                this.basePath, this.relativePath,
+                                lineIndex - 1, 0, lineIndex - 1, 255, language);
                             this.isProducedOriginalSourceCodeLocation = false;
                         }
                         else

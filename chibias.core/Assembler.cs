@@ -105,10 +105,13 @@ public sealed class Assembler
 
     private void AssembleFromSource(
         Parser parser,
+        string? baseSourcePath,
         string sourcePathDebuggerHint,
         TextReader sourceCodeReader)
     {
-        parser.SetSourcePathDebuggerHint(sourcePathDebuggerHint);
+        parser.SetSourcePathDebuggerHint(
+            baseSourcePath,
+            sourcePathDebuggerHint);
 
         var tokenizer = new Tokenizer();
 
@@ -223,6 +226,7 @@ public sealed class Assembler
 
                 this.AssembleFromSource(
                     parser,
+                    null,
                     sourcePathDebuggerHint,
                     sourceCodeReader);
             });
@@ -274,6 +278,7 @@ public sealed class Assembler
 
                         this.AssembleFromSource(
                             parser,
+                            baseSourcePath,
                             sourcePathDebuggerHint,
                             reader);
                     }
@@ -283,6 +288,7 @@ public sealed class Assembler
 
                         this.AssembleFromSource(
                             parser,
+                            null,
                             "<stdin>",
                             Console.In);
                     }

@@ -13,6 +13,7 @@ using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace chibias.Internal;
@@ -21,6 +22,7 @@ internal sealed partial class Parser
 {
     private readonly struct Location
     {
+        public readonly string? BasePath;
         public readonly string RelativePath;
         public readonly int StartLine;
         public readonly int StartColumn;
@@ -29,6 +31,7 @@ internal sealed partial class Parser
         public readonly DocumentLanguage? Language;
 
         public Location(
+            string? basePath,
             string relativePath,
             int startLine,
             int startColumn,
@@ -36,6 +39,7 @@ internal sealed partial class Parser
             int endColumn,
             DocumentLanguage? language)
         {
+            this.BasePath = basePath;
             this.RelativePath = relativePath;
             this.StartLine = startLine;
             this.StartColumn = startColumn;
@@ -65,6 +69,7 @@ internal sealed partial class Parser
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
 
+    private string? basePath;
     private string relativePath = "unknown.s";
     private Location? queuedLocation;
     private Location? lastLocation;
@@ -136,8 +141,9 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    public void SetSourcePathDebuggerHint(string relativePath)
+    public void SetSourcePathDebuggerHint(string? basePath, string relativePath)
     {
+        this.basePath = basePath;
         this.relativePath = relativePath;
         this.isProducedOriginalSourceCodeLocation = true;
         this.queuedLocation = null;
@@ -483,7 +489,9 @@ internal sealed partial class Parser
                             {
                                 if (!documents.TryGetValue(location.RelativePath, out var document))
                                 {
-                                    document = new(location.RelativePath);
+                                    document = new(location.BasePath is { } basePath ?
+                                        Path.Combine(basePath, location.RelativePath) :
+                                        location.RelativePath);
                                     document.Type = DocumentType.Text;
                                     if (location.Language is { } language)
                                     {
