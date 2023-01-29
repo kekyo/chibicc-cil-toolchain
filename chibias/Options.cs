@@ -20,7 +20,7 @@ internal sealed class Options
     public string OutputAssemblyPath = null!;
     public readonly List<string> ReferenceAssemblyBasePaths = new();
     public readonly AssemblerOptions AssemblerOptions = new();
-    public LogLevels LogLevel = LogLevels.Information;
+    public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
     public readonly List<string> SourceCodePaths = new();
 
@@ -78,6 +78,32 @@ internal sealed class Options
                         case 'c':
                             options.AssemblerOptions.AssemblyType = AssemblyTypes.Dll;
                             continue;
+                        case 'g':
+                            if (arg.Length == 3)
+                            {
+                                switch (arg[2])
+                                {
+                                    case '0':
+                                        options.AssemblerOptions.DebugSymbolType =
+                                            DebugSymbolTypes.None;
+                                        continue;
+                                    case '1':
+                                        options.AssemblerOptions.DebugSymbolType =
+                                            DebugSymbolTypes.Portable;
+                                        continue;
+                                    case '2':
+                                        options.AssemblerOptions.DebugSymbolType =
+                                            DebugSymbolTypes.Embedded;
+                                        continue;
+                                }
+                            }
+                            else if (arg.Length == 2)
+                            {
+                                options.AssemblerOptions.DebugSymbolType =
+                                    DebugSymbolTypes.Embedded;
+                                continue;
+                            }
+                            break;
                         case 'O':
                             if (arg.Length == 3)
                             {
@@ -171,9 +197,9 @@ internal sealed class Options
 
         if (options.OutputAssemblyPath == null)
         {
-            options.OutputAssemblyPath =
+            options.OutputAssemblyPath = Path.GetFullPath(
                 options.AssemblerOptions.AssemblyType == AssemblyTypes.Dll ?
-                    "a.out.dll" : "a.out.exe";
+                    "a.out.dll" : "a.out.exe");
         }
 
         options.AssemblerOptions.ReferenceAssemblyPaths =
@@ -185,6 +211,32 @@ internal sealed class Options
                 Distinct());
 
         return options;
+    }
+
+    public void Write(ILogger logger)
+    {
+        foreach (var path in this.SourceCodePaths)
+        {
+            logger.Information($"SourceCode={path}");
+        }
+
+        logger.Information($"OutputAssemblyPath={this.OutputAssemblyPath}");
+
+        foreach (var path in this.AssemblerOptions.ReferenceAssemblyPaths)
+        {
+            logger.Information($"ReferenceAssemblyPath={path}");
+        }
+
+        foreach (var path in this.ReferenceAssemblyBasePaths)
+        {
+            logger.Information($"ReferenceAssemblyBasePath={path}");
+        }
+
+        logger.Information($"AssemblyType={this.AssemblerOptions.AssemblyType}");
+        logger.Information($"DebugSymbolType={this.AssemblerOptions.DebugSymbolType}");
+        logger.Information($"Options={this.AssemblerOptions.Options}");
+        logger.Information($"Version={this.AssemblerOptions.Version}");
+        logger.Information($"TargetFrameworkMoniker={this.AssemblerOptions.TargetFrameworkMoniker}");
     }
 
     public static void WriteUsage(TextWriter tw)

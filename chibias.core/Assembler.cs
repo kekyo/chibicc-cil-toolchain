@@ -130,6 +130,8 @@ public sealed class Assembler
         AssemblerOptions options,
         Action<Parser> runner)
     {
+        var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
+
         var referenceTypes = this.LoadPublicTypesFrom(
             options.ReferenceAssemblyPaths);
 
@@ -139,11 +141,11 @@ public sealed class Assembler
         //////////////////////////////////////////////////////////////
 
         var assemblyName = new AssemblyNameDefinition(
-            Path.GetFileNameWithoutExtension(outputAssemblyPath),
+            Path.GetFileNameWithoutExtension(outputAssemblyFullPath),
             options.Version);
         var assembly = AssemblyDefinition.CreateAssembly(
             assemblyName,
-            Path.GetFileName(outputAssemblyPath),
+            Path.GetFileName(outputAssemblyFullPath),
             options.AssemblyType switch
             {
                 AssemblyTypes.Dll => ModuleKind.Dll,
@@ -184,8 +186,10 @@ public sealed class Assembler
 
         if (allFinished)
         {
+            this.logger.Information($"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
+
             module.Write(
-                outputAssemblyPath,
+                outputAssemblyFullPath,
                 new()
                 {
                     DeterministicMvid =
@@ -213,10 +217,15 @@ public sealed class Assembler
         this.Run(
             outputAssemblyPath,
             options,
-            parser => this.AssembleFromSource(
-                parser,
-                sourcePathDebuggerHint,
-                sourceCodeReader));
+            parser =>
+            {
+                this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
+
+                this.AssembleFromSource(
+                    parser,
+                    sourcePathDebuggerHint,
+                    sourceCodeReader);
+            });
 
     public bool Assemble(
         string outputAssemblyPath,
@@ -238,6 +247,8 @@ public sealed class Assembler
                 Select(path => path.Split(Path.DirectorySeparatorChar)).
                 Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
 
+        this.logger.Information($"Source code base path: {baseSourcePath}");
+
         //////////////////////////////////////////////////////////////
 
         return this.Run(
@@ -256,6 +267,8 @@ public sealed class Assembler
 
                     var sourcePathDebuggerHint = sourceFullPath.
                         Substring(baseSourcePath.Length + 1);
+
+                    this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
 
                     this.AssembleFromSource(
                         parser,

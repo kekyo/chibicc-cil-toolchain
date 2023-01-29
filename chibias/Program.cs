@@ -32,7 +32,9 @@ public static class Program
                 options.LogLevel,
                 Console.Out);
 
-            logger.Trace($"Started.");
+            logger.Information($"Started. [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFramework}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
+
+            options.Write(logger);
 
             var assembler = new Assembler(
                 logger,
@@ -43,12 +45,12 @@ public static class Program
                 options.AssemblerOptions,
                 options.SourceCodePaths.ToArray()))
             {
-                logger.Trace($"Finished.");
+                logger.Information($"Finished.");
                 return 0;
             }
             else
             {
-                logger.Trace($"Failed assembling.");
+                logger.Information($"Failed assembling.");
                 return 2;
             }
         }
