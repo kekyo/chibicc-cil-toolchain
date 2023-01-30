@@ -24,6 +24,7 @@ public enum DebugSymbolTypes
     None,
     Portable,
     Embedded,
+    Mono,
     WindowsProprietary,
 }
 

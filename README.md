@@ -32,7 +32,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.13.0,net6.0]
+chibias [0.15.0,net6.0]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -46,6 +46,8 @@ usage: chibias [options] <source path> [<source path> ...]
   -r                Reference assembly path
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
+      -gm           Produce mono debug symbol file
+      -gw           Produce windows proprietary debug symbol file
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)

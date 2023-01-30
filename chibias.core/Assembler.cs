@@ -10,6 +10,7 @@
 using chibias.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
 using System;
 using System.Collections.Generic;
@@ -203,7 +204,8 @@ public sealed class Assembler
                     {
                         DebugSymbolTypes.None => null!,
                         DebugSymbolTypes.Embedded => new EmbeddedPortablePdbWriterProvider(),
-                        DebugSymbolTypes.WindowsProprietary => new PdbWriterProvider(),
+                        DebugSymbolTypes.Mono => new MdbWriterProvider(),
+                        DebugSymbolTypes.WindowsProprietary => new NativePdbWriterProvider(),
                         _ => new PortablePdbWriterProvider(),
                     },
                 });
