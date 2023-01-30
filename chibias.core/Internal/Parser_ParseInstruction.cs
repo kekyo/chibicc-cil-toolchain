@@ -9,27 +9,38 @@
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using System;
-using System.Diagnostics;
 using System.Linq;
 
 namespace chibias.Internal;
 
 partial class Parser
 {
+    private Location GetCurrentLocation(Token startToken, Token endToken) =>
+        this.queuedLocation ??
+        this.lastLocation ??
+        new(
+            this.currentFile,
+            startToken.Line,
+            startToken.StartColumn,
+            endToken.Line,
+            endToken.EndColumn);
+
+    private Location GetCurrentLocation(Token token) =>
+        this.GetCurrentLocation(token, token);
+
     private Token? FetchOperand0(Token[] tokens)
     {
         if (tokens.Length >= 3)
         {
             this.OutputError(
-                tokens[2],
+                this.GetCurrentLocation(tokens[2]),
                 $"Too many operands.");
             return null;
         }
         else if (tokens.Length <= 1)
         {
             this.OutputError(
-                tokens.Last(),
+                this.GetCurrentLocation(tokens.Last()),
                 $"Missing operand.");
             return null;
         }
@@ -44,14 +55,14 @@ partial class Parser
         if (tokens.Length >= (2 + count))
         {
             this.OutputError(
-                tokens[count + 1],
+                this.GetCurrentLocation(tokens[count + 1]),
                 $"Too many operands.");
             return null;
         }
         else if (tokens.Length <= count)
         {
             this.OutputError(
-                tokens.Last(),
+                this.GetCurrentLocation(tokens.Last()),
                 $"Missing operand.");
             return null;
         }
@@ -67,24 +78,24 @@ partial class Parser
 
     private Instruction? ParseInlineNone(
         OpCode opCode, Token[] tokens) =>
-        FetchOperands(tokens, 0) is { } ?
+        this.FetchOperands(tokens, 0) is { } ?
             Instruction.Create(opCode) :
             null;
 
     private Instruction? ParseInlineI(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } iop)
+        if (this.FetchOperand0(tokens) is { } valueToken)
         {
-            if (Utilities.TryParseInt32(iop.Text, out var i))
+            if (Utilities.TryParseInt32(valueToken.Text, out var int32Value))
             {
-                return Instruction.Create(opCode, i);
+                return Instruction.Create(opCode, int32Value);
             }
             else
             {
                 this.OutputError(
-                    iop,
-                    $"Invalid operand: {iop.Text}");
+                    this.GetCurrentLocation(valueToken),
+                    $"Invalid operand: {valueToken.Text}");
             }
         }
         return null;
@@ -93,32 +104,32 @@ partial class Parser
     private Instruction? ParseShortInlineI(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } siop)
+        if (this.FetchOperand0(tokens) is { } valueToken)
         {
             if (opCode == OpCodes.Ldc_I4_S) // Only ldc.i4.s
             {
-                if (Utilities.TryParseInt8(siop.Text, out var sb))
+                if (Utilities.TryParseInt8(valueToken.Text, out var int8Value))
                 {
-                    return Instruction.Create(opCode, sb);
+                    return Instruction.Create(opCode, int8Value);
                 }
                 else
                 {
                     this.OutputError(
-                        siop,
-                        $"Invalid operand: {siop.Text}");
+                        this.GetCurrentLocation(valueToken),
+                        $"Invalid operand: {valueToken.Text}");
                 }
             }
             else
             {
-                if (Utilities.TryParseUInt8(siop.Text, out var b))
+                if (Utilities.TryParseUInt8(valueToken.Text, out var uint8Value))
                 {
-                    return Instruction.Create(opCode, b);
+                    return Instruction.Create(opCode, uint8Value);
                 }
                 else
                 {
                     this.OutputError(
-                        siop,
-                        $"Invalid operand: {siop.Text}");
+                        this.GetCurrentLocation(valueToken),
+                        $"Invalid operand: {valueToken.Text}");
                 }
             }
         }
@@ -128,17 +139,17 @@ partial class Parser
     private Instruction? ParseInlineI8(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } lop)
+        if (this.FetchOperand0(tokens) is { } valueToken)
         {
-            if (Utilities.TryParseInt64(lop.Text, out var l))
+            if (Utilities.TryParseInt64(valueToken.Text, out var int64Value))
             {
-                return Instruction.Create(opCode, l);
+                return Instruction.Create(opCode, int64Value);
             }
             else
             {
                 this.OutputError(
-                    lop,
-                    $"Invalid operand: {lop.Text}");
+                    this.GetCurrentLocation(valueToken),
+                    $"Invalid operand: {valueToken.Text}");
             }
         }
         return null;
@@ -147,17 +158,17 @@ partial class Parser
     private Instruction? ParseInlineR(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } rop)
+        if (this.FetchOperand0(tokens) is { } valueToken)
         {
-            if (Utilities.TryParseFloat64(rop.Text, out var d))
+            if (Utilities.TryParseFloat64(valueToken.Text, out var float64Value))
             {
-                return Instruction.Create(opCode, d);
+                return Instruction.Create(opCode, float64Value);
             }
             else
             {
                 this.OutputError(
-                    rop,
-                    $"Invalid operand: {rop.Text}");
+                    this.GetCurrentLocation(valueToken),
+                    $"Invalid operand: {valueToken.Text}");
             }
         }
         return null;
@@ -166,17 +177,17 @@ partial class Parser
     private Instruction? ParseShortInlineR(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } srop)
+        if (this.FetchOperand0(tokens) is { } valueToken)
         {
-            if (Utilities.TryParseFloat32(srop.Text, out var f))
+            if (Utilities.TryParseFloat32(valueToken.Text, out var float32Value))
             {
-                return Instruction.Create(opCode, f);
+                return Instruction.Create(opCode, float32Value);
             }
             else
             {
                 this.OutputError(
-                    srop,
-                    $"Invalid operand: {srop.Text}");
+                    this.GetCurrentLocation(valueToken),
+                    $"Invalid operand: {valueToken.Text}");
             }
         }
         return null;
@@ -185,26 +196,30 @@ partial class Parser
     private Instruction? ParseInlineBrTarget(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } brop)
+        if (this.FetchOperand0(tokens) is { } targetLabelNameToken)
         {
+            var targetLabelName = targetLabelNameToken.Text;
+
             var dummyInstruction = Instruction.Create(OpCodes.Nop);
             var instruction = Instruction.Create(opCode, dummyInstruction);
 
-            var capturedLocation = this.queuedLocation;
+            var capturedLocation =
+                this.GetCurrentLocation(targetLabelNameToken);
             this.delayedLookupBranchTargetActions.Add(() =>
             {
-                if (this.labelTargets.TryGetValue(brop.Text, out var target))
+                if (this.labelTargets.TryGetValue(targetLabelName, out var targetInstruction))
                 {
-                    instruction.Operand = target;
+                    instruction.Operand = targetInstruction;
                 }
                 else
                 {
                     instruction.Operand = Instruction.Create(OpCodes.Nop);
                     this.OutputError(
-                        brop,
-                        $"Could not found the label: {brop.Text}");
+                        capturedLocation,
+                        $"Could not found the label: {targetLabelName}");
                 }
             });
+
             return instruction;
         }
         return null;
@@ -213,24 +228,26 @@ partial class Parser
     private Instruction? ParseInlineVar(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } vop)
+        if (this.FetchOperand0(tokens) is { } variableIdentityToken)
         {
-            if (Utilities.TryParseInt32(vop.Text, out var vi) &&
-                vi < this.body!.Variables.Count)
+            var variableIdentity = variableIdentityToken.Text;
+
+            if (this.variableDebugInformationLists.TryGetValue(
+                this.method!.Name, out var list) &&
+                list.FirstOrDefault(vdi => vdi.Name == variableIdentity) is { } vdi)
             {
-                return Instruction.Create(opCode, this.body!.Variables[vi]);
+                return Instruction.Create(opCode, this.body!.Variables[vdi.Index]);
             }
-            else if (this.variableDebugInformationLists.TryGetValue(this.method!.Name, out var list) &&
-                list.FirstOrDefault(vdi => vdi.Name == vop.Text) is { } vdi)
+            else if (Utilities.TryParseInt32(variableIdentity, out var variableIndex) &&
+                variableIndex < this.body!.Variables.Count)
             {
-                vi = vdi.Index;
-                return Instruction.Create(opCode, this.body!.Variables[vi]);
+                return Instruction.Create(opCode, this.body!.Variables[variableIndex]);
             }
             else
             {
                 this.OutputError(
-                    vop,
-                    $"Invalid operand: {vop.Text}");
+                    this.GetCurrentLocation(variableIdentityToken),
+                    $"Invalid operand: {variableIdentity}");
             }
         }
         return null;
@@ -239,127 +256,87 @@ partial class Parser
     private Instruction? ParseInlineArg(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } aop)
+        if (this.FetchOperand0(tokens) is { } argumentIdentityToken)
         {
-            if (Utilities.TryParseInt32(aop.Text, out var pi) &&
-                pi < this.method!.Parameters.Count)
-            {
-                return Instruction.Create(opCode, this.method!.Parameters[pi]);
-            }
-            else if (this.method!.Parameters.
-                FirstOrDefault(p => p.Name == aop.Text) is { } parameter)
+            var argumentIdentity = argumentIdentityToken.Text;
+
+            if (this.method!.Parameters.
+                FirstOrDefault(p => p.Name == argumentIdentity) is { } parameter)
             {
                 return Instruction.Create(opCode, parameter);
+            }
+            else if (Utilities.TryParseInt32(argumentIdentity, out var parameterIndex) &&
+                parameterIndex < this.method!.Parameters.Count)
+            {
+                return Instruction.Create(opCode, this.method!.Parameters[parameterIndex]);
             }
             else
             {
                 this.OutputError(
-                    aop,
-                    $"Invalid operand: {aop.Text}");
+                    this.GetCurrentLocation(argumentIdentityToken),
+                    $"Invalid operand: {argumentIdentity}");
             }
         }
         return null;
     }
 
     private Instruction? ParseInlineMethod(
-        OpCode opCode, Token[] tokens, Location currentLocation)
+        OpCode opCode, Token[] tokens)
     {
         if (tokens.Length <= 1)
         {
             this.OutputError(
-                tokens.Last(),
+                this.GetCurrentLocation(tokens.Last()),
                 $"Missing operand.");
         }
         else
         {
-            var functionName = tokens[1].Text;
+            var functionNameToken = tokens[1];
+            var functionName = functionNameToken.Text;
             var functionParameterTypeNames =
                 tokens.Skip(2).Select(token => token.Text).ToArray();
 
-            if (this.TryGetMethod(
+            Instruction instruction = null!;
+            if (!this.TryGetMethod(
                 functionName, functionParameterTypeNames, out var method))
             {
-                return Instruction.Create(
-                    opCode, this.module.ImportReference(method));
-            }
-            else if (tokens.Length >= 3)
-            {
-                this.OutputError(
-                    tokens[1],
-                    $"Could not find method: {functionName}");
-            }
-            else
-            {
-                var dummyMethod = new MethodDefinition(
-                    "_dummy",
-                    MethodAttributes.Private | MethodAttributes.Abstract,
-                    this.module.TypeSystem.Void);
-                var instruction = Instruction.Create(
-                    opCode, dummyMethod);
+                method = this.CreateDummyMethod();
 
-                var capturedLocation = currentLocation;
-                this.delayedLookupLocalMemberActions.Add(() =>
-                {
-                    if (this.TryGetMethod(
-                        functionName, functionParameterTypeNames, out var method2))
-                    {
-                        instruction.Operand = method2;
-                    }
-                    else
-                    {
-                        this.OutputError(
-                            capturedLocation,
-                            $"Could not find function: {functionName}");
-                    }
-                });
+                this.DelayLookingUpMethod(
+                    functionName,
+                    functionParameterTypeNames,
+                    this.GetCurrentLocation(functionNameToken, tokens.Last()),
+                    method => instruction.Operand = method);
 
-                return instruction;
             }
+
+            instruction = Instruction.Create(opCode, method);
+            return instruction;
         }
 
         return null;
     }
 
     private Instruction? ParseInlineField(
-        OpCode opCode, Token[] tokens, Location currentLocation)
+        OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } fop)
+        if (this.FetchOperand0(tokens) is { } fieldNameToken)
         {
-            var fieldName = fop.Text;
+            var fieldName = fieldNameToken.Text;
 
-            if (this.TryGetField(
-                fieldName, out var field))
+            Instruction instruction = null!;
+            if (!this.TryGetField(fieldName, out var field))
             {
-                return Instruction.Create(
-                    opCode, this.module.ImportReference(field));
-            }
-            else
-            {
-                var dummyField = new FieldDefinition(
-                    "_dummy",
-                    FieldAttributes.Private | FieldAttributes.Literal,
-                    this.module.TypeSystem.Int32);
-                var instruction = Instruction.Create(
-                    opCode, dummyField);
+                field = this.CreateDummyField();
 
-                var capturedLocation = currentLocation;
-                this.delayedLookupLocalMemberActions.Add(() =>
-                {
-                    if (this.TryGetField(
-                        fieldName, out var field2))
-                    {
-                        instruction.Operand = field2;
-                    }
-                    else
-                    {
-                        this.OutputError(
-                            capturedLocation,
-                            $"Could not find global variable: {fieldName}");
-                    }
-                });
-
-                return instruction;
+                this.DelayLookingUpField(
+                    fieldName,
+                    this.GetCurrentLocation(fieldNameToken, fieldNameToken),
+                    field => instruction.Operand = field);
             }
+
+            instruction = Instruction.Create(opCode, field);
+            return instruction;
         }
 
         return null;
@@ -368,114 +345,95 @@ partial class Parser
     private Instruction? ParseInlineType(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } top)
+        if (this.FetchOperand0(tokens) is { } typeNameToken)
         {
-            var typeName = top.Text;
+            var typeName = typeNameToken.Text;
 
+            Instruction instruction = null!;
             if (!this.TryGetType(typeName, out var type))
             {
-                this.OutputError(
-                    top,
-                    $"Could not find type: {typeName}");
+                type = this.CreateDummyType();
+
+                this.DelayLookingUpType(
+                    typeName,
+                    this.GetCurrentLocation(typeNameToken, typeNameToken),
+                    type => instruction.Operand = type);
             }
-            else
-            {
-                return Instruction.Create(
-                    opCode, this.module.ImportReference(type));
-            }
+
+            instruction = Instruction.Create(opCode, type);
+            return instruction;
         }
         return null;
     }
 
     private Instruction? ParseInlineToken(
-        OpCode opCode, Token[] tokens, Location currentLocation)
+        OpCode opCode, Token[] tokens)
     {
         if (tokens.Length <= 1)
         {
             this.OutputError(
-                tokens.Last(),
+                this.GetCurrentLocation(tokens.Last()),
                 $"Missing operand.");
         }
         else
         {
-            Instruction? GetMember(
+            bool TryGetMember(
                 string memberName, string[] functionParameterTypeNames,
-                Func<FieldReference, Instruction> foundField,
-                Func<MethodReference, Instruction> foundMethod,
-                Func<TypeReference, Instruction> foundType)
+                out MemberReference member)
             {
-                if (this.TryGetMethod(
-                    memberName, functionParameterTypeNames, out var method))
+                if (this.TryGetMethod(memberName, functionParameterTypeNames, out var method))
                 {
-                    return foundMethod(this.module.ImportReference(method));
+                    member = method;
+                    return true;
                 }
-                else if (this.TryGetField(
-                    memberName, out var field))
+                else if (this.TryGetField(memberName, out var field))
                 {
-                    return foundField(this.module.ImportReference(field));
+                    member = field;
+                    return true;
                 }
-                else if (this.TryGetType(
-                    memberName, out var type))
+                else if (this.TryGetType(memberName, out var type))
                 {
-                    return foundType(this.module.ImportReference(type));
+                    member = type;
+                    return true;
                 }
                 else
                 {
-                    return null;
+                    member = null!;
+                    return false;
                 }
             }
 
-            var memberName = tokens[1].Text;
+            var memberNameToken = tokens[1];
+            var memberName = memberNameToken.Text;
             var functionParameterTypeNames =
                 tokens.Skip(2).Select(token => token.Text).ToArray();
 
-            if (GetMember(
-                memberName, functionParameterTypeNames,
-                fr => Instruction.Create(opCode, fr),
-                mr => Instruction.Create(opCode, mr),
-                tr => Instruction.Create(opCode, tr)) is { } instruction)
+            Instruction instruction = null!;
+            if (!TryGetMember(
+                memberName, functionParameterTypeNames, out var member))
             {
-                return instruction;
-            }
-            else if (functionParameterTypeNames.Length >= 1)
-            {
-                this.OutputError(
-                    tokens[1],
-                    $"Could not find member: {memberName}");
-            }
-            else
-            {
-                var dummyField = new FieldDefinition(
-                    "_dummy",
-                    FieldAttributes.Private | FieldAttributes.Literal,
-                    this.module.TypeSystem.Int32);
-                instruction = Instruction.Create(
-                    opCode, dummyField);
+                member = this.CreateDummyField();
 
-                var capturedLocation = currentLocation;
+                var capturedLocation = this.GetCurrentLocation(
+                    memberNameToken, tokens.Last());
                 this.delayedLookupLocalMemberActions.Add(() =>
                 {
-                    Instruction SetInstruction<T>(T member)
-                        where T : MemberReference
+                    if (TryGetMember(
+                        memberName, functionParameterTypeNames, out member))
                     {
                         instruction.Operand = member;
-                        return instruction;
                     }
-
-                    if (GetMember(
-                        memberName, functionParameterTypeNames,
-                        SetInstruction,
-                        SetInstruction,
-                        SetInstruction) == null)
+                    else
                     {
                         this.OutputError(
                             capturedLocation,
-                            $"Could not find global variable: {memberName}");
+                            $"Could not find member: {memberName}");
                     }
                 });
-
-                return instruction;
             }
+
+            instruction = Utilities.CreateInstruction(opCode, member);
+            return instruction;
         }
 
         return null;
@@ -487,41 +445,47 @@ partial class Parser
         if (tokens.Length <= 1)
         {
             this.OutputError(
-                tokens.Last(),
+                this.GetCurrentLocation(tokens.Last()),
                 $"Missing operand.");
         }
         else
         {
-            var returnTypeName = tokens[1].Text;
+            var returnTypeToken = tokens[1];
+            var returnTypeName = returnTypeToken.Text;
             var parameterTypeNames =
                 tokens.Skip(2).Select(token => token.Text).ToArray();
 
+            CallSite callSite = null!;
             if (!this.TryGetType(returnTypeName, out var returnType))
             {
-                this.OutputError(
-                    tokens[1],
-                    $"Could not find type: {returnTypeName}");
+                returnType = this.CreateDummyType();
+
+                this.DelayLookingUpType(
+                    returnTypeName,
+                    this.GetCurrentLocation(returnTypeToken, returnTypeToken),
+                    type => callSite.ReturnType = type);
             }
-            else
+
+            callSite = new(returnType);
+
+            foreach (var parameterTypeToken in tokens.Skip(2))
             {
-                var callSite = new CallSite(returnType);
-                foreach (var parameterTypeToken in tokens.Skip(2))
+                ParameterDefinition parameter = null!;
+                if (!this.TryGetType(parameterTypeToken.Text, out var parameterType))
                 {
-                    if (this.TryGetType(parameterTypeToken.Text, out var parameterType))
-                    {
-                        callSite.Parameters.Add(new(parameterType));
-                    }
-                    else
-                    {
-                        this.OutputError(
-                            parameterTypeToken,
-                            $"Could not find type: {parameterTypeToken.Text}");
-                    }
+                    parameterType = this.CreateDummyType();
+
+                    this.DelayLookingUpType(
+                        parameterTypeToken.Text,
+                        this.GetCurrentLocation(parameterTypeToken, parameterTypeToken),
+                        type => parameter.ParameterType = type);
                 }
 
-                return Instruction.Create(
-                    opCode, callSite);
+                parameter = new(parameterType);
+                callSite.Parameters.Add(parameter);
             }
+
+            return Instruction.Create(opCode, callSite);
         }
         return null;
     }
@@ -529,11 +493,10 @@ partial class Parser
     private Instruction? ParseInlineString(
         OpCode opCode, Token[] tokens)
     {
-        if (FetchOperand0(tokens) is { } sop)
+        if (this.FetchOperand0(tokens) is { } stringLiteralToken)
         {
-            var stringLiteral = sop.Text;
-            return Instruction.Create(
-                opCode, stringLiteral);
+            var stringLiteral = stringLiteralToken.Text;
+            return Instruction.Create(opCode, stringLiteral);
         }
 
         return null;
@@ -572,7 +535,7 @@ partial class Parser
         if (this.instructions == null)
         {
             this.OutputError(
-                tokens[0],
+                this.GetCurrentLocation(tokens[0]),
                 $"Function directive is not defined.");
         }
         // In function directive:
@@ -616,13 +579,13 @@ partial class Parser
                 OperandType.ShortInlineArg =>
                     this.ParseInlineArg(opCode, tokens),
                 OperandType.InlineMethod =>
-                    this.ParseInlineMethod(opCode, tokens, currentLocation),
+                    this.ParseInlineMethod(opCode, tokens),
                 OperandType.InlineField =>
-                    this.ParseInlineField(opCode, tokens, currentLocation),
+                    this.ParseInlineField(opCode, tokens),
                 OperandType.InlineType =>
                     this.ParseInlineType(opCode, tokens),
                 OperandType.InlineTok =>
-                    this.ParseInlineToken(opCode, tokens, currentLocation),
+                    this.ParseInlineToken(opCode, tokens),
                 OperandType.InlineSig =>
                     this.ParseInlineSig(opCode, tokens),
                 OperandType.InlineString =>

@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using NUnit.Framework;
+using System;
 using System.Threading.Tasks;
 
 using static VerifyNUnit.Verifier;
@@ -944,6 +945,76 @@ public sealed partial class AssemblerTests
                 ldftn System.Int32.Parse string
                 calli int32 string
                 ret");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task Structure1()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure2()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo 2
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure3()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo explicit
+                int32 a 0
+                int8 b 2
+                int32 c 6");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure4()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                bar b
+                int32 c
+            .structure bar
+                int16 a
+                int64 b
+                int32 c");
         return Verify(actual);
     }
 }

@@ -437,6 +437,39 @@ Elements placed in a constant directive are similar to global variables, but dif
 * Symbol names (`bar` in the above example) are treated like global variables and can be referenced by `ldsfld` opcode and likes.
   However, since the type of the retrieved instance will be of its own value type, and should be handled with care.
 
+### Structure
+
+The only types that can be defined are structure types.
+That is, types that inherit implicitly from `System.ValueType`:
+
+```
+.structure foo
+    int32 a
+    int8 b
+    int32 c
+```
+
+By default, structure packing is left to the CLR.
+To specify explicitly:
+
+```
+.structure foo 4  ; pack=4
+    int32 a
+    int8 b
+    int32 c
+```
+
+Or gives an offset to each member:
+
+```
+.structure foo explicit
+    int32 a 0   ; offset=0
+    int8 b 4    ; offset=4
+    int32 c 5   ; offset=5
+```
+
+By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
+
 ### Explicitly location information
 
 ```
@@ -492,7 +525,6 @@ Might be implemented:
 * `OperandType`
   * InlineSwitch
 * Handling variable arguments.
-* Handling value type declaration.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Handling for target framework moniker.
   * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?

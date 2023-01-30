@@ -97,7 +97,11 @@ public sealed class Assembler
                     Where(field => field.IsPublic && field.IsStatic).
                     Select(field => (IMemberDefinition)field).
                     ToArray();
-                return methods.Concat(fields).ToArray();
+                var types = type.NestedTypes.
+                    Where(type => type.IsPublic && type.IsValueType).
+                    Select(type => (IMemberDefinition)type).
+                    ToArray();
+                return methods.Concat(fields).Concat(types).ToArray();
             }).
             // Ignored trailing existence symbol names.
             Distinct(MemberDefinitionNameComparer.Instance).

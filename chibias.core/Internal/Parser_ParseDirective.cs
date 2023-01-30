@@ -23,7 +23,7 @@ partial class Parser
         ParameterDefinition[] parameters,
         bool isPublic)
     {
-        this.FinishCurrentFunction();
+        this.FinishCurrentState();
 
         this.method = new MethodDefinition(
             functionName,
@@ -51,17 +51,25 @@ partial class Parser
     private void ParseFunctionDirective(
         Token directive, Token[] tokens)
     {
-        if (tokens.Length <= 2)
+        if (tokens.Length < 3)
         {
             this.OutputError(directive, $"Missing directive operand.");
         }
-        else if (!this.TryGetType(tokens[1].Text, out var returnType))
-        {
-            this.OutputError(tokens[1], $"Invalid return type name: {tokens[1].Text}");
-        }
         else
         {
+            var returnTypeName = tokens[1].Text;
             var functionName = tokens[2].Text;
+
+            MethodDefinition method = null!;
+            if (!this.TryGetType(returnTypeName, out var returnType))
+            {
+                returnType = this.CreateDummyType();
+
+                this.DelayLookingUpType(
+                    tokens[1],
+                    type => method.ReturnType = type);
+            }
+
             var parameters = tokens.Skip(3).
                 Collect(parameterToken =>
                 {
@@ -76,33 +84,31 @@ partial class Parser
                     else
                     {
                         var parameterTypeName = splitted.Last();
-                        if (this.TryGetType(parameterTypeName, out var parameterType))
+
+                        ParameterDefinition parameter = null!;
+                        if (!this.TryGetType(parameterTypeName, out var parameterType))
                         {
-                            if (splitted.Length == 2)
-                            {
-                                var parameterName = splitted[0];
-                                return new ParameterDefinition(
-                                    parameterName,
-                                    ParameterAttributes.None,
-                                    parameterType);
-                            }
-                            else
-                            {
-                                return new ParameterDefinition(parameterType);
-                            }
-                        }
-                        else
-                        {
-                            this.OutputError(
+                            parameterType = CreateDummyType();
+
+                            this.DelayLookingUpType(
+                                parameterTypeName,
                                 parameterToken,
-                                $"Invalid parameter: {parameterToken.Text}");
+                                type => parameter.ParameterType = type);
                         }
-                        return null;
+
+                        parameter = new(parameterType);
+
+                        if (splitted.Length == 2)
+                        {
+                            parameter.Name = splitted[0];
+                        }
+
+                        return parameter;
                     }
                 }).
                 ToArray();
 
-            this.SetupFunctionBodyDirective(
+            method = this.SetupFunctionBodyDirective(
                 functionName,
                 returnType,
                 parameters,
@@ -113,7 +119,7 @@ partial class Parser
     private void ParseInitializerDirective(
         Token directive, Token[] tokens)
     {
-        if (tokens.Length >= 2)
+        if (tokens.Length > 1)
         {
             this.OutputError(directive, $"Too many operands.");
         }
@@ -134,26 +140,31 @@ partial class Parser
     private void ParseGlobalDirective(
         Token directive, Token[] tokens)
     {
-        if (tokens.Length <= 2)
+        if (tokens.Length < 3)
         {
             this.OutputError(directive, $"Missing global variable operand.");
         }
-        else if (!this.TryGetType(tokens[1].Text, out var globalType))
-        {
-            this.OutputError(
-                tokens[1],
-                $"Invalid global variable type name: {tokens[1].Text}");
-        }
         else
         {
-            this.FinishCurrentFunction();
+            this.FinishCurrentState();
 
+            var globalTypeName = tokens[1].Text;
             var globalName = tokens[2].Text;
-            var field = new FieldDefinition(
+
+            FieldDefinition field = null!;
+            if (!this.TryGetType(globalTypeName, out var globalType))
+            {
+                globalType = this.CreateDummyType();
+
+                this.DelayLookingUpType(
+                    tokens[1],
+                    type => field.FieldType = type);
+            }
+
+            field = new FieldDefinition(
                 globalName,
                 FieldAttributes.Public | FieldAttributes.Static,
-                this.module.ImportReference(globalType));
-
+                globalType);
             this.cabiSpecificModuleType.Fields.Add(field);
         }
     }
@@ -167,16 +178,33 @@ partial class Parser
                 directive,
                 $"Function directive is not defined.");
         }
-        else if (tokens.Length >= 4)
+        else if (tokens.Length < 2)
         {
             this.OutputError(
-                directive,
+                tokens.Last(),
+                $"Missing local variable operand.");
+        }
+        else if (tokens.Length > 3)
+        {
+            this.OutputError(
+                tokens.Last(),
                 $"Too many operands.");
         }
-        else if (this.TryGetType(tokens[1].Text, out var localType))
+        else
         {
-            var variable = new VariableDefinition(
-                this.module.ImportReference(localType));
+            var localTypeName = tokens[1].Text;
+
+            VariableDefinition variable = null!;
+            if (!this.TryGetType(localTypeName, out var localType))
+            {
+                localType = this.CreateDummyType();
+
+                this.DelayLookingUpType(
+                    tokens[1],
+                    type => variable.VariableType = type);
+            }
+
+            variable = new VariableDefinition(localType);
             this.body!.Variables.Add(variable);
 
             if (tokens.Length == 3)
@@ -198,11 +226,83 @@ partial class Parser
                 list.Add(variableDebugInformation);
             }
         }
-        else
+    }
+
+    private void ParseStructureDirective(
+        Token directive, Token[] tokens)
+    {
+        if (tokens.Length < 2)
         {
             this.OutputError(
-                tokens[1],
-                $"Invalid local variable type name: {tokens[1].Text}");
+                tokens.Last(),
+                $"Missing structure operand.");
+        }
+        else if (tokens.Length > 3)
+        {
+            this.OutputError(
+                tokens.Last(),
+                $"Too many operands.");
+        }
+        else
+        {
+            var typeAttributes = TypeAttributes.Public | TypeAttributes.Sealed;
+            short? packSize = null;
+            if (tokens.Length == 3)
+            {
+                var aligningToken = tokens[2];
+                var aligning = aligningToken.Text;
+                if (aligning == "explicit")
+                {
+                    typeAttributes |= TypeAttributes.ExplicitLayout;
+                }
+                else if (short.TryParse(aligning, out var ps))
+                {
+                    typeAttributes |= TypeAttributes.SequentialLayout;
+                    if (ps >= 1)
+                    {
+                        packSize = ps;
+                    }
+                    else
+                    {
+                        this.OutputError(
+                            aligningToken,
+                            $"Invalid pack size: {aligning}");
+                    }
+                }
+                else
+                {
+                    typeAttributes |= TypeAttributes.SequentialLayout;
+                }
+            }
+            else
+            {
+                typeAttributes |= TypeAttributes.SequentialLayout;
+            }
+
+            var structureTypeToken = tokens[1];
+            var structureTypeName = structureTypeToken.Text;
+
+            if (this.TryGetType(structureTypeName, out var st))
+            {
+                // TODO: checks equality
+            }
+            else
+            {
+                this.FinishCurrentState();
+
+                var structureType = new TypeDefinition(
+                    "",
+                    structureTypeName,
+                    typeAttributes,
+                    this.valueType.Value);
+                if (packSize is { } ps)
+                {
+                    structureType.PackingSize = ps;
+                }
+
+                this.cabiSpecificModuleType.NestedTypes.Add(structureType);
+                this.structure = structureType;
+            }
         }
     }
 
@@ -215,7 +315,7 @@ partial class Parser
         }
         else
         {
-            this.FinishCurrentFunction();
+            this.FinishCurrentState();
 
             var data = tokens.Skip(2).
                 Select(token =>
@@ -237,6 +337,7 @@ partial class Parser
             if (!this.constantTypes.TryGetValue(data.Length, out var constantType))
             {
                 var constantTypeName = $"<constant_type>_${data.Length}";
+
                 constantType = new TypeDefinition(
                     "",
                     constantTypeName,
@@ -365,6 +466,10 @@ partial class Parser
             // Local variable directive:
             case "local":
                 this.ParseLocalDirective(directive, tokens);
+                break;
+            // Structure directive:
+            case "structure":
+                this.ParseStructureDirective(directive, tokens);
                 break;
             // Constant directive:
             case "constant":

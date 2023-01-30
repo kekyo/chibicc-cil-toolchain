@@ -43,6 +43,7 @@ internal sealed partial class Parser
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
 
+    private int placeholderIndex;
     private FileDescriptor currentFile;
     private Location? queuedLocation;
     private Location? lastLocation;
@@ -50,6 +51,7 @@ internal sealed partial class Parser
     private MethodDefinition? method;
     private MethodBody? body;
     private ICollection<Instruction>? instructions;
+    private TypeDefinition? structure;
     private bool caughtError;
 
     /////////////////////////////////////////////////////////////////////
@@ -155,6 +157,22 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
+    private MethodDefinition CreateDummyMethod() =>
+        new($"<placeholder_method>_${placeholderIndex++}",
+            MethodAttributes.Private | MethodAttributes.Abstract,
+            this.module.TypeSystem.Void);
+
+    private FieldDefinition CreateDummyField() =>
+        new($"<placeholder_field>_${placeholderIndex++}",
+            FieldAttributes.Private | FieldAttributes.InitOnly,
+            this.module.TypeSystem.Int32);
+
+    private TypeDefinition CreateDummyType() =>
+        new("", $"<placeholder_type>_${placeholderIndex++}",
+            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
+
+    /////////////////////////////////////////////////////////////////////
+
     private bool TryGetType(
         string name,
         out TypeReference type)
@@ -198,13 +216,29 @@ internal sealed partial class Parser
                     return false;
                 }
             default:
-                if (this.knownTypes.TryGetValue(name, out type!))
+                // IMPORTANT ORDER:
+                //   Will lookup before this module, because the types redefinition by C headers
+                //   each assembly (by generating chibias).
+                //   Always we use first finding type, silently ignored when multiple declarations.
+                if (this.cabiSpecificSymbols.TryGetValue(name, out var member) &&
+                    member is TypeDefinition td1)
+                {
+                    type = this.module.ImportReference(td1);
+                    return true;
+                }
+                else if (this.cabiSpecificModuleType.NestedTypes.
+                    FirstOrDefault(type => type.Name == name) is { } td2)
+                {
+                    type = td2;
+                    return true;
+                }
+                else if (this.knownTypes.TryGetValue(name, out type!))
                 {
                     return true;
                 }
-                else if (this.referenceTypes.Value.TryGetValue(name, out var td))
+                else if (this.referenceTypes.Value.TryGetValue(name, out var td3))
                 {
-                    type = td;
+                    type = this.module.ImportReference(td3);
                     return true;
                 }
                 else
@@ -227,7 +261,7 @@ internal sealed partial class Parser
                 member is MethodDefinition m &&
                 parameterTypeNames.Length == 0)
             {
-                method = m;
+                method = this.module.ImportReference(m);
                 return true;
             }
             else if (this.cabiSpecificModuleType.Methods.
@@ -269,7 +303,7 @@ internal sealed partial class Parser
             strictParameterTypeNames.SequenceEqual(
                 method.Parameters.Select(p => p.ParameterType.FullName))) is { } m3)
         {
-            method = m3;
+            method = this.module.ImportReference(m3);
             return true;
         }
         else
@@ -290,7 +324,7 @@ internal sealed partial class Parser
                 name, out var member) &&
                 member is FieldDefinition f)
             {
-                field = f;
+                field = this.module.ImportReference(f);
                 return true;
             }
             else if (this.cabiSpecificModuleType.Fields.
@@ -324,7 +358,7 @@ internal sealed partial class Parser
         if (type.Fields.FirstOrDefault(field =>
             field.IsPublic && field.Name == fieldName) is { } f4)
         {
-            field = f4;
+            field = this.module.ImportReference(f4);
             return true;
         }
         else
@@ -333,6 +367,126 @@ internal sealed partial class Parser
             return false;
         }
     }
+
+    /////////////////////////////////////////////////////////////////////
+
+    private void DelayLookingUpType(
+        string typeName,
+        Token typeNameToken,
+        Action<TypeReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetType(typeName, out var type))
+            {
+                action(type);
+            }
+            else
+            {
+                this.OutputError(
+                    typeNameToken,
+                    $"Could not find type: {typeName}");
+            }
+        });
+
+    private void DelayLookingUpType(
+        Token typeNameToken,
+        Action<TypeReference> action) =>
+        this.DelayLookingUpType(
+            typeNameToken.Text,
+            typeNameToken,
+            action);
+
+    private void DelayLookingUpType(
+        string typeName,
+        Location location,
+        Action<TypeReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetType(typeName, out var type))
+            {
+                action(type);
+            }
+            else
+            {
+                this.OutputError(
+                    location,
+                    $"Could not find type: {typeName}");
+            }
+        });
+
+    private void DelayLookingUpField(
+        Token fieldNameToken,
+        Action<FieldReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetField(fieldNameToken.Text, out var field))
+            {
+                action(field);
+            }
+            else
+            {
+                this.OutputError(
+                    fieldNameToken,
+                    $"Could not find type: {fieldNameToken.Text}");
+            }
+        });
+
+    private void DelayLookingUpField(
+        string fieldName,
+        Location location,
+        Action<FieldReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetField(fieldName, out var field))
+            {
+                action(field);
+            }
+            else
+            {
+                this.OutputError(
+                    location,
+                    $"Could not find field: {fieldName}");
+            }
+        });
+
+    private void DelayLookingUpMethod(
+        Token methodNameToken,
+        string[] parameterTypeNames,
+        Action<MethodReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetMethod(
+                methodNameToken.Text, parameterTypeNames, out var method))
+            {
+                action(method);
+            }
+            else
+            {
+                this.OutputError(
+                    methodNameToken,
+                    $"Could not find type: {methodNameToken.Text}");
+            }
+        });
+
+    private void DelayLookingUpMethod(
+        string methodName,
+        string[] parameterTypeNames,
+        Location location,
+        Action<MethodReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetMethod(
+                methodName, parameterTypeNames, out var method))
+            {
+                action(method);
+            }
+            else
+            {
+                this.OutputError(
+                    location,
+                    $"Could not find type: {methodName}");
+            }
+        });
 
     /////////////////////////////////////////////////////////////////////
 
@@ -348,23 +502,32 @@ internal sealed partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     public void Parse(Token[] tokens)
     {
         if (tokens.FirstOrDefault() is { } token0)
         {
             switch (token0.Type)
             {
-                // Is it assembler directive?
+                // Is it an assembler directive?
                 case TokenTypes.Directive:
                     this.ParseDirective(token0, tokens);
                     break;
-                // Is it label?
+                // Is it a label?
                 case TokenTypes.Label:
                     this.ParseLabel(token0);
                     break;
-                // Is it OpCode?
-                case TokenTypes.Identity when Utilities.TryParseOpCode(token0.Text, out var opCode):
+                // Is it an OpCode?
+                case TokenTypes.Identity
+                    when this.instructions != null &&
+                         Utilities.TryParseOpCode(token0.Text, out var opCode):
                     this.ParseInstruction(opCode, tokens);
+                    break;
+                // Is it a structure member?
+                case TokenTypes.Identity
+                    when this.structure != null:
+                    this.ParseStructureMember(tokens);
                     break;
                 // Other, invalid syntax.
                 default:
@@ -376,12 +539,13 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    private void FinishCurrentFunction()
+    private void FinishCurrentState()
     {
         if (this.method != null)
         {
             Debug.Assert(this.instructions != null);
             Debug.Assert(this.body != null);
+            Debug.Assert(this.structure == null);
 
             if (!this.caughtError)
             {
@@ -398,11 +562,24 @@ internal sealed partial class Parser
             this.body = null;
             this.method = null;
         }
+
+        if (this.structure != null)
+        {
+            Debug.Assert(this.method == null);
+            Debug.Assert(this.instructions == null);
+            Debug.Assert(this.body == null);
+            
+            Debug.Assert(this.delayedLookupBranchTargetActions.Count == 0);
+            Debug.Assert(this.labelTargets.Count == 0);
+            Debug.Assert(this.willApplyLabelingNames.Count == 0);
+
+            this.structure = null;
+        }
     }
 
     public bool Finish(bool applyOptimization)
     {
-        this.FinishCurrentFunction();
+        this.FinishCurrentState();
 
         // main entry point lookup.
         if (this.produceExecutable)
