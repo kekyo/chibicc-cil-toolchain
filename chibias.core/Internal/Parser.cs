@@ -26,6 +26,7 @@ internal sealed partial class Parser
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
     private readonly TypeDefinition cabiSpecificModuleType;
+    private readonly TypeDefinition cabiSpecificRDataType;
     private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
     private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
     private readonly bool produceExecutable;
@@ -56,15 +57,28 @@ internal sealed partial class Parser
     public Parser(
         ILogger logger,
         ModuleDefinition module,
-        TypeDefinition cabiSpecificModuleType,
         Dictionary<string, IMemberDefinition> cabiSpecificSymbols,
         TypeDefinition[] referenceTypes,
         bool produceExecutable,
         bool produceDebuggingInformation)
     {
         this.logger = logger;
+        
         this.module = module;
-        this.cabiSpecificModuleType = cabiSpecificModuleType;
+
+        this.cabiSpecificModuleType = new TypeDefinition(
+            "C",
+            "module",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+            this.module.TypeSystem.Object);
+        this.cabiSpecificRDataType = new TypeDefinition(
+            "C",
+            "rdata",
+            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+            this.module.TypeSystem.Object);
+
         this.cabiSpecificSymbols = cabiSpecificSymbols;
         this.referenceTypes = new(() => referenceTypes.
             ToDictionary(type => type.FullName));
@@ -285,6 +299,12 @@ internal sealed partial class Parser
                 field = f2;
                 return true;
             }
+            else if (this.cabiSpecificRDataType.Fields.
+                FirstOrDefault(field => field.Name == fieldName) is { } f3)
+            {
+                field = f3;
+                return true;
+            }
             else
             {
                 field = null!;
@@ -302,9 +322,9 @@ internal sealed partial class Parser
 
         // Take only public field at imported.
         if (type.Fields.FirstOrDefault(field =>
-            field.IsPublic && field.Name == fieldName) is { } f3)
+            field.IsPublic && field.Name == fieldName) is { } f4)
         {
-            field = f3;
+            field = f4;
             return true;
         }
         else
@@ -401,6 +421,19 @@ internal sealed partial class Parser
 
         if (!this.caughtError)
         {
+            if (this.cabiSpecificModuleType.NestedTypes.Count >= 1 ||
+                this.cabiSpecificModuleType.Fields.Count >= 1 ||
+                this.cabiSpecificModuleType.Methods.Count >= 1)
+            {
+                this.module.Types.Add(this.cabiSpecificModuleType);
+            }
+
+            if (this.cabiSpecificRDataType.NestedTypes.Count >= 1 ||
+                this.cabiSpecificRDataType.Fields.Count >= 1)
+            {
+                this.module.Types.Add(this.cabiSpecificRDataType);
+            }
+
             // Append type initializer
             if (this.initializers.Count >= 1)
             {

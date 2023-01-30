@@ -159,14 +159,6 @@ public sealed class Assembler
 
         var module = assembly.MainModule;
 
-        var cabiSpecificModuleType = new TypeDefinition(
-            "C",
-            "module",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
-            module.TypeSystem.Object);
-        module.Types.Add(cabiSpecificModuleType);
-
         //////////////////////////////////////////////////////////////
 
         var produceExecutable =
@@ -175,7 +167,6 @@ public sealed class Assembler
         var parser = new Parser(
             this.logger,
             module,
-            cabiSpecificModuleType,
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,

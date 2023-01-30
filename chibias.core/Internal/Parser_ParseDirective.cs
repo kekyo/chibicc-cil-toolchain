@@ -240,22 +240,22 @@ partial class Parser
                 constantType = new TypeDefinition(
                     "",
                     constantTypeName,
-                    TypeAttributes.NestedPrivate | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
+                    TypeAttributes.NestedAssembly | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
                     this.valueType.Value);
                 constantType.PackingSize = 1;
                 constantType.ClassSize = data.Length;
 
-                this.cabiSpecificModuleType.NestedTypes.Add(constantType);
+                this.cabiSpecificRDataType.NestedTypes.Add(constantType);
                 this.constantTypes.Add(data.Length, constantType);
             }
 
             var field = new FieldDefinition(
                 dataName,
-                FieldAttributes.Private | FieldAttributes.Static | FieldAttributes.InitOnly,
+                FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly,
                 constantType);
             field.InitialValue = data;
 
-            this.cabiSpecificModuleType.Fields.Add(field);
+            this.cabiSpecificRDataType.Fields.Add(field);
         }
     }
 
