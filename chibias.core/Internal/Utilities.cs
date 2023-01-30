@@ -81,6 +81,21 @@ internal static class Utilities
     public static IEnumerable<TR> Collect<TR, T>(
         this IEnumerable<T> enumerable,
         Func<T, TR?> selector)
+        where TR : class
+    {
+        foreach (var item in enumerable)
+        {
+            if (selector(item) is { } value)
+            {
+                yield return value;
+            }
+        }
+    }
+
+    public static IEnumerable<TR> Collect<TR, T>(
+        this IEnumerable<T> enumerable,
+        Func<T, TR?> selector)
+        where TR : struct
     {
         foreach (var item in enumerable)
         {

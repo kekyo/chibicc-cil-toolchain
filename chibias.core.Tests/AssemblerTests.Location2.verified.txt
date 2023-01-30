@@ -28,10 +28,14 @@
 {
   .method public static int32  main() cil managed
   {
-    // Code size       2 (0x2)
+    // Code size       6 (0x6)
     .maxstack  8
     IL_0000:  ldc.i4.1
-    IL_0001:  ret
+    IL_0001:  ldc.i4.2
+    IL_0002:  add
+    IL_0003:  ldc.i4.6
+    IL_0004:  sub
+    IL_0005:  ret
   } // end of method module::main
 
 } // end of class C.module

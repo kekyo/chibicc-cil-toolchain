@@ -582,13 +582,11 @@ partial class Parser
                 this.queuedLocation ??
                 this.lastLocation ??
                 new Location(
-                    this.basePath,
-                    this.relativePath,
+                    this.currentFile,
                     tokens[0].Line,
                     tokens[0].StartColumn,
                     tokens[tokens.Length - 1].Line,
-                    tokens[tokens.Length - 1].EndColumn,
-                    DocumentLanguage.Cil);
+                    tokens[tokens.Length - 1].EndColumn);
 
             // Will fetch valid operand types:
             var instruction = opCode.OperandType switch

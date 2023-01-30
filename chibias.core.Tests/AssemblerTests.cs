@@ -41,8 +41,9 @@ public sealed partial class AssemblerTests
     public Task Location1()
     {
         var actual = Run(@"
+            .file 1 ""abc.c"" c
             .function int32 main
-                .location 123
+                .location 1 123 8 123 20
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -52,9 +53,15 @@ public sealed partial class AssemblerTests
     public Task Location2()
     {
         var actual = Run(@"
+            .file 1 ""abc.c"" c
             .function int32 main
-                .location 123 test.c c
+                .location 1 123 8 123 20
                 ldc.i4.1
+                ldc.i4.2
+                add
+                .location 1 124 8 124 12
+                ldc.i4.6
+                sub
                 ret");
         return Verify(actual);
     }

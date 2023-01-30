@@ -20,36 +20,8 @@ namespace chibias.Internal;
 
 internal sealed partial class Parser
 {
-    private readonly struct Location
-    {
-        public readonly string? BasePath;
-        public readonly string RelativePath;
-        public readonly int StartLine;
-        public readonly int StartColumn;
-        public readonly int EndLine;
-        public readonly int EndColumn;
-        public readonly DocumentLanguage? Language;
-
-        public Location(
-            string? basePath,
-            string relativePath,
-            int startLine,
-            int startColumn,
-            int endLine,
-            int endColumn,
-            DocumentLanguage? language)
-        {
-            this.BasePath = basePath;
-            this.RelativePath = relativePath;
-            this.StartLine = startLine;
-            this.StartColumn = startColumn;
-            this.EndLine = endLine;
-            this.EndColumn = endColumn;
-            this.Language = language;
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////
+    private static readonly FileDescriptor unknown = 
+        new(null, "unknown.s", DocumentLanguage.Cil);
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
@@ -62,6 +34,7 @@ internal sealed partial class Parser
     private readonly Dictionary<string, Instruction> labelTargets = new();
     private readonly List<MethodDefinition> initializers = new();
     private readonly Dictionary<int, TypeDefinition> constantTypes = new();
+    private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
     private readonly List<Action> delayedLookupBranchTargetActions = new();
@@ -69,8 +42,7 @@ internal sealed partial class Parser
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
 
-    private string? basePath;
-    private string relativePath = "unknown.s";
+    private FileDescriptor currentFile;
     private Location? queuedLocation;
     private Location? lastLocation;
     private bool isProducedOriginalSourceCodeLocation = true;
@@ -101,6 +73,7 @@ internal sealed partial class Parser
         this.valueType = new(() =>
             this.module.ImportReference(
                 this.referenceTypes.Value["System.ValueType"]));
+        this.currentFile = unknown;
 
         // Known types
         this.knownTypes.Add("void", module.TypeSystem.Void);
@@ -143,8 +116,7 @@ internal sealed partial class Parser
 
     public void SetSourcePathDebuggerHint(string? basePath, string relativePath)
     {
-        this.basePath = basePath;
-        this.relativePath = relativePath;
+        this.currentFile = new(basePath, relativePath, DocumentLanguage.Cil);
         this.isProducedOriginalSourceCodeLocation = true;
         this.queuedLocation = null;
         this.lastLocation = null;
@@ -155,13 +127,13 @@ internal sealed partial class Parser
     private void OutputError(Token token, string message)
     {
         this.caughtError = true;
-        this.logger.Error($"{this.relativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
+        this.logger.Error($"{this.currentFile.RelativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
     }
 
     private void OutputError(Location location, string message)
     {
         this.caughtError = true;
-        this.logger.Error($"{location.RelativePath}({location.StartLine + 1},{location.StartColumn + 1}): {message}");
+        this.logger.Error($"{location.File.RelativePath}({location.StartLine + 1},{location.StartColumn + 1}): {message}");
     }
 
     private void OutputTrace(string message) =>
@@ -423,7 +395,7 @@ internal sealed partial class Parser
             else
             {
                 this.caughtError = true;
-                this.logger.Error($"{this.relativePath}(1,1): Could not find main entry point.");
+                this.logger.Error($"{this.currentFile.RelativePath}(1,1): Could not find main entry point.");
             }
         }
 
@@ -487,17 +459,17 @@ internal sealed partial class Parser
                         {
                             if (this.locationByInstructions.TryGetValue(instruction, out var location))
                             {
-                                if (!documents.TryGetValue(location.RelativePath, out var document))
+                                if (!documents.TryGetValue(location.File.RelativePath, out var document))
                                 {
-                                    document = new(location.BasePath is { } basePath ?
-                                        Path.Combine(basePath, location.RelativePath) :
-                                        location.RelativePath);
+                                    document = new(location.File.BasePath is { } basePath ?
+                                        Path.Combine(basePath, location.File.RelativePath) :
+                                        location.File.RelativePath);
                                     document.Type = DocumentType.Text;
-                                    if (location.Language is { } language)
+                                    if (location.File.Language is { } language)
                                     {
                                         document.Language = language;
                                     }
-                                    documents.Add(location.RelativePath, document);
+                                    documents.Add(location.File.RelativePath, document);
                                 }
 
                                 var sequencePoint = new SequencePoint(
@@ -528,13 +500,14 @@ internal sealed partial class Parser
         }
 
         this.delayedLookupLocalMemberActions.Clear();
+        this.files.Clear();
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();
         this.initializers.Clear();
         this.constantTypes.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
-        this.relativePath = "unknown.s";
+        this.currentFile = unknown;
         this.queuedLocation = null;
         this.lastLocation = null;
 

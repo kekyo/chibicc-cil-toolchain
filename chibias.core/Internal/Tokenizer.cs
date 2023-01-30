@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -105,90 +106,97 @@ internal sealed class Tokenizer
                     while (index < line.Length)
                     {
                         inch = line[index];
-                        switch (escapeState)
+                        if (escapeState == EscapeStates.NonEscape)
                         {
-                            case EscapeStates.NonEscape:
-                                if (inch == '\\')
-                                {
-                                    escapeState = EscapeStates.First;
-                                }
-                                else if (inch == '"')
-                                {
+                            if (inch == '\\')
+                            {
+                                escapeState = EscapeStates.First;
+                            }
+                            else if (inch == '"')
+                            {
+                                break;
+                            }
+                            else
+                            {
+                                sb.Append(inch);
+                            }
+                        }
+                        else if (escapeState == EscapeStates.First)
+                        {
+                            switch (inch)
+                            {
+                                case 'a':
+                                    sb.Append('\a');
+                                    escapeState = EscapeStates.NonEscape;
                                     break;
-                                }
-                                else
-                                {
+                                case 'b':
+                                    sb.Append('\b');
+                                    escapeState = EscapeStates.NonEscape;
+                                    break;
+                                case 'f':
+                                    sb.Append('\f');
+                                    escapeState = EscapeStates.NonEscape;
+                                    break;
+                                case 'n':
+                                    sb.Append('\n');
+                                    escapeState = EscapeStates.NonEscape;
+                                    break;
+                                case 'r':
+                                    sb.Append('\r');
+                                    escapeState = EscapeStates.NonEscape;
+                                    break;
+                                case 't':
+                                    sb.Append('\t');
+                                    escapeState = EscapeStates.NonEscape;
+                                    break;
+                                case 'u':
+                                    escapeState = EscapeStates.Byte3;
+                                    break;
+                                case 'v':
+                                    sb.Append('\v');
+                                    escapeState = EscapeStates.NonEscape;
+                                    break;
+                                case 'x':
+                                    escapeState = EscapeStates.Byte1;
+                                    break;
+                                default:
                                     sb.Append(inch);
-                                }
-                                break;
-                            case EscapeStates.First:
-                                switch (inch)
-                                {
-                                    case 'a':
-                                        sb.Append('\a');
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                    case 'b':
-                                        sb.Append('\b');
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                    case 'f':
-                                        sb.Append('\f');
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                    case 'n':
-                                        sb.Append('\n');
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                    case 'r':
-                                        sb.Append('\r');
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                    case 't':
-                                        sb.Append('\t');
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                    case 'u':
-                                        escapeState = EscapeStates.Byte3;
-                                        break;
-                                    case 'v':
-                                        sb.Append('\v');
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                    case 'x':
-                                        escapeState = EscapeStates.Byte1;
-                                        break;
-                                    default:
-                                        sb.Append(inch);
-                                        escapeState = EscapeStates.NonEscape;
-                                        break;
-                                }
-                                break;
-                            case EscapeStates.Byte3:
-                                hex.Append(inch);
-                                escapeState = EscapeStates.Byte2;
-                                break;
-                            case EscapeStates.Byte2:
-                                hex.Append(inch);
-                                escapeState = EscapeStates.Byte1;
-                                break;
-                            case EscapeStates.Byte1:
-                                hex.Append(inch);
-                                escapeState = EscapeStates.Byte0;
-                                break;
-                            case EscapeStates.Byte0:
-                                hex.Append(inch);
-                                if (ushort.TryParse(
-                                    hex.ToString(),
-                                    NumberStyles.AllowHexSpecifier,
-                                    CultureInfo.InvariantCulture,
-                                    out var rawValue))
-                                {
-                                    sb.Append((char)rawValue);
-                                }
-                                hex.Clear();
-                                escapeState = EscapeStates.NonEscape;
-                                break;
+                                    escapeState = EscapeStates.NonEscape;
+                                    break;
+                            }
+                        }
+                        else if (escapeState == EscapeStates.Byte3)
+                        {
+                            hex.Append(inch);
+                            escapeState = EscapeStates.Byte2;
+                        }
+                        else if (escapeState == EscapeStates.Byte2)
+                        {
+                            hex.Append(inch);
+                            escapeState = EscapeStates.Byte1;
+                        }
+                        else if (escapeState == EscapeStates.Byte1)
+                        {
+                            hex.Append(inch);
+                            escapeState = EscapeStates.Byte0;
+                        }
+                        else if (escapeState == EscapeStates.Byte0)
+                        {
+                            hex.Append(inch);
+                            if (ushort.TryParse(
+                                hex.ToString(),
+                                NumberStyles.AllowHexSpecifier,
+                                CultureInfo.InvariantCulture,
+                                out var rawValue))
+                            {
+                                sb.Append((char)rawValue);
+                            }
+                            hex.Clear();
+                            escapeState = EscapeStates.NonEscape;
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException();
                         }
                         index++;
                     }

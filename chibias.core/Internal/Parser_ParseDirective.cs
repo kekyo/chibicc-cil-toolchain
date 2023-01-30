@@ -259,6 +259,44 @@ partial class Parser
         }
     }
 
+    private void ParseFileDirective(
+        Token directive, Token[] tokens)
+    {
+        if (tokens.Length < 4)
+        {
+            this.OutputError(
+                tokens.Last(),
+                $"Missing file operands.");
+        }
+        else if (tokens.Length > 4)
+        {
+            this.OutputError(
+                tokens[4],
+                $"Too many operands.");
+        }
+        else if (Utilities.TryParseEnum<DocumentLanguage>(tokens[3].Text, out var language))
+        {
+            if (this.produceDebuggingInformation)
+            {
+                // NOT Utilities.GetDirectoryPath()
+                var file = new FileDescriptor(
+                    Path.GetDirectoryName(tokens[2].Text),
+                    Path.GetFileName(tokens[2].Text),
+                    language);
+                this.currentFile = file;
+                this.files[tokens[1].Text] = file;
+                this.queuedLocation = null;
+                this.lastLocation = null;
+                this.isProducedOriginalSourceCodeLocation = false;
+            }
+        }
+        else
+        {
+            this.OutputError(
+                tokens[3], $"Invalid language operand: {tokens[3].Text}");
+        }
+    }
+
     private void ParseLocationDirective(
         Token directive, Token[] tokens)
     {
@@ -268,60 +306,42 @@ partial class Parser
                 directive,
                 $"Function directive is not defined.");
         }
-        else if (this.produceDebuggingInformation)
+        else if (tokens.Length < 6)
         {
-            if (tokens.Length <= 1)
-            {
-                this.OutputError(
-                    directive,
-                    $"Missing location operand.");
-            }
-            else if (!int.TryParse(tokens[1].Text, out var lineIndex))
+            this.OutputError(
+                tokens.Last(),
+                $"Missing location operand.");
+        }
+        else if (tokens.Length > 6)
+        {
+            this.OutputError(
+                tokens[6],
+                $"Too many operands.");
+        }
+        else if (!this.files.TryGetValue(tokens[1].Text, out var file))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Unknown file ID.");
+        }
+        else
+        {
+            var vs = tokens.
+                Skip(2).
+                Collect(token => int.TryParse(token.Text, out var vi) ? vi : default(int?)).
+                ToArray();
+            if (vs.Length != (tokens.Length - 2))
             {
                 this.OutputError(
                     directive,
                     $"Invalid operand: {tokens[1].Text}");
             }
-            else
+            else if (this.produceDebuggingInformation)
             {
-                switch (tokens.Length)
-                {
-                    // Only line index:
-                    case 2:
-                        this.queuedLocation = new(
-                            this.basePath, this.relativePath,
-                            lineIndex - 1, 0, lineIndex - 1, 255, null);
-                        this.isProducedOriginalSourceCodeLocation = false;
-                        break;
-                    case 3:
-                        this.OutputError(
-                            directive,
-                            $"Missing operand.");
-                        break;
-                    // Line index, relative path and language:
-                    case 4:
-                        if (Utilities.TryParseEnum<DocumentLanguage>(tokens[3].Text, out var language))
-                        {
-                            // NOT Utilities.GetDirectoryPath()
-                            this.basePath = Path.GetDirectoryName(tokens[2].Text);
-                            this.relativePath = Path.GetFileName(tokens[2].Text);
-                            this.queuedLocation = new(
-                                this.basePath, this.relativePath,
-                                lineIndex - 1, 0, lineIndex - 1, 255, language);
-                            this.isProducedOriginalSourceCodeLocation = false;
-                        }
-                        else
-                        {
-                            this.OutputError(
-                                tokens[3], $"Invalid language operand: {tokens[3].Text}");
-                        }
-                        break;
-                    default:
-                        this.OutputError(
-                            directive,
-                            $"Too many operands.");
-                        break;
-                }
+                var location = new Location(
+                    file, vs[0], vs[1], vs[2], vs[3]);
+                this.queuedLocation = location;
+                this.isProducedOriginalSourceCodeLocation = false;
             }
         }
     }
@@ -349,6 +369,10 @@ partial class Parser
             // Constant directive:
             case "constant":
                 this.ParseConstantDirective(directive, tokens);
+                break;
+            // File directive:
+            case "file":
+                this.ParseFileDirective(directive, tokens);
                 break;
             // Location directive:
             case "location":
