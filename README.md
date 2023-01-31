@@ -494,10 +494,10 @@ The file and location directive will produce sequence points into debugging info
   * The file directive can always declare, and will overwrite same ID.
 * The location directive indicates source code location.
   * First operand: ID for referring source code file.
-  * Second operand: Start line index. (1 based index)
-  * Third operand: Start column index. (1 based index)
-  * Forth operand: End line index. (1 based index)
-  * Fifth operand: End column index. (1 based index)
+  * Second operand: Start line index. (0 based index)
+  * Third operand: Start column index. (0 based index)
+  * Forth operand: End line index. (0 based index)
+  * Fifth operand: End column index. (0 based index, must larger than start)
   * The location directive can declare only in the function/initializer body.
 
 The language indicators is shown (not all):
