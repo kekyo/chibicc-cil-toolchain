@@ -32,7 +32,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.13.0,net6.0]
+chibias [0.15.0,net6.0]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -46,6 +46,8 @@ usage: chibias [options] <source path> [<source path> ...]
   -r                Reference assembly path
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
+      -gm           Produce mono debug symbol file
+      -gw           Produce windows proprietary debug symbol file
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
@@ -435,24 +437,70 @@ Elements placed in a constant directive are similar to global variables, but dif
 * Symbol names (`bar` in the above example) are treated like global variables and can be referenced by `ldsfld` opcode and likes.
   However, since the type of the retrieved instance will be of its own value type, and should be handled with care.
 
-### Location information
+### Structure
+
+The only types that can be defined are structure types.
+That is, types that inherit implicitly from `System.ValueType`:
 
 ```
+.structure foo
+    int32 a
+    int8 b
+    int32 c
+```
+
+By default, structure packing is left to the CLR.
+To specify explicitly:
+
+```
+.structure foo 4  ; pack=4
+    int32 a
+    int8 b
+    int32 c
+```
+
+Or gives an offset to each member:
+
+```
+.structure foo explicit
+    int32 a 0   ; offset=0
+    int8 b 4    ; offset=4
+    int32 c 5   ; offset=5
+```
+
+By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
+
+### Explicitly location information
+
+```
+.file 1 "/home/kouji/Projects/test.c" c
 .function int32 main
-    .location 10 "/home/kouji/Projects/test.c" c
+    .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456
     add
-    .location 11
+    .location 1 11 5 11 32
     ldc.i4 789
     sub
     ret
 ```
 
-The location directive will produce sequence points into debugging information.
+The file and location directive will produce sequence points into debugging information.
 
-* First operand: Line number (1 based index).
-* Second and third operands: Source file path and language indicator (Optional). Ignored case sensitive.
+* The file directive maps ID to source code file.
+  * First operand: ID (Valid any symbols include number, same as GAS's `.file` directive).
+  * Second operand: File path (or source code identity) string.
+  * Third operand: Language indicator, see listing below. (Optional)
+  * The file directive can always declare, and will overwrite same ID.
+* The location directive indicates source code location.
+  * First operand: ID for referring source code file.
+  * Second operand: Start line index. (1 based index)
+  * Third operand: Start column index. (1 based index)
+  * Forth operand: End line index. (1 based index)
+  * Fifth operand: End column index. (1 based index)
+  * The location directive can declare only in the function/initializer body.
+
+The language indicators is shown (not all):
 
 |Language indicator|Language|
 |:----|:----|
@@ -461,6 +509,7 @@ The location directive will produce sequence points into debugging information.
 |`cpp`|C++|
 |`csharp`|C#|
 |`fsharp`|F#|
+|`other`|-|
 
 Language indicator comes from [Mono.Cecil.Cil.DocumentLanguage](https://github.com/jbevain/cecil/blob/7b8ee049a151204997eecf587c69acc2f67c8405/Mono.Cecil.Cil/Document.cs#L27).
 
@@ -476,11 +525,9 @@ Might be implemented:
 * `OperandType`
   * InlineSwitch
 * Handling variable arguments.
-* Handling value type declaration.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Handling for target framework moniker.
   * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
-* Better handling for line-based number information.
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
 * And chibicc-cil specific requirements...
 

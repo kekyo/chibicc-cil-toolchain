@@ -31,33 +31,27 @@
 .class public abstract auto ansi sealed beforefieldinit C.module
        extends [mscorlib]System.Object
 {
-  .method public static native int  foo() cil managed
-  {
-    // Code size       7 (0x7)
-    .maxstack  8
-    IL_0000:  ldtoken    field valuetype C.rdata/'<constant_type>_$6' C.rdata::bar
-    IL_0005:  conv.i
-    IL_0006:  ret
-  } // end of method module::foo
-
-} // end of class C.module
-
-.class private abstract auto ansi sealed beforefieldinit C.rdata
-       extends [mscorlib]System.Object
-{
-  .class explicit ansi sealed nested assembly '<constant_type>_$6'
+  .class public explicit ansi sealed foo
          extends [System.Private.CoreLib]System.ValueType
   {
-    .pack 1
-    .size 6
-  } // end of class '<constant_type>_$6'
+    .field [0] public int32 a
+    .field [2] public int8 b
+    .field [6] public int32 c
+  } // end of class foo
 
-  .field static assembly initonly valuetype C.rdata/'<constant_type>_$6' bar at I_00002058
-} // end of class C.rdata
+  .method public static void  main() cil managed
+  {
+    // Code size       11 (0xb)
+    .maxstack  1
+    .locals (valuetype C.module/foo V_0)
+    IL_0000:  ldloca     V_0
+    IL_0004:  initobj    C.module/foo
+    IL_000a:  ret
+  } // end of method module::main
+
+} // end of class C.module
 
 
 // =============================================================
 
-.data cil I_00002058 = bytearray (
-                 01 02 31 32 B1 B2)                               // ..12..
 // *********** DISASSEMBLY COMPLETE ***********************

@@ -10,6 +10,7 @@
 using chibias.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
 using System;
 using System.Collections.Generic;
@@ -96,7 +97,11 @@ public sealed class Assembler
                     Where(field => field.IsPublic && field.IsStatic).
                     Select(field => (IMemberDefinition)field).
                     ToArray();
-                return methods.Concat(fields).ToArray();
+                var types = type.NestedTypes.
+                    Where(type => type.IsPublic && type.IsValueType).
+                    Select(type => (IMemberDefinition)type).
+                    ToArray();
+                return methods.Concat(fields).Concat(types).ToArray();
             }).
             // Ignored trailing existence symbol names.
             Distinct(MemberDefinitionNameComparer.Instance).
@@ -158,14 +163,6 @@ public sealed class Assembler
 
         var module = assembly.MainModule;
 
-        var cabiSpecificModuleType = new TypeDefinition(
-            "C",
-            "module",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
-            module.TypeSystem.Object);
-        module.Types.Add(cabiSpecificModuleType);
-
         //////////////////////////////////////////////////////////////
 
         var produceExecutable =
@@ -174,7 +171,6 @@ public sealed class Assembler
         var parser = new Parser(
             this.logger,
             module,
-            cabiSpecificModuleType,
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,
@@ -203,7 +199,8 @@ public sealed class Assembler
                     {
                         DebugSymbolTypes.None => null!,
                         DebugSymbolTypes.Embedded => new EmbeddedPortablePdbWriterProvider(),
-                        DebugSymbolTypes.WindowsProprietary => new PdbWriterProvider(),
+                        DebugSymbolTypes.Mono => new MdbWriterProvider(),
+                        DebugSymbolTypes.WindowsProprietary => new NativePdbWriterProvider(),
                         _ => new PortablePdbWriterProvider(),
                     },
                 });

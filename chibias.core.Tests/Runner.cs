@@ -82,6 +82,7 @@ partial class AssemblerTests
                         ReferenceAssemblyPaths = referenceAssemblyPaths,
                         AssemblyType = assemblyType,
                         TargetFrameworkMoniker = "net48",
+                        DebugSymbolType = DebugSymbolTypes.Embedded,
                     },
                     "source.s",
                     new StringReader(chibiasSourceCode));

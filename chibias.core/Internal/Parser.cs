@@ -20,40 +20,13 @@ namespace chibias.Internal;
 
 internal sealed partial class Parser
 {
-    private readonly struct Location
-    {
-        public readonly string? BasePath;
-        public readonly string RelativePath;
-        public readonly int StartLine;
-        public readonly int StartColumn;
-        public readonly int EndLine;
-        public readonly int EndColumn;
-        public readonly DocumentLanguage? Language;
-
-        public Location(
-            string? basePath,
-            string relativePath,
-            int startLine,
-            int startColumn,
-            int endLine,
-            int endColumn,
-            DocumentLanguage? language)
-        {
-            this.BasePath = basePath;
-            this.RelativePath = relativePath;
-            this.StartLine = startLine;
-            this.StartColumn = startColumn;
-            this.EndLine = endLine;
-            this.EndColumn = endColumn;
-            this.Language = language;
-        }
-    }
-
-    /////////////////////////////////////////////////////////////////////
+    private static readonly FileDescriptor unknown = 
+        new(null, "unknown.s", DocumentLanguage.Cil);
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
     private readonly TypeDefinition cabiSpecificModuleType;
+    private readonly TypeDefinition cabiSpecificRDataType;
     private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
     private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
     private readonly bool produceExecutable;
@@ -62,6 +35,7 @@ internal sealed partial class Parser
     private readonly Dictionary<string, Instruction> labelTargets = new();
     private readonly List<MethodDefinition> initializers = new();
     private readonly Dictionary<int, TypeDefinition> constantTypes = new();
+    private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
     private readonly List<Action> delayedLookupBranchTargetActions = new();
@@ -69,14 +43,15 @@ internal sealed partial class Parser
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
 
-    private string? basePath;
-    private string relativePath = "unknown.s";
+    private int placeholderIndex;
+    private FileDescriptor currentFile;
     private Location? queuedLocation;
     private Location? lastLocation;
     private bool isProducedOriginalSourceCodeLocation = true;
     private MethodDefinition? method;
     private MethodBody? body;
     private ICollection<Instruction>? instructions;
+    private TypeDefinition? structure;
     private bool caughtError;
 
     /////////////////////////////////////////////////////////////////////
@@ -84,15 +59,28 @@ internal sealed partial class Parser
     public Parser(
         ILogger logger,
         ModuleDefinition module,
-        TypeDefinition cabiSpecificModuleType,
         Dictionary<string, IMemberDefinition> cabiSpecificSymbols,
         TypeDefinition[] referenceTypes,
         bool produceExecutable,
         bool produceDebuggingInformation)
     {
         this.logger = logger;
+        
         this.module = module;
-        this.cabiSpecificModuleType = cabiSpecificModuleType;
+
+        this.cabiSpecificModuleType = new TypeDefinition(
+            "C",
+            "module",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+            this.module.TypeSystem.Object);
+        this.cabiSpecificRDataType = new TypeDefinition(
+            "C",
+            "rdata",
+            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+            this.module.TypeSystem.Object);
+
         this.cabiSpecificSymbols = cabiSpecificSymbols;
         this.referenceTypes = new(() => referenceTypes.
             ToDictionary(type => type.FullName));
@@ -101,6 +89,7 @@ internal sealed partial class Parser
         this.valueType = new(() =>
             this.module.ImportReference(
                 this.referenceTypes.Value["System.ValueType"]));
+        this.currentFile = unknown;
 
         // Known types
         this.knownTypes.Add("void", module.TypeSystem.Void);
@@ -143,8 +132,7 @@ internal sealed partial class Parser
 
     public void SetSourcePathDebuggerHint(string? basePath, string relativePath)
     {
-        this.basePath = basePath;
-        this.relativePath = relativePath;
+        this.currentFile = new(basePath, relativePath, DocumentLanguage.Cil);
         this.isProducedOriginalSourceCodeLocation = true;
         this.queuedLocation = null;
         this.lastLocation = null;
@@ -155,17 +143,33 @@ internal sealed partial class Parser
     private void OutputError(Token token, string message)
     {
         this.caughtError = true;
-        this.logger.Error($"{this.relativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
+        this.logger.Error($"{this.currentFile.RelativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
     }
 
     private void OutputError(Location location, string message)
     {
         this.caughtError = true;
-        this.logger.Error($"{location.RelativePath}({location.StartLine + 1},{location.StartColumn + 1}): {message}");
+        this.logger.Error($"{location.File.RelativePath}({location.StartLine + 1},{location.StartColumn + 1}): {message}");
     }
 
     private void OutputTrace(string message) =>
         this.logger.Trace($"{message}");
+
+    /////////////////////////////////////////////////////////////////////
+
+    private MethodDefinition CreateDummyMethod() =>
+        new($"<placeholder_method>_${placeholderIndex++}",
+            MethodAttributes.Private | MethodAttributes.Abstract,
+            this.module.TypeSystem.Void);
+
+    private FieldDefinition CreateDummyField() =>
+        new($"<placeholder_field>_${placeholderIndex++}",
+            FieldAttributes.Private | FieldAttributes.InitOnly,
+            this.module.TypeSystem.Int32);
+
+    private TypeDefinition CreateDummyType() =>
+        new("", $"<placeholder_type>_${placeholderIndex++}",
+            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
 
     /////////////////////////////////////////////////////////////////////
 
@@ -212,13 +216,29 @@ internal sealed partial class Parser
                     return false;
                 }
             default:
-                if (this.knownTypes.TryGetValue(name, out type!))
+                // IMPORTANT ORDER:
+                //   Will lookup before this module, because the types redefinition by C headers
+                //   each assembly (by generating chibias).
+                //   Always we use first finding type, silently ignored when multiple declarations.
+                if (this.cabiSpecificSymbols.TryGetValue(name, out var member) &&
+                    member is TypeDefinition td1)
+                {
+                    type = this.module.ImportReference(td1);
+                    return true;
+                }
+                else if (this.cabiSpecificModuleType.NestedTypes.
+                    FirstOrDefault(type => type.Name == name) is { } td2)
+                {
+                    type = td2;
+                    return true;
+                }
+                else if (this.knownTypes.TryGetValue(name, out type!))
                 {
                     return true;
                 }
-                else if (this.referenceTypes.Value.TryGetValue(name, out var td))
+                else if (this.referenceTypes.Value.TryGetValue(name, out var td3))
                 {
-                    type = td;
+                    type = this.module.ImportReference(td3);
                     return true;
                 }
                 else
@@ -241,7 +261,7 @@ internal sealed partial class Parser
                 member is MethodDefinition m &&
                 parameterTypeNames.Length == 0)
             {
-                method = m;
+                method = this.module.ImportReference(m);
                 return true;
             }
             else if (this.cabiSpecificModuleType.Methods.
@@ -283,7 +303,7 @@ internal sealed partial class Parser
             strictParameterTypeNames.SequenceEqual(
                 method.Parameters.Select(p => p.ParameterType.FullName))) is { } m3)
         {
-            method = m3;
+            method = this.module.ImportReference(m3);
             return true;
         }
         else
@@ -304,13 +324,19 @@ internal sealed partial class Parser
                 name, out var member) &&
                 member is FieldDefinition f)
             {
-                field = f;
+                field = this.module.ImportReference(f);
                 return true;
             }
             else if (this.cabiSpecificModuleType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
+                return true;
+            }
+            else if (this.cabiSpecificRDataType.Fields.
+                FirstOrDefault(field => field.Name == fieldName) is { } f3)
+            {
+                field = f3;
                 return true;
             }
             else
@@ -330,9 +356,9 @@ internal sealed partial class Parser
 
         // Take only public field at imported.
         if (type.Fields.FirstOrDefault(field =>
-            field.IsPublic && field.Name == fieldName) is { } f3)
+            field.IsPublic && field.Name == fieldName) is { } f4)
         {
-            field = f3;
+            field = this.module.ImportReference(f4);
             return true;
         }
         else
@@ -341,6 +367,126 @@ internal sealed partial class Parser
             return false;
         }
     }
+
+    /////////////////////////////////////////////////////////////////////
+
+    private void DelayLookingUpType(
+        string typeName,
+        Token typeNameToken,
+        Action<TypeReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetType(typeName, out var type))
+            {
+                action(type);
+            }
+            else
+            {
+                this.OutputError(
+                    typeNameToken,
+                    $"Could not find type: {typeName}");
+            }
+        });
+
+    private void DelayLookingUpType(
+        Token typeNameToken,
+        Action<TypeReference> action) =>
+        this.DelayLookingUpType(
+            typeNameToken.Text,
+            typeNameToken,
+            action);
+
+    private void DelayLookingUpType(
+        string typeName,
+        Location location,
+        Action<TypeReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetType(typeName, out var type))
+            {
+                action(type);
+            }
+            else
+            {
+                this.OutputError(
+                    location,
+                    $"Could not find type: {typeName}");
+            }
+        });
+
+    private void DelayLookingUpField(
+        Token fieldNameToken,
+        Action<FieldReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetField(fieldNameToken.Text, out var field))
+            {
+                action(field);
+            }
+            else
+            {
+                this.OutputError(
+                    fieldNameToken,
+                    $"Could not find type: {fieldNameToken.Text}");
+            }
+        });
+
+    private void DelayLookingUpField(
+        string fieldName,
+        Location location,
+        Action<FieldReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetField(fieldName, out var field))
+            {
+                action(field);
+            }
+            else
+            {
+                this.OutputError(
+                    location,
+                    $"Could not find field: {fieldName}");
+            }
+        });
+
+    private void DelayLookingUpMethod(
+        Token methodNameToken,
+        string[] parameterTypeNames,
+        Action<MethodReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetMethod(
+                methodNameToken.Text, parameterTypeNames, out var method))
+            {
+                action(method);
+            }
+            else
+            {
+                this.OutputError(
+                    methodNameToken,
+                    $"Could not find type: {methodNameToken.Text}");
+            }
+        });
+
+    private void DelayLookingUpMethod(
+        string methodName,
+        string[] parameterTypeNames,
+        Location location,
+        Action<MethodReference> action) =>
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetMethod(
+                methodName, parameterTypeNames, out var method))
+            {
+                action(method);
+            }
+            else
+            {
+                this.OutputError(
+                    location,
+                    $"Could not find type: {methodName}");
+            }
+        });
 
     /////////////////////////////////////////////////////////////////////
 
@@ -356,23 +502,32 @@ internal sealed partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     public void Parse(Token[] tokens)
     {
         if (tokens.FirstOrDefault() is { } token0)
         {
             switch (token0.Type)
             {
-                // Is it assembler directive?
+                // Is it an assembler directive?
                 case TokenTypes.Directive:
                     this.ParseDirective(token0, tokens);
                     break;
-                // Is it label?
+                // Is it a label?
                 case TokenTypes.Label:
                     this.ParseLabel(token0);
                     break;
-                // Is it OpCode?
-                case TokenTypes.Identity when Utilities.TryParseOpCode(token0.Text, out var opCode):
+                // Is it an OpCode?
+                case TokenTypes.Identity
+                    when this.instructions != null &&
+                         Utilities.TryParseOpCode(token0.Text, out var opCode):
                     this.ParseInstruction(opCode, tokens);
+                    break;
+                // Is it a structure member?
+                case TokenTypes.Identity
+                    when this.structure != null:
+                    this.ParseStructureMember(tokens);
                     break;
                 // Other, invalid syntax.
                 default:
@@ -384,12 +539,13 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    private void FinishCurrentFunction()
+    private void FinishCurrentState()
     {
         if (this.method != null)
         {
             Debug.Assert(this.instructions != null);
             Debug.Assert(this.body != null);
+            Debug.Assert(this.structure == null);
 
             if (!this.caughtError)
             {
@@ -406,11 +562,24 @@ internal sealed partial class Parser
             this.body = null;
             this.method = null;
         }
+
+        if (this.structure != null)
+        {
+            Debug.Assert(this.method == null);
+            Debug.Assert(this.instructions == null);
+            Debug.Assert(this.body == null);
+            
+            Debug.Assert(this.delayedLookupBranchTargetActions.Count == 0);
+            Debug.Assert(this.labelTargets.Count == 0);
+            Debug.Assert(this.willApplyLabelingNames.Count == 0);
+
+            this.structure = null;
+        }
     }
 
     public bool Finish(bool applyOptimization)
     {
-        this.FinishCurrentFunction();
+        this.FinishCurrentState();
 
         // main entry point lookup.
         if (this.produceExecutable)
@@ -423,12 +592,25 @@ internal sealed partial class Parser
             else
             {
                 this.caughtError = true;
-                this.logger.Error($"{this.relativePath}(1,1): Could not find main entry point.");
+                this.logger.Error($"{this.currentFile.RelativePath}(1,1): Could not find main entry point.");
             }
         }
 
         if (!this.caughtError)
         {
+            if (this.cabiSpecificModuleType.NestedTypes.Count >= 1 ||
+                this.cabiSpecificModuleType.Fields.Count >= 1 ||
+                this.cabiSpecificModuleType.Methods.Count >= 1)
+            {
+                this.module.Types.Add(this.cabiSpecificModuleType);
+            }
+
+            if (this.cabiSpecificRDataType.NestedTypes.Count >= 1 ||
+                this.cabiSpecificRDataType.Fields.Count >= 1)
+            {
+                this.module.Types.Add(this.cabiSpecificRDataType);
+            }
+
             // Append type initializer
             if (this.initializers.Count >= 1)
             {
@@ -487,17 +669,17 @@ internal sealed partial class Parser
                         {
                             if (this.locationByInstructions.TryGetValue(instruction, out var location))
                             {
-                                if (!documents.TryGetValue(location.RelativePath, out var document))
+                                if (!documents.TryGetValue(location.File.RelativePath, out var document))
                                 {
-                                    document = new(location.BasePath is { } basePath ?
-                                        Path.Combine(basePath, location.RelativePath) :
-                                        location.RelativePath);
+                                    document = new(location.File.BasePath is { } basePath ?
+                                        Path.Combine(basePath, location.File.RelativePath) :
+                                        location.File.RelativePath);
                                     document.Type = DocumentType.Text;
-                                    if (location.Language is { } language)
+                                    if (location.File.Language is { } language)
                                     {
                                         document.Language = language;
                                     }
-                                    documents.Add(location.RelativePath, document);
+                                    documents.Add(location.File.RelativePath, document);
                                 }
 
                                 var sequencePoint = new SequencePoint(
@@ -528,13 +710,14 @@ internal sealed partial class Parser
         }
 
         this.delayedLookupLocalMemberActions.Clear();
+        this.files.Clear();
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();
         this.initializers.Clear();
         this.constantTypes.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
-        this.relativePath = "unknown.s";
+        this.currentFile = unknown;
         this.queuedLocation = null;
         this.lastLocation = null;
 

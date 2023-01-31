@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
@@ -60,6 +61,17 @@ internal static class Utilities
             _ => 0,
         };
 
+    public static Instruction CreateInstruction(OpCode opCode, object operand) =>
+        operand switch
+        {
+            MethodReference method => Instruction.Create(opCode, method),
+            FieldReference field => Instruction.Create(opCode, field),
+            TypeReference type => Instruction.Create(opCode, type),
+            CallSite callSite => Instruction.Create(opCode, callSite),
+            Instruction instruction => Instruction.Create(opCode, instruction),
+            _ => throw new InvalidOperationException(),
+        };
+
 #if NET40 || NET45
     private static class ArrayEmpty<T>
     {
@@ -81,6 +93,21 @@ internal static class Utilities
     public static IEnumerable<TR> Collect<TR, T>(
         this IEnumerable<T> enumerable,
         Func<T, TR?> selector)
+        where TR : class
+    {
+        foreach (var item in enumerable)
+        {
+            if (selector(item) is { } value)
+            {
+                yield return value;
+            }
+        }
+    }
+
+    public static IEnumerable<TR> Collect<TR, T>(
+        this IEnumerable<T> enumerable,
+        Func<T, TR?> selector)
+        where TR : struct
     {
         foreach (var item in enumerable)
         {

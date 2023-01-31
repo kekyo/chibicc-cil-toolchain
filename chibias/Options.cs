@@ -97,6 +97,14 @@ internal sealed class Options
                                         options.AssemblerOptions.DebugSymbolType =
                                             DebugSymbolTypes.Embedded;
                                         continue;
+                                    case 'm':
+                                        options.AssemblerOptions.DebugSymbolType =
+                                            DebugSymbolTypes.Mono;
+                                        continue;
+                                    case 'w':
+                                        options.AssemblerOptions.DebugSymbolType =
+                                            DebugSymbolTypes.WindowsProprietary;
+                                        continue;
                                 }
                             }
                             else if (arg.Length == 2)
@@ -258,6 +266,8 @@ internal sealed class Options
         tw.WriteLine("  -r                Reference assembly path");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
+        tw.WriteLine("      -gm           Produce mono debug symbol file");
+        tw.WriteLine("      -gw           Produce windows proprietary debug symbol file");
         tw.WriteLine("      -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");

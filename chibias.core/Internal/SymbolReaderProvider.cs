@@ -141,7 +141,15 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
         {
         }
 
-        ms.Position = 0;
-        return pdbProvider.GetSymbolReader(module, ms);
+        try
+        {
+            ms.Position = 0;
+            return pdbProvider.GetSymbolReader(module, ms);
+        }
+        catch
+        {
+        }
+
+        return null;
     }
 }

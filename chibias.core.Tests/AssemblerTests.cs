@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using NUnit.Framework;
+using System;
 using System.Threading.Tasks;
 
 using static VerifyNUnit.Verifier;
@@ -41,8 +42,9 @@ public sealed partial class AssemblerTests
     public Task Location1()
     {
         var actual = Run(@"
+            .file 1 ""abc.c"" c
             .function int32 main
-                .location 123
+                .location 1 123 8 123 20
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -52,9 +54,15 @@ public sealed partial class AssemblerTests
     public Task Location2()
     {
         var actual = Run(@"
+            .file 1 ""abc.c"" c
             .function int32 main
-                .location 123 test.c c
+                .location 1 123 8 123 20
                 ldc.i4.1
+                ldc.i4.2
+                add
+                .location 1 124 8 124 12
+                ldc.i4.6
+                sub
                 ret");
         return Verify(actual);
     }
@@ -937,6 +945,76 @@ public sealed partial class AssemblerTests
                 ldftn System.Int32.Parse string
                 calli int32 string
                 ret");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task Structure1()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure2()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo 2
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure3()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo explicit
+                int32 a 0
+                int8 b 2
+                int32 c 6");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure4()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                bar b
+                int32 c
+            .structure bar
+                int16 a
+                int64 b
+                int32 c");
         return Verify(actual);
     }
 }
