@@ -429,9 +429,13 @@ partial class Parser
         {
             var vs = tokens.
                 Skip(2).
-                Collect(token => int.TryParse(token.Text, out var vi) ? vi : default(int?)).
+                Collect(token =>
+                    (int.TryParse(token.Text, out var vi) && vi >= 0) ?
+                        vi : default(int?)).
                 ToArray();
-            if (vs.Length != (tokens.Length - 2))
+            if ((vs.Length != (tokens.Length - 2)) ||
+                (vs[0] > vs[2]) ||
+                (vs[1] >= vs[3]))
             {
                 this.OutputError(
                     directive,
