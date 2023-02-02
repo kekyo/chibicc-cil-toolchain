@@ -33,7 +33,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
   .method public static void  main() cil managed
@@ -44,9 +44,9 @@
     IL_0000:  ldstr      "Hello world"
     IL_0005:  call       void [System.Console]System.Console::WriteLine(string)
     IL_000a:  ret
-  } // end of method module::main
+  } // end of method text::main
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

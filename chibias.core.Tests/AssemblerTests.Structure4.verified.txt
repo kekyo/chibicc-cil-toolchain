@@ -28,18 +28,18 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
-  .class public sequential ansi sealed foo
+  .class sequential ansi sealed nested public foo
          extends [System.Private.CoreLib]System.ValueType
   {
     .field public int32 a
-    .field public valuetype C.module/bar b
+    .field public valuetype C.text/bar b
     .field public int32 c
   } // end of class foo
 
-  .class public sequential ansi sealed bar
+  .class sequential ansi sealed nested public bar
          extends [System.Private.CoreLib]System.ValueType
   {
     .field public int16 a
@@ -51,13 +51,13 @@
   {
     // Code size       11 (0xb)
     .maxstack  1
-    .locals (valuetype C.module/foo V_0)
+    .locals (valuetype C.text/foo V_0)
     IL_0000:  ldloca     V_0
-    IL_0004:  initobj    C.module/foo
+    IL_0004:  initobj    C.text/foo
     IL_000a:  ret
-  } // end of method module::main
+  } // end of method text::main
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

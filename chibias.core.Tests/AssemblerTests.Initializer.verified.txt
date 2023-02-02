@@ -23,7 +23,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
   .field public static int32 givalue
@@ -32,20 +32,20 @@
     // Code size       11 (0xb)
     .maxstack  8
     IL_0000:  ldc.i4     0x7b
-    IL_0005:  stsfld     int32 C.module::givalue
+    IL_0005:  stsfld     int32 C.text::givalue
     IL_000a:  ret
-  } // end of method module::'<initializer>_$0'
+  } // end of method text::'<initializer>_$0'
 
   .method private hidebysig specialname rtspecialname static 
           void  .cctor() cil managed
   {
     // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  call       void C.module::'<initializer>_$0'()
+    IL_0000:  call       void C.text::'<initializer>_$0'()
     IL_0005:  ret
-  } // end of method module::.cctor
+  } // end of method text::.cctor
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

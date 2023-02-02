@@ -295,18 +295,18 @@ Then:
 $ chibias -r test.dll main.s
 ```
 
-The functions (.NET CIL methods) are placed into single class named `C.module`.
+The functions (.NET CIL methods) are placed into single class named `C.text`.
 That mapping is:
 
-* `int32 main` --> `public static int32 C.module::main()`
-* `int32 add2 a:int32 b:int32` --> `public static int32 C.module::add2(int32 a, int32 b)`
+* `int32 main` --> `public static int32 C.text::main()`
+* `int32 add2 a:int32 b:int32` --> `public static int32 C.text::add2(int32 a, int32 b)`
 
 Pseudo code in C# (test.dll):
 
 ```csharp
 namespace C;
 
-public static class module
+public static class text
 {
     public static int add2(int a, int b) => a + b;
 }
@@ -316,13 +316,13 @@ Pseudo code in C# (main.exe):
 
 ```csharp
 extern alias test;
-using test_module = test::C.module;
+using test_text = test::C.text;
 
 namespace C;
 
-public static class module
+public static class text
 {
-    public static int main() => test_module::add2(1, 2);
+    public static int main() => test_text::add2(1, 2);
 }
 ```
 
@@ -382,7 +382,7 @@ Pseudo code in C#:
 ```csharp
 namespace C;
 
-public static class module
+public static class text
 {
     public static int main()
     {
@@ -407,7 +407,7 @@ This is used to write custom code to initialize global variables:
 ```
 
 Initializer directives may be used any number of times in the source code.
-They are called from the real type initializer of the `C.module` class.
+They are called from the real type initializer of the `C.text` class.
 
 However, the order cannot be specified.
 The relationship of one Initializer depending on the other is not taken into account.
@@ -527,7 +527,7 @@ Might be implemented:
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Handling for target framework moniker.
-  * Refers `System.Object` from `C.module` base class, is it referenced to `mscorlib` or `System.Runtime` ?
+  * Refers `System.Object` from `C.text` base class, is it referenced to `mscorlib` or `System.Runtime` ?
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
 * And chibicc-cil specific requirements...
 

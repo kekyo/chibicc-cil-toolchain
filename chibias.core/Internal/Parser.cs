@@ -25,7 +25,7 @@ internal sealed partial class Parser
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
-    private readonly TypeDefinition cabiSpecificModuleType;
+    private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiSpecificRDataType;
     private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
     private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
@@ -68,9 +68,9 @@ internal sealed partial class Parser
         
         this.module = module;
 
-        this.cabiSpecificModuleType = new TypeDefinition(
+        this.cabiTextType = new TypeDefinition(
             "C",
-            "module",
+            "text",
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
@@ -234,7 +234,7 @@ internal sealed partial class Parser
                     type = this.Import(tr1);
                     return true;
                 }
-                else if (this.cabiSpecificModuleType.NestedTypes.
+                else if (this.cabiTextType.NestedTypes.
                     FirstOrDefault(type => type.Name == name) is { } td2)
                 {
                     type = td2;
@@ -272,7 +272,7 @@ internal sealed partial class Parser
                 method = this.Import(m);
                 return true;
             }
-            else if (this.cabiSpecificModuleType.Methods.
+            else if (this.cabiTextType.Methods.
                 FirstOrDefault(method => method.Name == methodName) is { } m2)
             {
                 // In this case, we do not check matching any parameter types.
@@ -335,7 +335,7 @@ internal sealed partial class Parser
                 field = this.Import(f);
                 return true;
             }
-            else if (this.cabiSpecificModuleType.Fields.
+            else if (this.cabiTextType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
@@ -592,7 +592,7 @@ internal sealed partial class Parser
         // main entry point lookup.
         if (this.produceExecutable)
         {
-            if (this.cabiSpecificModuleType.Methods.
+            if (this.cabiTextType.Methods.
                 FirstOrDefault(m => m.Name == "main") is { } main)
             {
                 this.module.EntryPoint = main;
@@ -606,11 +606,11 @@ internal sealed partial class Parser
 
         if (!this.caughtError)
         {
-            if (this.cabiSpecificModuleType.NestedTypes.Count >= 1 ||
-                this.cabiSpecificModuleType.Fields.Count >= 1 ||
-                this.cabiSpecificModuleType.Methods.Count >= 1)
+            if (this.cabiTextType.NestedTypes.Count >= 1 ||
+                this.cabiTextType.Fields.Count >= 1 ||
+                this.cabiTextType.Methods.Count >= 1)
             {
-                this.module.Types.Add(this.cabiSpecificModuleType);
+                this.module.Types.Add(this.cabiTextType);
             }
 
             if (this.cabiSpecificRDataType.NestedTypes.Count >= 1 ||
@@ -630,7 +630,7 @@ internal sealed partial class Parser
                     MethodAttributes.SpecialName |
                     MethodAttributes.RTSpecialName,
                     this.module.TypeSystem.Void);
-                this.cabiSpecificModuleType.Methods.Add(typeInitializer);
+                this.cabiTextType.Methods.Add(typeInitializer);
 
                 var body = typeInitializer.Body;
                 var instructions = body.Instructions;
@@ -654,7 +654,7 @@ internal sealed partial class Parser
             ///////////////////////////////////////////////
 
             var documents = new Dictionary<string, Document>();
-            foreach (var method in this.cabiSpecificModuleType.Methods)
+            foreach (var method in this.cabiTextType.Methods)
             {
                 if (method.Body.Instructions.Count >= 1)
                 {

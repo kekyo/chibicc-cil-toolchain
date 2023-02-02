@@ -1,7 +1,7 @@
 ﻿.assembly tmp2
 {
 }
-.class public auto ansi abstract sealed beforefieldinit C.module
+.class public auto ansi abstract sealed beforefieldinit C.text
   extends [mscorlib]System.Object
 {
   .field public static int32 gvalue

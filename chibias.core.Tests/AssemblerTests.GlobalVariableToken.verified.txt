@@ -23,7 +23,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
   .field public static int32 bar
@@ -31,12 +31,12 @@
   {
     // Code size       7 (0x7)
     .maxstack  8
-    IL_0000:  ldtoken    field int32 C.module::bar
+    IL_0000:  ldtoken    field int32 C.text::bar
     IL_0005:  conv.i
     IL_0006:  ret
-  } // end of method module::foo
+  } // end of method text::foo
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

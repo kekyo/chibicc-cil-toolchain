@@ -38,7 +38,7 @@ partial class Parser
             this.method.Parameters.Add(parameter);
         }
 
-        this.cabiSpecificModuleType.Methods.Add(this.method);
+        this.cabiTextType.Methods.Add(this.method);
 
         this.body = this.method.Body;
         this.body.InitLocals = false;   // Derived C behavior.
@@ -165,7 +165,7 @@ partial class Parser
                 globalName,
                 FieldAttributes.Public | FieldAttributes.Static,
                 globalType);
-            this.cabiSpecificModuleType.Fields.Add(field);
+            this.cabiTextType.Fields.Add(field);
         }
     }
 
@@ -300,7 +300,7 @@ partial class Parser
                     structureType.PackingSize = ps;
                 }
 
-                this.cabiSpecificModuleType.NestedTypes.Add(structureType);
+                this.cabiTextType.NestedTypes.Add(structureType);
                 this.structure = structureType;
             }
         }

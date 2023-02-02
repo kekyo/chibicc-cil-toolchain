@@ -23,17 +23,17 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
   .method public static native int  foo() cil managed
   {
     // Code size       7 (0x7)
     .maxstack  8
-    IL_0000:  ldtoken    method int32 C.module::bar()
+    IL_0000:  ldtoken    method int32 C.text::bar()
     IL_0005:  conv.i
     IL_0006:  ret
-  } // end of method module::foo
+  } // end of method text::foo
 
   .method public static int32  bar() cil managed
   {
@@ -41,9 +41,9 @@
     .maxstack  8
     IL_0000:  ldc.i4.1
     IL_0001:  ret
-  } // end of method module::bar
+  } // end of method text::bar
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

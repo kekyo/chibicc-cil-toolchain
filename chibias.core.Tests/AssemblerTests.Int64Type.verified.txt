@@ -23,7 +23,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
   .method public static int64  foo() cil managed
@@ -32,9 +32,9 @@
     .maxstack  8
     IL_0000:  ldc.i8     0x1
     IL_0009:  ret
-  } // end of method module::foo
+  } // end of method text::foo
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

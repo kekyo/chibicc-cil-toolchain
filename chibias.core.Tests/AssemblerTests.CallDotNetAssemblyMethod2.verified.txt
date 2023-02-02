@@ -28,7 +28,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
   .method public static void  main() cil managed
@@ -43,9 +43,9 @@
                                                                                                                                                                           valuetype [System.Private.CoreLib]System.Runtime.InteropServices.GCHandleType)
     IL_000c:  pop
     IL_000d:  ret
-  } // end of method module::main
+  } // end of method text::main
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

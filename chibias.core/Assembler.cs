@@ -86,7 +86,7 @@ public sealed class Assembler
         return referenceTypes.
             Where(type =>
                 type.IsClass && type.IsAbstract && type.IsSealed &&
-                type.FullName == "C.module").
+                type.Namespace == "C").
             SelectMany(type =>
             {
                 var methods = type.Methods.
