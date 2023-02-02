@@ -31,7 +31,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.text
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
   .method public static int32  main() cil managed
@@ -39,8 +39,8 @@
     // Code size       16 (0x10)
     .maxstack  8
     IL_0000:  ldc.i4     0x7b
-    IL_0005:  stsfld     int32 [tmp2]C.text::gvalue
-    IL_000a:  ldsfld     int32 [tmp2]C.text::gvalue
+    IL_0005:  stsfld     int32 [tmp2]C.data::gvalue
+    IL_000a:  ldsfld     int32 [tmp2]C.data::gvalue
     IL_000f:  ret
   } // end of method text::main
 

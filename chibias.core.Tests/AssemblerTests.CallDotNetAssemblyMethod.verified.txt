@@ -33,7 +33,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.text
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
   .method public static void  main() cil managed

@@ -1,11 +1,14 @@
 ﻿.assembly tmp2
 {
 }
-.class public auto ansi abstract sealed beforefieldinit C.text
+.class public auto ansi abstract sealed beforefieldinit C.data
   extends [mscorlib]System.Object
 {
   .field public static int32 gvalue
-
+}
+.class public auto ansi abstract sealed C.text
+  extends [mscorlib]System.Object
+{
   .method public hidebysig static int32 ret3() cil managed
   {
     ldc.i4.3

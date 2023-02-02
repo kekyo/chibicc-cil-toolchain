@@ -375,21 +375,25 @@ However, excludes declarations outside function body:
 .global int32 foo
 ```
 
-Global variable name strategy complies with CABI.
+Global variable name strategy complies with CABI excepts placing into `C.data` class.
 
 Pseudo code in C#:
 
 ```csharp
 namespace C;
 
+public static class data
+{
+    public static int foo;
+}
+
 public static class text
 {
     public static int main()
     {
-        foo = 123;
-        return foo;
+        data.foo = 123;
+        return data.foo;
     }
-    public static int foo;
 }
 ```
 
@@ -407,7 +411,7 @@ This is used to write custom code to initialize global variables:
 ```
 
 Initializer directives may be used any number of times in the source code.
-They are called from the real type initializer of the `C.text` class.
+They are called from the real type initializer of the `C.data` class.
 
 However, the order cannot be specified.
 The relationship of one Initializer depending on the other is not taken into account.

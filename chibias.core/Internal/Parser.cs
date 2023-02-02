@@ -26,15 +26,14 @@ internal sealed partial class Parser
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
     private readonly TypeDefinition cabiTextType;
-    private readonly TypeDefinition cabiRDataType;
+    private readonly TypeDefinition cabiDataType;
+    private readonly TypeDefinition cabiConstantType;
     private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
     private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
-    private readonly bool produceExecutable;
-    private readonly bool produceDebuggingInformation;
     private readonly Dictionary<string, TypeReference> knownTypes = new();
     private readonly Dictionary<string, Instruction> labelTargets = new();
     private readonly List<MethodDefinition> initializers = new();
-    private readonly Dictionary<int, TypeDefinition> constantTypes = new();
+    private readonly Dictionary<int, TypeDefinition> constantTypeBySize = new();
     private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
@@ -42,6 +41,8 @@ internal sealed partial class Parser
     private readonly List<Action> delayedLookupLocalMemberActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
+    private readonly bool produceExecutable;
+    private readonly bool produceDebuggingInformation;
 
     private int placeholderIndex;
     private FileDescriptor currentFile;
@@ -72,11 +73,17 @@ internal sealed partial class Parser
             "C",
             "text",
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class,
+            this.module.TypeSystem.Object);
+        this.cabiDataType = new TypeDefinition(
+            "C",
+            "data",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
-        this.cabiRDataType = new TypeDefinition(
-            "C",
-            "rdata",
+        this.cabiConstantType = new TypeDefinition(
+            "",
+            "constant",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
@@ -336,13 +343,13 @@ internal sealed partial class Parser
                 field = this.Import(f);
                 return true;
             }
-            else if (this.cabiTextType.Fields.
+            else if (this.cabiDataType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
                 return true;
             }
-            else if (this.cabiRDataType.Fields.
+            else if (this.cabiConstantType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f3)
             {
                 field = f3;
@@ -607,17 +614,19 @@ internal sealed partial class Parser
 
         if (!this.caughtError)
         {
-            if (this.cabiTextType.NestedTypes.Count >= 1 ||
-                this.cabiTextType.Fields.Count >= 1 ||
-                this.cabiTextType.Methods.Count >= 1)
+            if (this.cabiTextType.Methods.Count >= 1)
             {
                 this.module.Types.Add(this.cabiTextType);
             }
 
-            if (this.cabiRDataType.NestedTypes.Count >= 1 ||
-                this.cabiRDataType.Fields.Count >= 1)
+            if (this.cabiDataType.Fields.Count >= 1)
             {
-                this.module.Types.Add(this.cabiRDataType);
+                this.module.Types.Add(this.cabiDataType);
+            }
+
+            if (this.cabiConstantType.Fields.Count >= 1)
+            {
+                this.module.Types.Add(this.cabiConstantType);
             }
 
             // Append type initializer
@@ -631,7 +640,7 @@ internal sealed partial class Parser
                     MethodAttributes.SpecialName |
                     MethodAttributes.RTSpecialName,
                     this.module.TypeSystem.Void);
-                this.cabiTextType.Methods.Add(typeInitializer);
+                this.cabiDataType.Methods.Add(typeInitializer);
 
                 var body = typeInitializer.Body;
                 var instructions = body.Instructions;
@@ -723,7 +732,7 @@ internal sealed partial class Parser
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();
         this.initializers.Clear();
-        this.constantTypes.Clear();
+        this.constantTypeBySize.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
         this.currentFile = unknown;

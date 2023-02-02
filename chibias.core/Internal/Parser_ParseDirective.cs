@@ -38,8 +38,6 @@ partial class Parser
             this.method.Parameters.Add(parameter);
         }
 
-        this.cabiTextType.Methods.Add(this.method);
-
         this.body = this.method.Body;
         this.body.InitLocals = false;   // Derived C behavior.
 
@@ -67,7 +65,7 @@ partial class Parser
 
                 this.DelayLookingUpType(
                     tokens[1],
-                    type => method.ReturnType = type);
+                    type => method.ReturnType = type);   // (captured)
             }
 
             var parameters = tokens.Skip(3).
@@ -113,6 +111,7 @@ partial class Parser
                 returnType,
                 parameters,
                 true);
+            this.cabiTextType.Methods.Add(method);
         }
     }
 
@@ -125,13 +124,14 @@ partial class Parser
         }
         else
         {
-            var functionName = $"<initializer>_${this.initializers.Count}";
+            var functionName = $"initializer_{this.initializers.Count}";
 
             var initializer = this.SetupFunctionBodyDirective(
                 functionName,
                 this.module.TypeSystem.Void,
                 Utilities.Empty<ParameterDefinition>(),
                 false);
+            this.cabiDataType.Methods.Add(initializer);
 
             this.initializers.Add(initializer);
         }
@@ -158,14 +158,14 @@ partial class Parser
 
                 this.DelayLookingUpType(
                     tokens[1],
-                    type => field.FieldType = type);
+                    type => field.FieldType = type);   // (captured)
             }
 
             field = new FieldDefinition(
                 globalName,
                 FieldAttributes.Public | FieldAttributes.Static,
                 globalType);
-            this.cabiTextType.Fields.Add(field);
+            this.cabiDataType.Fields.Add(field);
         }
     }
 
@@ -201,7 +201,7 @@ partial class Parser
 
                 this.DelayLookingUpType(
                     tokens[1],
-                    type => variable.VariableType = type);
+                    type => variable.VariableType = type);   // (captured)
             }
 
             variable = new VariableDefinition(localType);
@@ -334,20 +334,20 @@ partial class Parser
 
             var dataName = tokens[1].Text;
 
-            if (!this.constantTypes.TryGetValue(data.Length, out var constantType))
+            if (!this.constantTypeBySize.TryGetValue(data.Length, out var constantType))
             {
-                var constantTypeName = $"<constant_type>_${data.Length}";
+                var constantTypeName = $"constant_size_{data.Length}";
 
                 constantType = new TypeDefinition(
                     "",
                     constantTypeName,
-                    TypeAttributes.NestedAssembly | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
+                    TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
                     this.valueType.Value);
                 constantType.PackingSize = 1;
                 constantType.ClassSize = data.Length;
 
-                this.cabiRDataType.NestedTypes.Add(constantType);
-                this.constantTypes.Add(data.Length, constantType);
+                this.module.Types.Add(constantType);
+                this.constantTypeBySize.Add(data.Length, constantType);
             }
 
             var field = new FieldDefinition(
@@ -356,7 +356,7 @@ partial class Parser
                 constantType);
             field.InitialValue = data;
 
-            this.cabiRDataType.Fields.Add(field);
+            this.cabiConstantType.Fields.Add(field);
         }
     }
 

@@ -36,7 +36,7 @@
   .field public int32 c
 } // end of class C.type.foo
 
-.class public abstract auto ansi sealed beforefieldinit C.text
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
   .method public static void  main() cil managed
