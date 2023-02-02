@@ -28,36 +28,36 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public sequential ansi sealed C.type.foo
+       extends [System.Private.CoreLib]System.ValueType
+{
+  .field public int32 a
+  .field public valuetype C.type.bar b
+  .field public int32 c
+} // end of class C.type.foo
+
+.class public sequential ansi sealed C.type.bar
+       extends [System.Private.CoreLib]System.ValueType
+{
+  .field public int16 a
+  .field public int64 b
+  .field public int32 c
+} // end of class C.type.bar
+
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .class public sequential ansi sealed foo
-         extends [System.Private.CoreLib]System.ValueType
-  {
-    .field public int32 a
-    .field public valuetype C.module/bar b
-    .field public int32 c
-  } // end of class foo
-
-  .class public sequential ansi sealed bar
-         extends [System.Private.CoreLib]System.ValueType
-  {
-    .field public int16 a
-    .field public int64 b
-    .field public int32 c
-  } // end of class bar
-
   .method public static void  main() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  1
-    .locals (valuetype C.module/foo V_0)
+    .locals (valuetype C.type.foo V_0)
     IL_0000:  ldloca     V_0
-    IL_0004:  initobj    C.module/foo
+    IL_0004:  initobj    C.type.foo
     IL_000a:  ret
-  } // end of method module::main
+  } // end of method text::main
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

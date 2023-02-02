@@ -28,32 +28,32 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class private explicit ansi sealed constant_size_6
+       extends [System.Private.CoreLib]System.ValueType
+{
+  .pack 1
+  .size 6
+} // end of class constant_size_6
+
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
   .method public static native int  foo() cil managed
   {
     // Code size       7 (0x7)
     .maxstack  8
-    IL_0000:  ldtoken    field valuetype C.rdata/'<constant_type>_$6' C.rdata::bar
+    IL_0000:  ldtoken    field valuetype constant_size_6 constant::bar
     IL_0005:  conv.i
     IL_0006:  ret
-  } // end of method module::foo
+  } // end of method text::foo
 
-} // end of class C.module
+} // end of class C.text
 
-.class private abstract auto ansi sealed beforefieldinit C.rdata
+.class private abstract auto ansi sealed beforefieldinit constant
        extends [mscorlib]System.Object
 {
-  .class explicit ansi sealed nested assembly '<constant_type>_$6'
-         extends [System.Private.CoreLib]System.ValueType
-  {
-    .pack 1
-    .size 6
-  } // end of class '<constant_type>_$6'
-
-  .field static assembly initonly valuetype C.rdata/'<constant_type>_$6' bar at I_00002058
-} // end of class C.rdata
+  .field static assembly initonly valuetype constant_size_6 bar at I_00002058
+} // end of class constant
 
 
 // =============================================================

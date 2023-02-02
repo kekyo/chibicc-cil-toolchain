@@ -25,16 +25,15 @@ internal sealed partial class Parser
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
-    private readonly TypeDefinition cabiSpecificModuleType;
-    private readonly TypeDefinition cabiSpecificRDataType;
-    private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
-    private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
-    private readonly bool produceExecutable;
-    private readonly bool produceDebuggingInformation;
+    private readonly TypeDefinition cabiTextType;
+    private readonly TypeDefinition cabiDataType;
+    private readonly TypeDefinition cabiConstantType;
+    private readonly MemberDictionary<MemberReference> cabiSpecificSymbols;
+    private readonly MemberDictionary<TypeDefinition> referenceTypes;
     private readonly Dictionary<string, TypeReference> knownTypes = new();
     private readonly Dictionary<string, Instruction> labelTargets = new();
     private readonly List<MethodDefinition> initializers = new();
-    private readonly Dictionary<int, TypeDefinition> constantTypes = new();
+    private readonly Dictionary<int, TypeDefinition> constantTypeBySize = new();
     private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
@@ -42,6 +41,8 @@ internal sealed partial class Parser
     private readonly List<Action> delayedLookupLocalMemberActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
+    private readonly bool produceExecutable;
+    private readonly bool produceDebuggingInformation;
 
     private int placeholderIndex;
     private FileDescriptor currentFile;
@@ -59,8 +60,8 @@ internal sealed partial class Parser
     public Parser(
         ILogger logger,
         ModuleDefinition module,
-        Dictionary<string, IMemberDefinition> cabiSpecificSymbols,
-        TypeDefinition[] referenceTypes,
+        MemberDictionary<MemberReference> cabiSpecificSymbols,
+        TypeDefinitionCache referenceTypes,
         bool produceExecutable,
         bool produceDebuggingInformation)
     {
@@ -68,27 +69,33 @@ internal sealed partial class Parser
         
         this.module = module;
 
-        this.cabiSpecificModuleType = new TypeDefinition(
+        this.cabiTextType = new TypeDefinition(
             "C",
-            "module",
+            "text",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class,
+            this.module.TypeSystem.Object);
+        this.cabiDataType = new TypeDefinition(
+            "C",
+            "data",
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
-        this.cabiSpecificRDataType = new TypeDefinition(
-            "C",
-            "rdata",
+        this.cabiConstantType = new TypeDefinition(
+            "",
+            "constant",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
 
         this.cabiSpecificSymbols = cabiSpecificSymbols;
-        this.referenceTypes = new(() => referenceTypes.
-            ToDictionary(type => type.FullName));
+        this.referenceTypes = new(
+            referenceTypes.OfType<TypeDefinition>(),
+            type => type.FullName);
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
         this.valueType = new(() =>
-            this.module.ImportReference(
-                this.referenceTypes.Value["System.ValueType"]));
+            this.Import(this.referenceTypes.TryGetMember("System.ValueType", out var type) ? type : null!));
         this.currentFile = unknown;
 
         // Known types
@@ -171,6 +178,18 @@ internal sealed partial class Parser
         new("", $"<placeholder_type>_${placeholderIndex++}",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
 
+    private TypeReference Import(TypeReference type) =>
+        (type.Module?.Equals(this.module) ?? type is TypeDefinition) ?
+            type : this.module.ImportReference(type);
+
+    private MethodReference Import(MethodReference method) =>
+        (method.Module?.Equals(this.module) ?? method is MethodDefinition) ?
+            method : this.module.ImportReference(method);
+
+    private FieldReference Import(FieldReference field) =>
+        (field.Module?.Equals(this.module) ?? field is FieldDefinition) ?
+            field : this.module.ImportReference(field);
+
     /////////////////////////////////////////////////////////////////////
 
     private bool TryGetType(
@@ -182,8 +201,7 @@ internal sealed partial class Parser
             case '*':
                 if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType1))
                 {
-                    type = new PointerType(
-                        this.module.ImportReference(preType1));
+                    type = new PointerType(this.Import(preType1));
                     return true;
                 }
                 else
@@ -194,8 +212,7 @@ internal sealed partial class Parser
             case '&':
                 if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType2))
                 {
-                    type = new ByReferenceType(
-                        this.module.ImportReference(preType2));
+                    type = new ByReferenceType(this.Import(preType2));
                     return true;
                 }
                 else
@@ -206,8 +223,7 @@ internal sealed partial class Parser
             case ']' when name.Length >= 2 && name[name.Length - 2] == '[':
                 if (this.TryGetType(name.Substring(0, name.Length - 2), out var preType3))
                 {
-                    type = new ArrayType(
-                        this.module.ImportReference(preType3));
+                    type = new ArrayType(this.Import(preType3));
                     return true;
                 }
                 else
@@ -220,13 +236,13 @@ internal sealed partial class Parser
                 //   Will lookup before this module, because the types redefinition by C headers
                 //   each assembly (by generating chibias).
                 //   Always we use first finding type, silently ignored when multiple declarations.
-                if (this.cabiSpecificSymbols.TryGetValue(name, out var member) &&
-                    member is TypeDefinition td1)
+                if (this.cabiSpecificSymbols.TryGetMember<TypeReference>(name, out var tr1))
                 {
-                    type = this.module.ImportReference(td1);
+                    type = this.Import(tr1);
                     return true;
                 }
-                else if (this.cabiSpecificModuleType.NestedTypes.
+                else if (this.module.Types.
+                    Where(type => type.Namespace == "C.type").
                     FirstOrDefault(type => type.Name == name) is { } td2)
                 {
                     type = td2;
@@ -236,9 +252,9 @@ internal sealed partial class Parser
                 {
                     return true;
                 }
-                else if (this.referenceTypes.Value.TryGetValue(name, out var td3))
+                else if (this.referenceTypes.TryGetMember(name, out var td3))
                 {
-                    type = this.module.ImportReference(td3);
+                    type = this.Import(td3);
                     return true;
                 }
                 else
@@ -256,15 +272,13 @@ internal sealed partial class Parser
         var methodName = name.Substring(methodNameIndex + 1);
         if (methodNameIndex <= 0)
         {
-            if (this.cabiSpecificSymbols.TryGetValue(
-                methodName, out var member) &&
-                member is MethodDefinition m &&
+            if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m) &&
                 parameterTypeNames.Length == 0)
             {
-                method = this.module.ImportReference(m);
+                method = this.Import(m);
                 return true;
             }
-            else if (this.cabiSpecificModuleType.Methods.
+            else if (this.cabiTextType.Methods.
                 FirstOrDefault(method => method.Name == methodName) is { } m2)
             {
                 // In this case, we do not check matching any parameter types.
@@ -281,7 +295,7 @@ internal sealed partial class Parser
 
         var typeName = name.Substring(0, methodNameIndex);
 
-        if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
+        if (!this.referenceTypes.TryGetMember(typeName, out var type))
         {
             method = null!;
             return false;
@@ -303,7 +317,7 @@ internal sealed partial class Parser
             strictParameterTypeNames.SequenceEqual(
                 method.Parameters.Select(p => p.ParameterType.FullName))) is { } m3)
         {
-            method = this.module.ImportReference(m3);
+            method = this.Import(m3);
             return true;
         }
         else
@@ -320,20 +334,18 @@ internal sealed partial class Parser
         var fieldName = name.Substring(fieldNameIndex + 1);
         if (fieldNameIndex <= 0)
         {
-            if (this.cabiSpecificSymbols.TryGetValue(
-                name, out var member) &&
-                member is FieldDefinition f)
+            if (this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
             {
-                field = this.module.ImportReference(f);
+                field = this.Import(f);
                 return true;
             }
-            else if (this.cabiSpecificModuleType.Fields.
+            else if (this.cabiDataType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
                 return true;
             }
-            else if (this.cabiSpecificRDataType.Fields.
+            else if (this.cabiConstantType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f3)
             {
                 field = f3;
@@ -348,7 +360,7 @@ internal sealed partial class Parser
 
         var typeName = name.Substring(0, fieldNameIndex);
 
-        if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
+        if (!this.referenceTypes.TryGetMember(typeName, out var type))
         {
             field = null!;
             return false;
@@ -358,7 +370,7 @@ internal sealed partial class Parser
         if (type.Fields.FirstOrDefault(field =>
             field.IsPublic && field.Name == fieldName) is { } f4)
         {
-            field = this.module.ImportReference(f4);
+            field = this.Import(f4);
             return true;
         }
         else
@@ -584,7 +596,7 @@ internal sealed partial class Parser
         // main entry point lookup.
         if (this.produceExecutable)
         {
-            if (this.cabiSpecificModuleType.Methods.
+            if (this.cabiTextType.Methods.
                 FirstOrDefault(m => m.Name == "main") is { } main)
             {
                 this.module.EntryPoint = main;
@@ -598,17 +610,19 @@ internal sealed partial class Parser
 
         if (!this.caughtError)
         {
-            if (this.cabiSpecificModuleType.NestedTypes.Count >= 1 ||
-                this.cabiSpecificModuleType.Fields.Count >= 1 ||
-                this.cabiSpecificModuleType.Methods.Count >= 1)
+            if (this.cabiTextType.Methods.Count >= 1)
             {
-                this.module.Types.Add(this.cabiSpecificModuleType);
+                this.module.Types.Add(this.cabiTextType);
             }
 
-            if (this.cabiSpecificRDataType.NestedTypes.Count >= 1 ||
-                this.cabiSpecificRDataType.Fields.Count >= 1)
+            if (this.cabiDataType.Fields.Count >= 1)
             {
-                this.module.Types.Add(this.cabiSpecificRDataType);
+                this.module.Types.Add(this.cabiDataType);
+            }
+
+            if (this.cabiConstantType.Fields.Count >= 1)
+            {
+                this.module.Types.Add(this.cabiConstantType);
             }
 
             // Append type initializer
@@ -622,7 +636,7 @@ internal sealed partial class Parser
                     MethodAttributes.SpecialName |
                     MethodAttributes.RTSpecialName,
                     this.module.TypeSystem.Void);
-                this.cabiSpecificModuleType.Methods.Add(typeInitializer);
+                this.cabiDataType.Methods.Add(typeInitializer);
 
                 var body = typeInitializer.Body;
                 var instructions = body.Instructions;
@@ -646,7 +660,7 @@ internal sealed partial class Parser
             ///////////////////////////////////////////////
 
             var documents = new Dictionary<string, Document>();
-            foreach (var method in this.cabiSpecificModuleType.Methods)
+            foreach (var method in this.cabiTextType.Methods)
             {
                 if (method.Body.Instructions.Count >= 1)
                 {
@@ -714,7 +728,7 @@ internal sealed partial class Parser
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();
         this.initializers.Clear();
-        this.constantTypes.Clear();
+        this.constantTypeBySize.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
         this.currentFile = unknown;

@@ -12,22 +12,6 @@ using System.Collections.Generic;
 
 namespace chibias.Internal;
 
-internal sealed class MemberDefinitionNameComparer :
-    IEqualityComparer<IMemberDefinition>
-{
-    private MemberDefinitionNameComparer()
-    {
-    }
-
-    public bool Equals(IMemberDefinition? x, IMemberDefinition? y) =>
-        x!.Name.Equals(y!.Name);
-
-    public int GetHashCode(IMemberDefinition obj) =>
-        obj.Name.GetHashCode();
-
-    public static readonly MemberDefinitionNameComparer Instance = new();
-}
-
 internal sealed class AssemblyDefinitionComparer :
     IEqualityComparer<AssemblyDefinition>
 {

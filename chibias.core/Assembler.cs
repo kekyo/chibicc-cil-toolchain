@@ -34,7 +34,7 @@ public sealed class Assembler
             referenceAssemblyBasePaths);
     }
 
-    private TypeDefinition[] LoadPublicTypesFrom(
+    private TypeDefinitionCache LoadPublicTypesFrom(
         string[] referenceAssemblyPaths)
     {
         var assemblies = referenceAssemblyPaths.
@@ -67,7 +67,7 @@ public sealed class Assembler
             SelectMany(anr => ResolveDescendants(anr, saved)).
             ToArray();
 
-        return corlibAssemblies.
+        return new(corlibAssemblies.
             Concat(assemblies).
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
@@ -76,36 +76,33 @@ public sealed class Assembler
             Where(type =>
                 type.IsPublic &&
                 (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
-                type.GenericParameters.Count == 0).
-            ToArray();
+                type.GenericParameters.Count == 0));
     }
 
-    private Dictionary<string, IMemberDefinition> AggregateCAbiSpecificSymbols(
-        TypeDefinition[] referenceTypes)
+    private MemberDictionary<MemberReference> AggregateCAbiSpecificSymbols(
+        TypeDefinitionCache referenceTypes)
     {
-        return referenceTypes.
+        var methods = referenceTypes.
             Where(type =>
-                type.IsClass && type.IsAbstract && type.IsSealed &&
-                type.FullName == "C.module").
-            SelectMany(type =>
-            {
-                var methods = type.Methods.
-                    Where(method => method.IsPublic && method.IsStatic && !method.HasGenericParameters).
-                    Select(method => (IMemberDefinition)method).
-                    ToArray();
-                var fields = type.Fields.
-                    Where(field => field.IsPublic && field.IsStatic).
-                    Select(field => (IMemberDefinition)field).
-                    ToArray();
-                var types = type.NestedTypes.
-                    Where(type => type.IsPublic && type.IsValueType).
-                    Select(type => (IMemberDefinition)type).
-                    ToArray();
-                return methods.Concat(fields).Concat(types).ToArray();
-            }).
-            // Ignored trailing existence symbol names.
-            Distinct(MemberDefinitionNameComparer.Instance).
-            ToDictionary(member => member.Name);
+                type.IsPublic && type.IsClass && type.IsAbstract && type.IsSealed &&
+                type.Namespace == "C" && type.Name == "text").
+            SelectMany(type => type.Methods.
+                Where(method => method.IsPublic && method.IsStatic && !method.HasGenericParameters)).
+            Cast<MemberReference>();
+
+        var fields = referenceTypes.
+            Where(type =>
+                type.IsPublic && type.IsClass && type.IsAbstract && type.IsSealed &&
+                type.Namespace == "C" && type.Name == "data").
+            SelectMany(type => type.Fields.
+                Where(field => field.IsPublic && field.IsStatic));
+
+        var types = referenceTypes.
+            Where(type =>
+                type.IsPublic && type.IsValueType &&
+                type.Namespace == "C.type");
+
+        return new(methods.Concat(fields).Concat(types));
     }
 
     private void AssembleFromSource(

@@ -23,7 +23,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
   .method public static int32  foo(int32 A_0,
@@ -35,9 +35,9 @@
     IL_0001:  pop
     IL_0002:  ldarg.s    A_1
     IL_0004:  ret
-  } // end of method module::foo
+  } // end of method text::foo
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

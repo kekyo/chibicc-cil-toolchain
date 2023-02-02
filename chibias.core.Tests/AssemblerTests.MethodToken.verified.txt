@@ -28,7 +28,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.module
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
   .method public static native int  foo() cil managed
@@ -38,9 +38,9 @@
     IL_0000:  ldtoken    method int32 [System.Private.CoreLib]System.Int32::Parse(string)
     IL_0005:  conv.i
     IL_0006:  ret
-  } // end of method module::foo
+  } // end of method text::foo
 
-} // end of class C.module
+} // end of class C.text
 
 
 // =============================================================

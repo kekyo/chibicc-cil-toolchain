@@ -30,15 +30,13 @@ partial class Parser
             isPublic ?
                 (MethodAttributes.Public | MethodAttributes.Static) :
                 (MethodAttributes.Private | MethodAttributes.Static),
-            this.module.ImportReference(returnType));
+            this.Import(returnType));
         this.method.HasThis = false;
 
         foreach (var parameter in parameters)
         {
             this.method.Parameters.Add(parameter);
         }
-
-        this.cabiSpecificModuleType.Methods.Add(this.method);
 
         this.body = this.method.Body;
         this.body.InitLocals = false;   // Derived C behavior.
@@ -67,7 +65,7 @@ partial class Parser
 
                 this.DelayLookingUpType(
                     tokens[1],
-                    type => method.ReturnType = type);
+                    type => method.ReturnType = type);   // (captured)
             }
 
             var parameters = tokens.Skip(3).
@@ -113,6 +111,7 @@ partial class Parser
                 returnType,
                 parameters,
                 true);
+            this.cabiTextType.Methods.Add(method);
         }
     }
 
@@ -125,13 +124,14 @@ partial class Parser
         }
         else
         {
-            var functionName = $"<initializer>_${this.initializers.Count}";
+            var functionName = $"initializer_{this.initializers.Count}";
 
             var initializer = this.SetupFunctionBodyDirective(
                 functionName,
                 this.module.TypeSystem.Void,
                 Utilities.Empty<ParameterDefinition>(),
                 false);
+            this.cabiDataType.Methods.Add(initializer);
 
             this.initializers.Add(initializer);
         }
@@ -158,14 +158,14 @@ partial class Parser
 
                 this.DelayLookingUpType(
                     tokens[1],
-                    type => field.FieldType = type);
+                    type => field.FieldType = type);   // (captured)
             }
 
             field = new FieldDefinition(
                 globalName,
                 FieldAttributes.Public | FieldAttributes.Static,
                 globalType);
-            this.cabiSpecificModuleType.Fields.Add(field);
+            this.cabiDataType.Fields.Add(field);
         }
     }
 
@@ -201,7 +201,7 @@ partial class Parser
 
                 this.DelayLookingUpType(
                     tokens[1],
-                    type => variable.VariableType = type);
+                    type => variable.VariableType = type);   // (captured)
             }
 
             variable = new VariableDefinition(localType);
@@ -291,7 +291,7 @@ partial class Parser
                 this.FinishCurrentState();
 
                 var structureType = new TypeDefinition(
-                    "",
+                    "C.type",
                     structureTypeName,
                     typeAttributes,
                     this.valueType.Value);
@@ -300,7 +300,7 @@ partial class Parser
                     structureType.PackingSize = ps;
                 }
 
-                this.cabiSpecificModuleType.NestedTypes.Add(structureType);
+                this.module.Types.Add(structureType);
                 this.structure = structureType;
             }
         }
@@ -334,20 +334,20 @@ partial class Parser
 
             var dataName = tokens[1].Text;
 
-            if (!this.constantTypes.TryGetValue(data.Length, out var constantType))
+            if (!this.constantTypeBySize.TryGetValue(data.Length, out var constantType))
             {
-                var constantTypeName = $"<constant_type>_${data.Length}";
+                var constantTypeName = $"constant_size_{data.Length}";
 
                 constantType = new TypeDefinition(
                     "",
                     constantTypeName,
-                    TypeAttributes.NestedAssembly | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
+                    TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
                     this.valueType.Value);
                 constantType.PackingSize = 1;
                 constantType.ClassSize = data.Length;
 
-                this.cabiSpecificRDataType.NestedTypes.Add(constantType);
-                this.constantTypes.Add(data.Length, constantType);
+                this.module.Types.Add(constantType);
+                this.constantTypeBySize.Add(data.Length, constantType);
             }
 
             var field = new FieldDefinition(
@@ -356,7 +356,7 @@ partial class Parser
                 constantType);
             field.InitialValue = data;
 
-            this.cabiSpecificRDataType.Fields.Add(field);
+            this.cabiConstantType.Fields.Add(field);
         }
     }
 
@@ -429,9 +429,13 @@ partial class Parser
         {
             var vs = tokens.
                 Skip(2).
-                Collect(token => int.TryParse(token.Text, out var vi) ? vi : default(int?)).
+                Collect(token =>
+                    (int.TryParse(token.Text, out var vi) && vi >= 0) ?
+                        vi : default(int?)).
                 ToArray();
-            if (vs.Length != (tokens.Length - 2))
+            if ((vs.Length != (tokens.Length - 2)) ||
+                (vs[0] > vs[2]) ||
+                (vs[1] >= vs[3]))
             {
                 this.OutputError(
                     directive,
