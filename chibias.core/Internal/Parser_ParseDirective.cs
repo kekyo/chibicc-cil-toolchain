@@ -245,7 +245,7 @@ partial class Parser
         }
         else
         {
-            var typeAttributes = TypeAttributes.NestedPublic | TypeAttributes.Sealed;
+            var typeAttributes = TypeAttributes.Public | TypeAttributes.Sealed;
             short? packSize = null;
             if (tokens.Length == 3)
             {
@@ -291,7 +291,7 @@ partial class Parser
                 this.FinishCurrentState();
 
                 var structureType = new TypeDefinition(
-                    "",
+                    "C.type",
                     structureTypeName,
                     typeAttributes,
                     this.valueType.Value);
@@ -300,7 +300,7 @@ partial class Parser
                     structureType.PackingSize = ps;
                 }
 
-                this.cabiTextType.NestedTypes.Add(structureType);
+                this.module.Types.Add(structureType);
                 this.structure = structureType;
             }
         }
@@ -346,7 +346,7 @@ partial class Parser
                 constantType.PackingSize = 1;
                 constantType.ClassSize = data.Length;
 
-                this.cabiSpecificRDataType.NestedTypes.Add(constantType);
+                this.cabiRDataType.NestedTypes.Add(constantType);
                 this.constantTypes.Add(data.Length, constantType);
             }
 
@@ -356,7 +356,7 @@ partial class Parser
                 constantType);
             field.InitialValue = data;
 
-            this.cabiSpecificRDataType.Fields.Add(field);
+            this.cabiRDataType.Fields.Add(field);
         }
     }
 

@@ -26,7 +26,7 @@ internal sealed partial class Parser
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
     private readonly TypeDefinition cabiTextType;
-    private readonly TypeDefinition cabiSpecificRDataType;
+    private readonly TypeDefinition cabiRDataType;
     private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
     private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
     private readonly bool produceExecutable;
@@ -74,7 +74,7 @@ internal sealed partial class Parser
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
-        this.cabiSpecificRDataType = new TypeDefinition(
+        this.cabiRDataType = new TypeDefinition(
             "C",
             "rdata",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
@@ -234,7 +234,8 @@ internal sealed partial class Parser
                     type = this.Import(tr1);
                     return true;
                 }
-                else if (this.cabiTextType.NestedTypes.
+                else if (this.module.Types.
+                    Where(type => type.Namespace == "C.type").
                     FirstOrDefault(type => type.Name == name) is { } td2)
                 {
                     type = td2;
@@ -341,7 +342,7 @@ internal sealed partial class Parser
                 field = f2;
                 return true;
             }
-            else if (this.cabiSpecificRDataType.Fields.
+            else if (this.cabiRDataType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f3)
             {
                 field = f3;
@@ -613,10 +614,10 @@ internal sealed partial class Parser
                 this.module.Types.Add(this.cabiTextType);
             }
 
-            if (this.cabiSpecificRDataType.NestedTypes.Count >= 1 ||
-                this.cabiSpecificRDataType.Fields.Count >= 1)
+            if (this.cabiRDataType.NestedTypes.Count >= 1 ||
+                this.cabiRDataType.Fields.Count >= 1)
             {
-                this.module.Types.Add(this.cabiSpecificRDataType);
+                this.module.Types.Add(this.cabiRDataType);
             }
 
             // Append type initializer

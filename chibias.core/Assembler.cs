@@ -83,26 +83,29 @@ public sealed class Assembler
     private Dictionary<string, IMemberDefinition> AggregateCAbiSpecificSymbols(
         TypeDefinition[] referenceTypes)
     {
-        return referenceTypes.
+        var types = referenceTypes.
             Where(type =>
-                type.IsClass && type.IsAbstract && type.IsSealed &&
-                type.Namespace == "C").
-            SelectMany(type =>
-            {
-                var methods = type.Methods.
-                    Where(method => method.IsPublic && method.IsStatic && !method.HasGenericParameters).
-                    Select(method => (IMemberDefinition)method).
-                    ToArray();
-                var fields = type.Fields.
-                    Where(field => field.IsPublic && field.IsStatic).
-                    Select(field => (IMemberDefinition)field).
-                    ToArray();
-                var types = type.NestedTypes.
-                    Where(type => type.IsPublic && type.IsValueType).
-                    Select(type => (IMemberDefinition)type).
-                    ToArray();
-                return methods.Concat(fields).Concat(types).ToArray();
-            }).
+                type.IsPublic && type.IsValueType &&
+                type.Namespace == "C.type").
+            Cast<IMemberDefinition>();
+
+        var methods = referenceTypes.
+            Where(type =>
+                type.IsPublic && type.IsClass && type.IsAbstract && type.IsSealed &&
+                type.Namespace == "C" && type.Name == "text").
+            SelectMany(type => type.Methods.
+                Where(method => method.IsPublic && method.IsStatic && !method.HasGenericParameters)).
+            Cast<IMemberDefinition>();
+
+        var fields = referenceTypes.
+            Where(type =>
+                type.IsPublic && type.IsClass && type.IsAbstract && type.IsSealed &&
+                type.Namespace == "C" && type.Name == "data").
+            SelectMany(type => type.Fields.
+                Where(field => field.IsPublic && field.IsStatic)).
+            Cast<IMemberDefinition>();
+
+        return fields.Concat(methods).Concat(types).
             // Ignored trailing existence symbol names.
             Distinct(MemberDefinitionNameComparer.Instance).
             ToDictionary(member => member.Name);

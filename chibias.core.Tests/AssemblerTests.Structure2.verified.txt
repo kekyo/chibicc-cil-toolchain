@@ -28,25 +28,25 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
+.class public sequential ansi sealed C.type.foo
+       extends [System.Private.CoreLib]System.ValueType
+{
+  .pack 2
+  .field public int32 a
+  .field public int8 b
+  .field public int32 c
+} // end of class C.type.foo
+
 .class public abstract auto ansi sealed beforefieldinit C.text
        extends [mscorlib]System.Object
 {
-  .class sequential ansi sealed nested public foo
-         extends [System.Private.CoreLib]System.ValueType
-  {
-    .pack 2
-    .field public int32 a
-    .field public int8 b
-    .field public int32 c
-  } // end of class foo
-
   .method public static void  main() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  1
-    .locals (valuetype C.text/foo V_0)
+    .locals (valuetype C.type.foo V_0)
     IL_0000:  ldloca     V_0
-    IL_0004:  initobj    C.text/foo
+    IL_0004:  initobj    C.type.foo
     IL_000a:  ret
   } // end of method text::main
 
