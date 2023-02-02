@@ -2,7 +2,7 @@
   "profiles": {
     "chibias": {
       "commandName": "Project",
-      "commandLineArgs": "-r ..\\..\\..\\..\\..\\chibicc\\mscorlib.dll test.s"
+      "commandLineArgs": "-r ..\\..\\..\\..\\..\\chibicc-cil\\mscorlib.dll ..\\..\\..\\..\\..\\chibicc-cil\\test\\struct.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common_s"
     }
   }
 }
