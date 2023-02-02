@@ -453,6 +453,20 @@ That is, types that inherit implicitly from `System.ValueType`:
     int32 c
 ```
 
+Pseudo code in C#:
+
+```csharp
+namespace C.type;
+
+[StructLayout(LayoutKind.Sequential)]
+public struct foo
+{
+    public int a;
+    public sbyte b;
+    public int c;
+}
+```
+
 By default, structure packing is left to the CLR.
 To specify explicitly:
 
@@ -467,12 +481,44 @@ Or gives an offset to each member:
 
 ```
 .structure foo explicit
-    int32 a 0   ; offset=0
-    int8 b 4    ; offset=4
-    int32 c 5   ; offset=5
+    int32 a 0     ; offset=0
+    int8 b 4      ; offset=4
+    int32 c 5     ; offset=5
 ```
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
+
+When you use explicitly array length type like `int8[3]`,
+chibias will generate custom type automatically include each item fields.
+
+```
+.structure foo
+    int32 a
+    int8[3] b    ; <-- Array type for explicitly length
+    int32 c
+```
+
+Pseudo code in C#:
+
+```csharp
+namespace C.type;
+
+[StructLayout(LayoutKind.Sequential)]
+public struct foo
+{
+    public int a;
+    public int8_len3 b;    // <-- int8[3]
+    public int c;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct int8_len3    // : IList<sbyte>  // TODO:
+{
+    public sbyte Item0;
+    public sbyte Item1;
+    public sbyte Item2;
+}
+```
 
 ### Explicitly location information
 
@@ -528,6 +574,7 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
+* Automatic implements `IList<T>` on array type for explicitly length.
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Handling for target framework moniker.

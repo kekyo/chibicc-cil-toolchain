@@ -13,6 +13,7 @@ using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -192,6 +193,41 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
+    private string GetExactLengthProxyTypeName(string name)
+    {
+        switch (name[name.Length - 1])
+        {
+            case '*':
+                return $"{this.GetExactLengthProxyTypeName(name.Substring(0, name.Length - 1))}_ptr";
+            case '&':
+                return $"{this.GetExactLengthProxyTypeName(name.Substring(0, name.Length - 1))}_ref";
+            case ']' when name.Length >= 4:
+                // "aaa[]"
+                var startBracketIndex = name.LastIndexOf('[', name.Length - 2);
+                if (startBracketIndex >= 1 && (name.Length - startBracketIndex - 2) == 0)
+                {
+                    var typeName = name.Substring(0, startBracketIndex);
+                    return $"{this.GetExactLengthProxyTypeName(typeName)}_arr";
+                }
+                // "aaa[10]"
+                else if (int.TryParse(
+                    name.Substring(startBracketIndex + 1, name.Length - startBracketIndex - 2),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var length))
+                {
+                    var typeName = name.Substring(0, startBracketIndex);
+                    return $"{this.GetExactLengthProxyTypeName(typeName)}_len{length}";
+                }
+                else
+                {
+                    return name;
+                }
+            default:
+                return name;
+        }
+    }
+
     private bool TryGetType(
         string name,
         out TypeReference type)
@@ -220,11 +256,60 @@ internal sealed partial class Parser
                     type = null!;
                     return false;
                 }
-            case ']' when name.Length >= 2 && name[name.Length - 2] == '[':
-                if (this.TryGetType(name.Substring(0, name.Length - 2), out var preType3))
+            case ']' when name.Length >= 4:
+                var startBracketIndex = name.LastIndexOf('[', name.Length - 2);
+                if (startBracketIndex >= 1)
                 {
-                    type = new ArrayType(this.Import(preType3));
-                    return true;
+                    // "aaa"
+                    var baseTypeName = name.Substring(0, startBracketIndex);
+                    if (this.TryGetType(baseTypeName, out var baseType))
+                    {
+                        // "aaa[]"
+                        if ((name.Length - startBracketIndex - 2) == 0)
+                        {
+                            type = new ArrayType(this.Import(baseType));
+                            return true;
+                        }
+                        // "aaa[10]"
+                        else
+                        {
+                            // "aaa_len10"
+                            var proxyTypeName = this.GetExactLengthProxyTypeName(name);
+                            if (this.TryGetType(proxyTypeName, out type))
+                            {
+                                return true;
+                            }
+                            else
+                            {
+                                var exactSizeType = new TypeDefinition(
+                                    "C.type",
+                                    proxyTypeName,
+                                    TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.SequentialLayout,
+                                    this.valueType.Value);
+                                this.module.Types.Add(exactSizeType);
+
+                                var length = int.Parse(
+                                    name.Substring(startBracketIndex + 1, name.Length - startBracketIndex - 2),
+                                    NumberStyles.Integer,
+                                    CultureInfo.InvariantCulture);
+
+                                for (var index = 0; index < length; index++)
+                                {
+                                    var itemField = new FieldDefinition(
+                                        $"Item{index}", FieldAttributes.Public, baseType);
+                                    exactSizeType.Fields.Add(itemField);
+                                }
+
+                                type = exactSizeType;
+                                return true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        type = null!;
+                        return false;
+                    }
                 }
                 else
                 {

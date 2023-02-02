@@ -1017,4 +1017,56 @@ public sealed partial class AssemblerTests
                 int32 c");
         return Verify(actual);
     }
+
+    [Test]
+    public Task StructureWithArray1()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                int8[4] b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task StructureWithArray2()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                int8[4][3] b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task StructureWithArray3()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                bar[3] b
+                int32 c
+            .structure bar
+                int32 a
+                int8[4] b
+                int32 c");
+        return Verify(actual);
+    }
 }

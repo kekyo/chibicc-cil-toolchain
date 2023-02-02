@@ -49,6 +49,7 @@ partial class Parser
             else
             {
                 Debug.Assert(this.structure!.Attributes.HasFlag(TypeAttributes.ExplicitLayout));
+
                 if (tokens.Length == 2)
                 {
                     this.OutputError(
