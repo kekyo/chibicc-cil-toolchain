@@ -87,8 +87,7 @@ internal sealed partial class Parser
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
         this.valueType = new(() =>
-            this.module.ImportReference(
-                this.referenceTypes.Value["System.ValueType"]));
+            this.Import(this.referenceTypes.Value["System.ValueType"]));
         this.currentFile = unknown;
 
         // Known types
@@ -171,6 +170,18 @@ internal sealed partial class Parser
         new("", $"<placeholder_type>_${placeholderIndex++}",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
 
+    private TypeReference Import(TypeReference type) =>
+        (type.Module?.Equals(this.module) ?? type is TypeDefinition) ?
+            type : this.module.ImportReference(type);
+
+    private MethodReference Import(MethodReference method) =>
+        (method.Module?.Equals(this.module) ?? method is MethodDefinition) ?
+            method : this.module.ImportReference(method);
+
+    private FieldReference Import(FieldReference field) =>
+        (field.Module?.Equals(this.module) ?? field is FieldDefinition) ?
+            field : this.module.ImportReference(field);
+
     /////////////////////////////////////////////////////////////////////
 
     private bool TryGetType(
@@ -182,8 +193,7 @@ internal sealed partial class Parser
             case '*':
                 if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType1))
                 {
-                    type = new PointerType(
-                        this.module.ImportReference(preType1));
+                    type = new PointerType(this.Import(preType1));
                     return true;
                 }
                 else
@@ -194,8 +204,7 @@ internal sealed partial class Parser
             case '&':
                 if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType2))
                 {
-                    type = new ByReferenceType(
-                        this.module.ImportReference(preType2));
+                    type = new ByReferenceType(this.Import(preType2));
                     return true;
                 }
                 else
@@ -206,8 +215,7 @@ internal sealed partial class Parser
             case ']' when name.Length >= 2 && name[name.Length - 2] == '[':
                 if (this.TryGetType(name.Substring(0, name.Length - 2), out var preType3))
                 {
-                    type = new ArrayType(
-                        this.module.ImportReference(preType3));
+                    type = new ArrayType(this.Import(preType3));
                     return true;
                 }
                 else
@@ -221,9 +229,9 @@ internal sealed partial class Parser
                 //   each assembly (by generating chibias).
                 //   Always we use first finding type, silently ignored when multiple declarations.
                 if (this.cabiSpecificSymbols.TryGetValue(name, out var member) &&
-                    member is TypeDefinition td1)
+                    member is TypeReference tr1)
                 {
-                    type = this.module.ImportReference(td1);
+                    type = this.Import(tr1);
                     return true;
                 }
                 else if (this.cabiSpecificModuleType.NestedTypes.
@@ -238,7 +246,7 @@ internal sealed partial class Parser
                 }
                 else if (this.referenceTypes.Value.TryGetValue(name, out var td3))
                 {
-                    type = this.module.ImportReference(td3);
+                    type = this.Import(td3);
                     return true;
                 }
                 else
@@ -258,10 +266,10 @@ internal sealed partial class Parser
         {
             if (this.cabiSpecificSymbols.TryGetValue(
                 methodName, out var member) &&
-                member is MethodDefinition m &&
+                member is MethodReference m &&
                 parameterTypeNames.Length == 0)
             {
-                method = this.module.ImportReference(m);
+                method = this.Import(m);
                 return true;
             }
             else if (this.cabiSpecificModuleType.Methods.
@@ -303,7 +311,7 @@ internal sealed partial class Parser
             strictParameterTypeNames.SequenceEqual(
                 method.Parameters.Select(p => p.ParameterType.FullName))) is { } m3)
         {
-            method = this.module.ImportReference(m3);
+            method = this.Import(m3);
             return true;
         }
         else
@@ -322,9 +330,9 @@ internal sealed partial class Parser
         {
             if (this.cabiSpecificSymbols.TryGetValue(
                 name, out var member) &&
-                member is FieldDefinition f)
+                member is FieldReference f)
             {
-                field = this.module.ImportReference(f);
+                field = this.Import(f);
                 return true;
             }
             else if (this.cabiSpecificModuleType.Fields.
@@ -358,7 +366,7 @@ internal sealed partial class Parser
         if (type.Fields.FirstOrDefault(field =>
             field.IsPublic && field.Name == fieldName) is { } f4)
         {
-            field = this.module.ImportReference(f4);
+            field = this.Import(f4);
             return true;
         }
         else

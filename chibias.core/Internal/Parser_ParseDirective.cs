@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////////////
+﻿/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibias-cil - The specialized backend CIL assembler for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -30,7 +30,7 @@ partial class Parser
             isPublic ?
                 (MethodAttributes.Public | MethodAttributes.Static) :
                 (MethodAttributes.Private | MethodAttributes.Static),
-            this.module.ImportReference(returnType));
+            this.Import(returnType));
         this.method.HasThis = false;
 
         foreach (var parameter in parameters)
