@@ -28,8 +28,8 @@ internal sealed partial class Parser
     private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiDataType;
     private readonly TypeDefinition cabiConstantType;
-    private readonly Dictionary<string, IMemberDefinition> cabiSpecificSymbols;
-    private readonly Lazy<Dictionary<string, TypeDefinition>> referenceTypes;
+    private readonly MemberDictionary<MemberReference> cabiSpecificSymbols;
+    private readonly MemberDictionary<TypeDefinition> referenceTypes;
     private readonly Dictionary<string, TypeReference> knownTypes = new();
     private readonly Dictionary<string, Instruction> labelTargets = new();
     private readonly List<MethodDefinition> initializers = new();
@@ -60,8 +60,8 @@ internal sealed partial class Parser
     public Parser(
         ILogger logger,
         ModuleDefinition module,
-        Dictionary<string, IMemberDefinition> cabiSpecificSymbols,
-        TypeDefinition[] referenceTypes,
+        MemberDictionary<MemberReference> cabiSpecificSymbols,
+        TypeDefinitionCache referenceTypes,
         bool produceExecutable,
         bool produceDebuggingInformation)
     {
@@ -89,12 +89,13 @@ internal sealed partial class Parser
             this.module.TypeSystem.Object);
 
         this.cabiSpecificSymbols = cabiSpecificSymbols;
-        this.referenceTypes = new(() => referenceTypes.
-            ToDictionary(type => type.FullName));
+        this.referenceTypes = new(
+            referenceTypes.OfType<TypeDefinition>(),
+            type => type.FullName);
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
         this.valueType = new(() =>
-            this.Import(this.referenceTypes.Value["System.ValueType"]));
+            this.Import(this.referenceTypes.TryGetMember("System.ValueType", out var type) ? type : null!));
         this.currentFile = unknown;
 
         // Known types
@@ -235,8 +236,7 @@ internal sealed partial class Parser
                 //   Will lookup before this module, because the types redefinition by C headers
                 //   each assembly (by generating chibias).
                 //   Always we use first finding type, silently ignored when multiple declarations.
-                if (this.cabiSpecificSymbols.TryGetValue(name, out var member) &&
-                    member is TypeReference tr1)
+                if (this.cabiSpecificSymbols.TryGetMember<TypeReference>(name, out var tr1))
                 {
                     type = this.Import(tr1);
                     return true;
@@ -252,7 +252,7 @@ internal sealed partial class Parser
                 {
                     return true;
                 }
-                else if (this.referenceTypes.Value.TryGetValue(name, out var td3))
+                else if (this.referenceTypes.TryGetMember(name, out var td3))
                 {
                     type = this.Import(td3);
                     return true;
@@ -272,9 +272,7 @@ internal sealed partial class Parser
         var methodName = name.Substring(methodNameIndex + 1);
         if (methodNameIndex <= 0)
         {
-            if (this.cabiSpecificSymbols.TryGetValue(
-                methodName, out var member) &&
-                member is MethodReference m &&
+            if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m) &&
                 parameterTypeNames.Length == 0)
             {
                 method = this.Import(m);
@@ -297,7 +295,7 @@ internal sealed partial class Parser
 
         var typeName = name.Substring(0, methodNameIndex);
 
-        if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
+        if (!this.referenceTypes.TryGetMember(typeName, out var type))
         {
             method = null!;
             return false;
@@ -336,9 +334,7 @@ internal sealed partial class Parser
         var fieldName = name.Substring(fieldNameIndex + 1);
         if (fieldNameIndex <= 0)
         {
-            if (this.cabiSpecificSymbols.TryGetValue(
-                name, out var member) &&
-                member is FieldReference f)
+            if (this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
             {
                 field = this.Import(f);
                 return true;
@@ -364,7 +360,7 @@ internal sealed partial class Parser
 
         var typeName = name.Substring(0, fieldNameIndex);
 
-        if (!this.referenceTypes.Value.TryGetValue(typeName, out var type))
+        if (!this.referenceTypes.TryGetMember(typeName, out var type))
         {
             field = null!;
             return false;
