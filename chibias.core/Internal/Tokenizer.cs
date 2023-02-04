@@ -96,7 +96,7 @@ internal sealed class Tokenizer
                         line.Substring(start, index - start),
                         this.lineIndex,
                         start,
-                        index - 1));
+                        index));
                 }
                 else if (inch == '"')
                 {
@@ -205,7 +205,7 @@ internal sealed class Tokenizer
                         sb.ToString(),
                         this.lineIndex,
                         start,
-                        index - 1));
+                        index));
                     hex.Clear();
                     sb.Clear();
                 }
@@ -230,7 +230,7 @@ internal sealed class Tokenizer
                             line.Substring(start, index - start - 1),
                             this.lineIndex,
                             start,
-                            index - 1 - 1));
+                            index - 1));
                     }
                     else
                     {
@@ -239,7 +239,7 @@ internal sealed class Tokenizer
                             line.Substring(start, index - start),
                             this.lineIndex,
                             start,
-                            index - 1));
+                            index));
                     }
                 }
             }
