@@ -862,14 +862,24 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
-    public Task RawData()
+    public Task GlobalVariableWithInitializingData1()
     {
         var actual = Run(@"
-            .function intptr foo
-                ldtoken bar
-                conv.i
+            .function int32 foo
+                ldsfld bar
                 ret
-            .constant bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+            .global int32 bar 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData2()
+    {
+        var actual = Run(@"
+            .function uint8[6] foo
+                ldsfld bar
+                ret
+            .global uint8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
         return Verify(actual);
     }
 

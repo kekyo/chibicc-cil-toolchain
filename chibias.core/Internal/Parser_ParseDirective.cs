@@ -148,6 +148,21 @@ partial class Parser
         {
             this.FinishCurrentState();
 
+            var data = tokens.Skip(3).
+                Select(token =>
+                {
+                    if (Utilities.TryParseUInt8(token.Text, out var value))
+                    {
+                        return value;
+                    }
+                    else
+                    {
+                        this.OutputError(token, $"Invalid data operand.");
+                        return (byte)0;
+                    }
+                }).
+                ToArray();
+
             var globalTypeName = tokens[1].Text;
             var globalName = tokens[2].Text;
 
@@ -165,6 +180,10 @@ partial class Parser
                 globalName,
                 FieldAttributes.Public | FieldAttributes.Static,
                 globalType);
+            if (data.Length >= 1)
+            {
+                field.InitialValue = data;
+            }
             this.cabiDataType.Fields.Add(field);
         }
     }
@@ -306,47 +325,6 @@ partial class Parser
         }
     }
 
-    private void ParseConstantDirective(
-        Token directive, Token[] tokens)
-    {
-        if (tokens.Length <= 2)
-        {
-            this.OutputError(directive, $"Missing data operand.");
-        }
-        else
-        {
-            this.FinishCurrentState();
-
-            var data = tokens.Skip(2).
-                Select(token =>
-                {
-                    if (Utilities.TryParseUInt8(token.Text, out var value))
-                    {
-                        return value;
-                    }
-                    else
-                    {
-                        this.OutputError(token, $"Invalid data operand.");
-                        return (byte)0;
-                    }
-                }).
-                ToArray();
-
-            var constantType = this.GetValueArrayType(
-                this.module.TypeSystem.SByte,
-                data.Length);
-            var dataName = tokens[1].Text;
-
-            var field = new FieldDefinition(
-                dataName,
-                FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
-                constantType);
-            field.InitialValue = data;
-
-            this.cabiDataType.Fields.Add(field);
-        }
-    }
-
     private void ParseFileDirective(
         Token directive, Token[] tokens)
     {
@@ -461,10 +439,6 @@ partial class Parser
             // Structure directive:
             case "structure":
                 this.ParseStructureDirective(directive, tokens);
-                break;
-            // Constant directive:
-            case "constant":
-                this.ParseConstantDirective(directive, tokens);
                 break;
             // File directive:
             case "file":

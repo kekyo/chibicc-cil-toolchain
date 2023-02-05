@@ -48,6 +48,10 @@
        extends [System.Private.CoreLib]System.ValueType
 {
   .custom instance void [System.Private.CoreLib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .field private int8 item0
+  .field private int8 item1
+  .field private int8 item2
+  .field private int8 item3
   .method public hidebysig specialname instance int32 
           get_Length() cil managed
   {
@@ -120,6 +124,9 @@
        extends [System.Private.CoreLib]System.ValueType
 {
   .custom instance void [System.Private.CoreLib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .field private valuetype C.type.bar item0
+  .field private valuetype C.type.bar item1
+  .field private valuetype C.type.bar item2
   .method public hidebysig specialname instance int32 
           get_Length() cil managed
   {
