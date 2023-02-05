@@ -40,18 +40,66 @@
        extends [System.Private.CoreLib]System.ValueType
 {
   .field public int32 a
-  .field public valuetype C.type.int8_len4 b
+  .field public valuetype System.SByte_len4 b
   .field public int32 c
 } // end of class C.type.bar
 
-.class public sequential ansi sealed C.type.int8_len4
+.class public sequential ansi sealed System.SByte_len4
        extends [System.Private.CoreLib]System.ValueType
 {
-  .field public int8 Item0
-  .field public int8 Item1
-  .field public int8 Item2
-  .field public int8 Item3
-} // end of class C.type.int8_len4
+  .custom instance void [System.Private.CoreLib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .method public hidebysig specialname instance int32 
+          get_Length() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldc.i4     0x4
+    IL_0005:  ret
+  } // end of method SByte_len4::get_Length
+
+  .method public hidebysig specialname instance int8 
+          get_Item(int32 index) cil managed
+  {
+    // Code size       13 (0xd)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     [mscorlib]System.SByte
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldind.i1
+    IL_000c:  ret
+  } // end of method SByte_len4::get_Item
+
+  .method public hidebysig specialname instance void 
+          set_Item(int32 index,
+                   int8 'value') cil managed
+  {
+    // Code size       14 (0xe)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     [mscorlib]System.SByte
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldarg.2
+    IL_000c:  stind.i1
+    IL_000d:  ret
+  } // end of method SByte_len4::set_Item
+
+  .property instance callconv(8) int32 Length()
+  {
+    .get instance int32 System.SByte_len4::get_Length()
+  } // end of property SByte_len4::Length
+  .property instance callconv(8) int8 Item(int32)
+  {
+    .get instance int8 System.SByte_len4::get_Item(int32)
+    .set instance void System.SByte_len4::set_Item(int32,
+                                                   int8)
+  } // end of property SByte_len4::Item
+} // end of class System.SByte_len4
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
@@ -71,9 +119,59 @@
 .class public sequential ansi sealed C.type.bar_len3
        extends [System.Private.CoreLib]System.ValueType
 {
-  .field public valuetype C.type.bar Item0
-  .field public valuetype C.type.bar Item1
-  .field public valuetype C.type.bar Item2
+  .custom instance void [System.Private.CoreLib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .method public hidebysig specialname instance int32 
+          get_Length() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldc.i4     0x3
+    IL_0005:  ret
+  } // end of method bar_len3::get_Length
+
+  .method public hidebysig specialname instance valuetype C.type.bar 
+          get_Item(int32 index) cil managed
+  {
+    // Code size       17 (0x11)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     C.type.bar
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldobj      C.type.bar
+    IL_0010:  ret
+  } // end of method bar_len3::get_Item
+
+  .method public hidebysig specialname instance void 
+          set_Item(int32 index,
+                   valuetype C.type.bar 'value') cil managed
+  {
+    // Code size       18 (0x12)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     C.type.bar
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldarg.2
+    IL_000c:  stobj      C.type.bar
+    IL_0011:  ret
+  } // end of method bar_len3::set_Item
+
+  .property instance callconv(8) int32 Length()
+  {
+    .get instance int32 C.type.bar_len3::get_Length()
+  } // end of property bar_len3::Length
+  .property instance callconv(8) valuetype C.type.bar
+          Item(int32)
+  {
+    .get instance valuetype C.type.bar C.type.bar_len3::get_Item(int32)
+    .set instance void C.type.bar_len3::set_Item(int32,
+                                                 valuetype C.type.bar)
+  } // end of property bar_len3::Item
 } // end of class C.type.bar_len3
 
 

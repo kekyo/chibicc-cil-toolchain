@@ -28,12 +28,62 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private explicit ansi sealed constant_size_6
+.class public sequential ansi sealed System.SByte_len6
        extends [System.Private.CoreLib]System.ValueType
 {
-  .pack 1
-  .size 6
-} // end of class constant_size_6
+  .custom instance void [System.Private.CoreLib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .method public hidebysig specialname instance int32 
+          get_Length() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldc.i4     0x6
+    IL_0005:  ret
+  } // end of method SByte_len6::get_Length
+
+  .method public hidebysig specialname instance int8 
+          get_Item(int32 index) cil managed
+  {
+    // Code size       13 (0xd)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     [mscorlib]System.SByte
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldind.i1
+    IL_000c:  ret
+  } // end of method SByte_len6::get_Item
+
+  .method public hidebysig specialname instance void 
+          set_Item(int32 index,
+                   int8 'value') cil managed
+  {
+    // Code size       14 (0xe)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     [mscorlib]System.SByte
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldarg.2
+    IL_000c:  stind.i1
+    IL_000d:  ret
+  } // end of method SByte_len6::set_Item
+
+  .property instance callconv(8) int32 Length()
+  {
+    .get instance int32 System.SByte_len6::get_Length()
+  } // end of property SByte_len6::Length
+  .property instance callconv(8) int8 Item(int32)
+  {
+    .get instance int8 System.SByte_len6::get_Item(int32)
+    .set instance void System.SByte_len6::set_Item(int32,
+                                                   int8)
+  } // end of property SByte_len6::Item
+} // end of class System.SByte_len6
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
@@ -42,22 +92,22 @@
   {
     // Code size       7 (0x7)
     .maxstack  8
-    IL_0000:  ldtoken    field valuetype constant_size_6 constant::bar
+    IL_0000:  ldtoken    field valuetype System.SByte_len6 C.data::bar
     IL_0005:  conv.i
     IL_0006:  ret
   } // end of method text::foo
 
 } // end of class C.text
 
-.class private abstract auto ansi sealed beforefieldinit constant
+.class public abstract auto ansi sealed beforefieldinit C.data
        extends [mscorlib]System.Object
 {
-  .field static assembly initonly valuetype constant_size_6 bar at I_00002058
-} // end of class constant
+  .field public static initonly valuetype System.SByte_len6 bar at I_0000207C
+} // end of class C.data
 
 
 // =============================================================
 
-.data cil I_00002058 = bytearray (
-                 01 02 31 32 B1 B2)                               // ..12..
+.data cil I_0000207C = bytearray (
+                 01) 
 // *********** DISASSEMBLY COMPLETE ***********************

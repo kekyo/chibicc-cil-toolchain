@@ -332,31 +332,18 @@ partial class Parser
                 }).
                 ToArray();
 
+            var constantType = this.GetValueArrayType(
+                this.module.TypeSystem.SByte,
+                data.Length);
             var dataName = tokens[1].Text;
-
-            if (!this.constantTypeBySize.TryGetValue(data.Length, out var constantType))
-            {
-                var constantTypeName = $"constant_size_{data.Length}";
-
-                constantType = new TypeDefinition(
-                    "",
-                    constantTypeName,
-                    TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
-                    this.valueType.Value);
-                constantType.PackingSize = 1;
-                constantType.ClassSize = data.Length;
-
-                this.module.Types.Add(constantType);
-                this.constantTypeBySize.Add(data.Length, constantType);
-            }
 
             var field = new FieldDefinition(
                 dataName,
-                FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly,
+                FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
                 constantType);
             field.InitialValue = data;
 
-            this.cabiConstantType.Fields.Add(field);
+            this.cabiDataType.Fields.Add(field);
         }
     }
 
