@@ -805,20 +805,6 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
-    public Task Initializer()
-    {
-        var actual = Run(@"
-            .initializer
-                ldc.i4 123
-                stsfld givalue
-                ret
-            .global int32 givalue");
-        return Verify(actual);
-    }
-
-    /////////////////////////////////////////////////////////
-
-    [Test]
     public Task CallDotNetAssemblyMethod()
     {
         var actual = Run(@"
@@ -862,14 +848,24 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
-    public Task RawData()
+    public Task GlobalVariableWithInitializingData1()
     {
         var actual = Run(@"
-            .function intptr foo
-                ldtoken bar
-                conv.i
+            .function int32 foo
+                ldsfld bar
                 ret
-            .constant bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+            .global int32 bar 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData2()
+    {
+        var actual = Run(@"
+            .function uint8[6] foo
+                ldsfld bar
+                ret
+            .global uint8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
         return Verify(actual);
     }
 
@@ -951,6 +947,75 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
+    public Task ValueArray1()
+    {
+        var actual = Run(@"
+            .function int8[6] foo
+                ldsfld bar
+                ret
+            .global int8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray2()
+    {
+        var actual = Run(@"
+            .function uint8[6]* foo
+                ldsfld bar
+                ret
+            .global uint8[6]* bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray3()
+    {
+        var actual = Run(@"
+            .function uint8*[6] foo
+                ldsfld bar
+                ret
+            .global uint8*[6] bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray4()
+    {
+        var actual = Run(@"
+            .function uint8&[6] foo
+                ldsfld bar
+                ret
+            .global uint8&[6] bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray5()
+    {
+        var actual = Run(@"
+            .function uint8[3][6] foo
+                ldsfld bar
+                ret
+            .global uint8[3][6] bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray6()
+    {
+        var actual = Run(@"
+            .function uint8[3]*[6] foo
+                ldsfld bar
+                ret
+            .global uint8[3]*[6] bar");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+
+    [Test]
     public Task Structure1()
     {
         var actual = Run(@"
@@ -1014,6 +1079,58 @@ public sealed partial class AssemblerTests
             .structure bar
                 int16 a
                 int64 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task StructureWithArray1()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                int8[4] b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task StructureWithArray2()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                int8[4][3] b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task StructureWithArray3()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                bar[3] b
+                int32 c
+            .structure bar
+                int32 a
+                int8[4] b
                 int32 c");
         return Verify(actual);
     }

@@ -23,31 +23,28 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.data
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .field public static int32 givalue
-  .method private static void  initializer_0() cil managed
-  {
-    // Code size       11 (0xb)
-    .maxstack  8
-    IL_0000:  ldc.i4     0x7b
-    IL_0005:  stsfld     int32 C.data::givalue
-    IL_000a:  ret
-  } // end of method data::initializer_0
-
-  .method private hidebysig specialname rtspecialname static 
-          void  .cctor() cil managed
+  .method public static int32  foo() cil managed
   {
     // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  call       void C.data::initializer_0()
+    IL_0000:  ldsfld     int32 C.data::bar
     IL_0005:  ret
-  } // end of method data::.cctor
+  } // end of method text::foo
 
+} // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static int32 bar at I_00002058
 } // end of class C.data
 
 
 // =============================================================
 
+.data cil I_00002058 = bytearray (
+                 10 32 54 76)                                     // .2Tv
 // *********** DISASSEMBLY COMPLETE ***********************

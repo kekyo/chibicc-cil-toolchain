@@ -13,6 +13,7 @@ using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -27,13 +28,10 @@ internal sealed partial class Parser
     private readonly ModuleDefinition module;
     private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiDataType;
-    private readonly TypeDefinition cabiConstantType;
     private readonly MemberDictionary<MemberReference> cabiSpecificSymbols;
     private readonly MemberDictionary<TypeDefinition> referenceTypes;
     private readonly Dictionary<string, TypeReference> knownTypes = new();
     private readonly Dictionary<string, Instruction> labelTargets = new();
-    private readonly List<MethodDefinition> initializers = new();
-    private readonly Dictionary<int, TypeDefinition> constantTypeBySize = new();
     private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
@@ -79,12 +77,6 @@ internal sealed partial class Parser
             "C",
             "data",
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
-            this.module.TypeSystem.Object);
-        this.cabiConstantType = new TypeDefinition(
-            "",
-            "constant",
-            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
 
@@ -220,11 +212,30 @@ internal sealed partial class Parser
                     type = null!;
                     return false;
                 }
-            case ']' when name.Length >= 2 && name[name.Length - 2] == '[':
-                if (this.TryGetType(name.Substring(0, name.Length - 2), out var preType3))
+            case ']' when name.Length >= 4:
+                var startBracketIndex = name.LastIndexOf('[', name.Length - 2);
+                // "aaa"
+                if (startBracketIndex >= 1 &&
+                    this.TryGetType(name.Substring(0, startBracketIndex), out var elementType))
                 {
-                    type = new ArrayType(this.Import(preType3));
-                    return true;
+                    // "aaa[]"
+                    if ((name.Length - startBracketIndex - 2) == 0)
+                    {
+                        type = new ArrayType(this.Import(elementType));
+                        return true;
+                    }
+                    // "aaa[10]"
+                    else
+                    {
+                        var length = int.Parse(
+                            name.Substring(startBracketIndex + 1, name.Length - startBracketIndex - 2),
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture);
+
+                        // "aaa_len10"
+                        type = this.GetValueArrayType(elementType, length);
+                        return true;
+                    }
                 }
                 else
                 {
@@ -241,9 +252,8 @@ internal sealed partial class Parser
                     type = this.Import(tr1);
                     return true;
                 }
-                else if (this.module.Types.
-                    Where(type => type.Namespace == "C.type").
-                    FirstOrDefault(type => type.Name == name) is { } td2)
+                else if (this.module.Types.FirstOrDefault(type =>
+                    (type.Namespace == "C.type" ? type.Name : type.FullName) == name) is { } td2)
                 {
                     type = td2;
                     return true;
@@ -270,6 +280,13 @@ internal sealed partial class Parser
     {
         var methodNameIndex = name.LastIndexOf('.');
         var methodName = name.Substring(methodNameIndex + 1);
+
+        if (methodName == "ctor" || methodName == "cctor")
+        {
+            methodName = "." + methodName;
+            methodNameIndex--;
+        }
+
         if (methodNameIndex <= 0)
         {
             if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m) &&
@@ -343,12 +360,6 @@ internal sealed partial class Parser
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
-                return true;
-            }
-            else if (this.cabiConstantType.Fields.
-                FirstOrDefault(field => field.Name == fieldName) is { } f3)
-            {
-                field = f3;
                 return true;
             }
             else
@@ -476,7 +487,7 @@ internal sealed partial class Parser
             {
                 this.OutputError(
                     methodNameToken,
-                    $"Could not find type: {methodNameToken.Text}");
+                    $"Could not find method: {methodNameToken.Text}");
             }
         });
 
@@ -496,7 +507,7 @@ internal sealed partial class Parser
             {
                 this.OutputError(
                     location,
-                    $"Could not find type: {methodName}");
+                    $"Could not find method: {methodName}");
             }
         });
 
@@ -620,35 +631,6 @@ internal sealed partial class Parser
                 this.module.Types.Add(this.cabiDataType);
             }
 
-            if (this.cabiConstantType.Fields.Count >= 1)
-            {
-                this.module.Types.Add(this.cabiConstantType);
-            }
-
-            // Append type initializer
-            if (this.initializers.Count >= 1)
-            {
-                var typeInitializer = new MethodDefinition(
-                    ".cctor",
-                    MethodAttributes.Private |
-                    MethodAttributes.Static |
-                    MethodAttributes.HideBySig |
-                    MethodAttributes.SpecialName |
-                    MethodAttributes.RTSpecialName,
-                    this.module.TypeSystem.Void);
-                this.cabiDataType.Methods.Add(typeInitializer);
-
-                var body = typeInitializer.Body;
-                var instructions = body.Instructions;
-
-                foreach (var initializer in this.initializers)
-                {
-                    instructions.Add(Instruction.Create(OpCodes.Call, initializer));
-                }
-
-                instructions.Add(Instruction.Create(OpCodes.Ret));
-            }
-
             // Fire local member lookup.
             foreach (var action in this.delayedLookupLocalMemberActions)
             {
@@ -727,8 +709,6 @@ internal sealed partial class Parser
         this.files.Clear();
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();
-        this.initializers.Clear();
-        this.constantTypeBySize.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
         this.currentFile = unknown;

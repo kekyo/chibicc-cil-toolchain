@@ -1,0 +1,118 @@
+﻿
+//  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
+
+
+
+// Metadata version: v4.0.30319
+.assembly extern mscorlib
+{
+  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
+  .ver 4:0:0:0
+}
+.assembly extern System.Private.CoreLib
+{
+  .publickeytoken = (7C EC 85 D7 BE A7 79 8E )                         // |.....y.
+  .ver 6:0:0:0
+}
+.assembly output
+{
+  .ver 1:0:0:0
+}
+.module output.dll
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class public sequential ansi sealed C.type.foo
+       extends [System.Private.CoreLib]System.ValueType
+{
+  .field public int32 a
+  .field public valuetype System.SByte_len4 b
+  .field public int32 c
+} // end of class C.type.foo
+
+.class public sequential ansi sealed System.SByte_len4
+       extends [System.Private.CoreLib]System.ValueType
+{
+  .custom instance void [System.Private.CoreLib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .field private int8 item0
+  .field private int8 item1
+  .field private int8 item2
+  .field private int8 item3
+  .method public hidebysig specialname instance int32 
+          get_Length() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldc.i4     0x4
+    IL_0005:  ret
+  } // end of method SByte_len4::get_Length
+
+  .method public hidebysig specialname instance int8 
+          get_Item(int32 index) cil managed
+  {
+    // Code size       13 (0xd)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     [mscorlib]System.SByte
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldind.i1
+    IL_000c:  ret
+  } // end of method SByte_len4::get_Item
+
+  .method public hidebysig specialname instance void 
+          set_Item(int32 index,
+                   int8 'value') cil managed
+  {
+    // Code size       14 (0xe)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  sizeof     [mscorlib]System.SByte
+    IL_0007:  mul
+    IL_0008:  ldarg.0
+    IL_0009:  conv.u
+    IL_000a:  add
+    IL_000b:  ldarg.2
+    IL_000c:  stind.i1
+    IL_000d:  ret
+  } // end of method SByte_len4::set_Item
+
+  .property instance callconv(8) int32 Length()
+  {
+    .get instance int32 System.SByte_len4::get_Length()
+  } // end of property SByte_len4::Length
+  .property instance callconv(8) int8 Item(int32)
+  {
+    .get instance int8 System.SByte_len4::get_Item(int32)
+    .set instance void System.SByte_len4::set_Item(int32,
+                                                   int8)
+  } // end of property SByte_len4::Item
+} // end of class System.SByte_len4
+
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static void  main() cil managed
+  {
+    // Code size       11 (0xb)
+    .maxstack  1
+    .locals (valuetype C.type.foo V_0)
+    IL_0000:  ldloca     V_0
+    IL_0004:  initobj    C.type.foo
+    IL_000a:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
+
+// =============================================================
+
+// *********** DISASSEMBLY COMPLETE ***********************

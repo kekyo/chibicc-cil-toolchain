@@ -2,7 +2,7 @@
   "profiles": {
     "chibias": {
       "commandName": "Project",
-      "commandLineArgs": "-o tmp.exe test.s"
+      "commandLineArgs": "-r ..\\..\\..\\..\\..\\chibicc-cil\\mscorlib.dll -c test.s"
     }
   }
 }

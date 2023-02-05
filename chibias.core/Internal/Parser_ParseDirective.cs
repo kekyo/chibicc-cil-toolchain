@@ -115,28 +115,6 @@ partial class Parser
         }
     }
 
-    private void ParseInitializerDirective(
-        Token directive, Token[] tokens)
-    {
-        if (tokens.Length > 1)
-        {
-            this.OutputError(directive, $"Too many operands.");
-        }
-        else
-        {
-            var functionName = $"initializer_{this.initializers.Count}";
-
-            var initializer = this.SetupFunctionBodyDirective(
-                functionName,
-                this.module.TypeSystem.Void,
-                Utilities.Empty<ParameterDefinition>(),
-                false);
-            this.cabiDataType.Methods.Add(initializer);
-
-            this.initializers.Add(initializer);
-        }
-    }
-
     private void ParseGlobalDirective(
         Token directive, Token[] tokens)
     {
@@ -147,6 +125,21 @@ partial class Parser
         else
         {
             this.FinishCurrentState();
+
+            var data = tokens.Skip(3).
+                Select(token =>
+                {
+                    if (Utilities.TryParseUInt8(token.Text, out var value))
+                    {
+                        return value;
+                    }
+                    else
+                    {
+                        this.OutputError(token, $"Invalid data operand.");
+                        return (byte)0;
+                    }
+                }).
+                ToArray();
 
             var globalTypeName = tokens[1].Text;
             var globalName = tokens[2].Text;
@@ -165,6 +158,10 @@ partial class Parser
                 globalName,
                 FieldAttributes.Public | FieldAttributes.Static,
                 globalType);
+            if (data.Length >= 1)
+            {
+                field.InitialValue = data;
+            }
             this.cabiDataType.Fields.Add(field);
         }
     }
@@ -306,60 +303,6 @@ partial class Parser
         }
     }
 
-    private void ParseConstantDirective(
-        Token directive, Token[] tokens)
-    {
-        if (tokens.Length <= 2)
-        {
-            this.OutputError(directive, $"Missing data operand.");
-        }
-        else
-        {
-            this.FinishCurrentState();
-
-            var data = tokens.Skip(2).
-                Select(token =>
-                {
-                    if (Utilities.TryParseUInt8(token.Text, out var value))
-                    {
-                        return value;
-                    }
-                    else
-                    {
-                        this.OutputError(token, $"Invalid data operand.");
-                        return (byte)0;
-                    }
-                }).
-                ToArray();
-
-            var dataName = tokens[1].Text;
-
-            if (!this.constantTypeBySize.TryGetValue(data.Length, out var constantType))
-            {
-                var constantTypeName = $"constant_size_{data.Length}";
-
-                constantType = new TypeDefinition(
-                    "",
-                    constantTypeName,
-                    TypeAttributes.NotPublic | TypeAttributes.Sealed | TypeAttributes.ExplicitLayout,
-                    this.valueType.Value);
-                constantType.PackingSize = 1;
-                constantType.ClassSize = data.Length;
-
-                this.module.Types.Add(constantType);
-                this.constantTypeBySize.Add(data.Length, constantType);
-            }
-
-            var field = new FieldDefinition(
-                dataName,
-                FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly,
-                constantType);
-            field.InitialValue = data;
-
-            this.cabiConstantType.Fields.Add(field);
-        }
-    }
-
     private void ParseFileDirective(
         Token directive, Token[] tokens)
     {
@@ -459,10 +402,6 @@ partial class Parser
             case "function":
                 this.ParseFunctionDirective(directive, tokens);
                 break;
-            // Initializer directive:
-            case "initializer":
-                this.ParseInitializerDirective(directive, tokens);
-                break;
             // Global variable directive:
             case "global":
                 this.ParseGlobalDirective(directive, tokens);
@@ -474,10 +413,6 @@ partial class Parser
             // Structure directive:
             case "structure":
                 this.ParseStructureDirective(directive, tokens);
-                break;
-            // Constant directive:
-            case "constant":
-                this.ParseConstantDirective(directive, tokens);
                 break;
             // File directive:
             case "file":

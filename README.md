@@ -397,51 +397,75 @@ public static class text
 }
 ```
 
-### Global initializer
+### Initializing data
 
-The Initializer directive is the same as the Function directive except that there is no return type, function name, or parameters.
-This is used to write custom code to initialize global variables:
+The global variable declares with initializing data.
 
 ```
-.initializer
-    ldc.i4 123
-    stsfld foo
+.function int32 bar
+    ldsfld foo
     ret
-.global int32 foo
+; int32 foo = 0x76543210
+.global int32 foo 0x10 0x32 0x54 0x76
 ```
 
-Initializer directives may be used any number of times in the source code.
-They are called from the real type initializer of the `C.data` class.
+The data must be fill in bytes.
 
-However, the order cannot be specified.
-The relationship of one Initializer depending on the other is not taken into account.
+In addition, since the placed data will be writable,
+care must be taken in handling it.
 
-### Constant data
+### Value array type
 
-The Constant directive places fixed data in the assembly that will not change:
+.NET does not have an array type that behaves like a value type.
+chibias can use the `value array` type to pseudo-realize this.
+The value array type plays a very important role in the realization of the C language compiler.
+
+To use a value array type, declare the type as follows:
 
 ```
-.function uint8[] foo
-    ldc.i4.6
-    newarr uint8
-    dup
-    ldtoken bar
-    call System.Runtime.CompilerServices.RuntimeHelpers.InitializeArray System.Array System.RuntimeFieldHandle
+.function int8[5] bar   ; <-- Value array requres element length
+    ldsfld foo
     ret
-.constant bar 0x01 0x02 0x31 0x32 0xb1 0xb2
+.global int8[5] foo 0x10 0x32 0x54 0x76 0x98
 ```
 
-Placed fixed data is placed directly into a dedicated hidden structure type and can be referenced by `ldtoken` opcode.
-The standard scenario is to have an array of initial values as shown above.
+At this time, the actual type of the `bar` function and the `foo` variable will be of type `System.Int8_len5`.
+Specifically, the following structure is declared automatically.
 
-Elements placed in a constant directive are similar to global variables, but differ in several ways:
+Pseudo code in C#:
 
-* Because it is marked as private, it can only be accessed by CABI members in the same assembly.
-  It cannot be referenced from outside the assembly.
-* Symbol names (`bar` in the above example) are treated like global variables and can be referenced by `ldsfld` opcode and likes.
-  However, since the type of the retrieved instance will be of its own value type, and should be handled with care.
+```csharp
+namespace System;
 
-### Structure
+[StructLayout(LayoutKind.Sequential)]
+public struct Int8_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
+{
+    private sbyte item0;
+    private sbyte item1;
+    private sbyte item2;
+    private sbyte item3;
+    private sbyte item4;
+
+    public int Length => 5;
+    public sbyte this[int index]
+    {
+        get => /* ... */;
+        set => /* ... */;
+    }
+}
+```
+
+This structure can behave likes an array outside of chibias (and chibicc).
+
+The natural interpretation of types is also performed.
+For example:
+
+* `int8[5]*` --> `System.Int8_len5*`
+* `int8*[5]` --> `System.Int8_ptr_len5`
+* `int8[5][3]` --> `System.Int8_len5_len3`
+* `int8[5]*[3]` --> `System.Int8_len5_ptr_len3`
+
+### Structure type
 
 The only types that can be defined are structure types.
 That is, types that inherit implicitly from `System.ValueType`:
@@ -451,6 +475,20 @@ That is, types that inherit implicitly from `System.ValueType`:
     int32 a
     int8 b
     int32 c
+```
+
+Pseudo code in C#:
+
+```csharp
+namespace C.type;
+
+[StructLayout(LayoutKind.Sequential)]
+public struct foo
+{
+    public int a;
+    public sbyte b;
+    public int c;
+}
 ```
 
 By default, structure packing is left to the CLR.
@@ -467,9 +505,9 @@ Or gives an offset to each member:
 
 ```
 .structure foo explicit
-    int32 a 0   ; offset=0
-    int8 b 4    ; offset=4
-    int32 c 5   ; offset=5
+    int32 a 0     ; offset=0
+    int8 b 4      ; offset=4
+    int32 c 5     ; offset=5
 ```
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
@@ -502,7 +540,7 @@ The file and location directive will produce sequence points into debugging info
   * Third operand: Start column index. (0 based index)
   * Forth operand: End line index. (0 based index)
   * Fifth operand: End column index. (0 based index, must larger than start)
-  * The location directive can declare only in the function/initializer body.
+  * The location directive can declare only in the function body.
 
 The language indicators is shown (not all):
 
@@ -528,6 +566,8 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
+* Handling function/global variable scopes.
+* Automatic implements `IList<T>` on value array type.
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Handling for target framework moniker.
