@@ -414,7 +414,7 @@ The data must be fill in bytes.
 In addition, since the placed data will be writable,
 care must be taken in handling it.
 
-### The value array
+### Value array type
 
 .NET does not have an array type that behaves like a value type.
 chibias can use the `value array` type to pseudo-realize this.
@@ -475,7 +475,7 @@ They are called from the real type initializer of the `C.data` class.
 However, the order cannot be specified.
 The relationship of one Initializer depending on the other is not taken into account.
 
-### Structure
+### Structure type
 
 The only types that can be defined are structure types.
 That is, types that inherit implicitly from `System.ValueType`:
