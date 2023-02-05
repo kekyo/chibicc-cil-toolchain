@@ -115,28 +115,6 @@ partial class Parser
         }
     }
 
-    private void ParseInitializerDirective(
-        Token directive, Token[] tokens)
-    {
-        if (tokens.Length > 1)
-        {
-            this.OutputError(directive, $"Too many operands.");
-        }
-        else
-        {
-            var functionName = $"initializer_{this.initializers.Count}";
-
-            var initializer = this.SetupFunctionBodyDirective(
-                functionName,
-                this.module.TypeSystem.Void,
-                Utilities.Empty<ParameterDefinition>(),
-                false);
-            this.cabiDataType.Methods.Add(initializer);
-
-            this.initializers.Add(initializer);
-        }
-    }
-
     private void ParseGlobalDirective(
         Token directive, Token[] tokens)
     {
@@ -423,10 +401,6 @@ partial class Parser
             // Function directive:
             case "function":
                 this.ParseFunctionDirective(directive, tokens);
-                break;
-            // Initializer directive:
-            case "initializer":
-                this.ParseInitializerDirective(directive, tokens);
                 break;
             // Global variable directive:
             case "global":

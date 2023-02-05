@@ -428,7 +428,7 @@ To use a value array type, declare the type as follows:
 .global int8[5] foo 0x10 0x32 0x54 0x76 0x98
 ```
 
-At this time, the actual type of the `bar` function and the `foo` variable will be of type `System.Int32_len5`.
+At this time, the actual type of the `bar` function and the `foo` variable will be of type `System.Int8_len5`.
 Specifically, the following structure is declared automatically.
 
 Pseudo code in C#:
@@ -437,16 +437,16 @@ Pseudo code in C#:
 namespace System;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct Int32_len5   // TODO: : IList<byte>, IReadOnlyList<byte>
+public struct Int8_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 {
-    private int item0;
-    private int item1;
-    private int item2;
-    private int item3;
-    private int item4;
+    private sbyte item0;
+    private sbyte item1;
+    private sbyte item2;
+    private sbyte item3;
+    private sbyte item4;
 
     public int Length => 5;
-    public int this[int index]
+    public sbyte this[int index]
     {
         get => /* ... */;
         set => /* ... */;
@@ -455,25 +455,6 @@ public struct Int32_len5   // TODO: : IList<byte>, IReadOnlyList<byte>
 ```
 
 This structure can be used as a structure that behaves like an array outside of chibias (and chibicc).
-
-### Global initializer
-
-The Initializer directive is the same as the Function directive except that there is no return type, function name, or parameters.
-This is used to write custom code to initialize global variables:
-
-```
-.initializer
-    ldc.i4 123
-    stsfld foo
-    ret
-.global int32 foo
-```
-
-Initializer directives may be used any number of times in the source code.
-They are called from the real type initializer of the `C.data` class.
-
-However, the order cannot be specified.
-The relationship of one Initializer depending on the other is not taken into account.
 
 ### Structure type
 
@@ -550,7 +531,7 @@ The file and location directive will produce sequence points into debugging info
   * Third operand: Start column index. (0 based index)
   * Forth operand: End line index. (0 based index)
   * Fifth operand: End column index. (0 based index, must larger than start)
-  * The location directive can declare only in the function/initializer body.
+  * The location directive can declare only in the function body.
 
 The language indicators is shown (not all):
 
@@ -576,6 +557,7 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
+* Handling function/global variable scopes.
 * Automatic implements `IList<T>` on array type for explicitly length.
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)

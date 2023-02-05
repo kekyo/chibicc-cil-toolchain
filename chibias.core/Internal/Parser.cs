@@ -32,7 +32,6 @@ internal sealed partial class Parser
     private readonly MemberDictionary<TypeDefinition> referenceTypes;
     private readonly Dictionary<string, TypeReference> knownTypes = new();
     private readonly Dictionary<string, Instruction> labelTargets = new();
-    private readonly List<MethodDefinition> initializers = new();
     private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
@@ -632,30 +631,6 @@ internal sealed partial class Parser
                 this.module.Types.Add(this.cabiDataType);
             }
 
-            // Append type initializer
-            if (this.initializers.Count >= 1)
-            {
-                var typeInitializer = new MethodDefinition(
-                    ".cctor",
-                    MethodAttributes.Private |
-                    MethodAttributes.Static |
-                    MethodAttributes.HideBySig |
-                    MethodAttributes.SpecialName |
-                    MethodAttributes.RTSpecialName,
-                    this.module.TypeSystem.Void);
-                this.cabiDataType.Methods.Add(typeInitializer);
-
-                var body = typeInitializer.Body;
-                var instructions = body.Instructions;
-
-                foreach (var initializer in this.initializers)
-                {
-                    instructions.Add(Instruction.Create(OpCodes.Call, initializer));
-                }
-
-                instructions.Add(Instruction.Create(OpCodes.Ret));
-            }
-
             // Fire local member lookup.
             foreach (var action in this.delayedLookupLocalMemberActions)
             {
@@ -734,7 +709,6 @@ internal sealed partial class Parser
         this.files.Clear();
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();
-        this.initializers.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
         this.currentFile = unknown;
