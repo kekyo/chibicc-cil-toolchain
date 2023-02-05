@@ -418,6 +418,7 @@ care must be taken in handling it.
 
 .NET does not have an array type that behaves like a value type.
 chibias can use the `value array` type to pseudo-realize this.
+The value array type plays a very important role in the realization of the C language compiler.
 
 To use a value array type, declare the type as follows:
 
@@ -454,7 +455,13 @@ public struct Int8_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 }
 ```
 
-This structure can be used as a structure that behaves like an array outside of chibias (and chibicc).
+This structure can behave likes an array outside of chibias (and chibicc).
+
+The natural interpretation of types is also performed.
+For example, the type `int8[5] *` is interpreted as `System.Int8_len5 *`.
+
+Similarly, the type `int8[5][3]` is interpreted as the type `System.Int8_len5_len3`.
+The latter behaves as an array containing elements of type `Int8_len5`.
 
 ### Structure type
 
