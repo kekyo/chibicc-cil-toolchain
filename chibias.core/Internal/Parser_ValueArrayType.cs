@@ -9,6 +9,7 @@
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using System.Globalization;
 
 namespace chibias.Internal;
 
@@ -274,10 +275,47 @@ partial class Parser
         return valueArrayType;
     }
 
+    private string GetValueArrayTypeName(string name)
+    {
+        switch (name[name.Length - 1])
+        {
+            case '*':
+                return $"{this.GetValueArrayTypeName(name.Substring(0, name.Length - 1))}_ptr";
+            case '&':
+                return $"{this.GetValueArrayTypeName(name.Substring(0, name.Length - 1))}_ref";
+            case ']' when name.Length >= 4:
+                var startBracketIndex = name.LastIndexOf('[', name.Length - 2);
+                // "aaa"
+                if (startBracketIndex >= 1)
+                {
+                    var elementTypeName = name.Substring(0, startBracketIndex);
+                    // "aaa[]"
+                    if ((name.Length - startBracketIndex - 2) == 0)
+                    {
+                        return $"{this.GetValueArrayTypeName(elementTypeName)}_arr";
+                    }
+                    // "aaa[10]"
+                    else
+                    {
+                        var length = int.Parse(
+                            name.Substring(startBracketIndex + 1, name.Length - startBracketIndex - 2),
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture);
+
+                        // "aaa_len10"
+                        return $"{this.GetValueArrayTypeName(elementTypeName)}_len{length}";
+                    }
+                }
+                break;
+        }
+
+        return name;
+    }
+
     private TypeReference GetValueArrayType(
         TypeReference elementType, int length)
     {
-        var valueArrayTypeName = $"{elementType.Name}_len{length}";
+        var valueArrayTypeName = $"{this.GetValueArrayTypeName(elementType.Name)}_len{length}";
         var valueArrayTypeFullName = elementType.Namespace == "C.type" ?
             valueArrayTypeName : $"{elementType.Namespace}.{valueArrayTypeName}";
 

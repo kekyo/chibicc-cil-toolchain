@@ -458,10 +458,12 @@ public struct Int8_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 This structure can behave likes an array outside of chibias (and chibicc).
 
 The natural interpretation of types is also performed.
-For example, the type `int8[5] *` is interpreted as `System.Int8_len5 *`.
+For example:
 
-Similarly, the type `int8[5][3]` is interpreted as the type `System.Int8_len5_len3`.
-The latter behaves as an array containing elements of type `Int8_len5`.
+* `int8[5]*` --> `System.Int8_len5*`
+* `int8*[5]` --> `System.Int8_ptr_len5`
+* `int8[5][3]` --> `System.Int8_len5_len3`
+* `int8[5]*[3]` --> `System.Int8_len5_ptr_len3`
 
 ### Structure type
 
@@ -565,7 +567,7 @@ Might be implemented:
 * `OperandType`
   * InlineSwitch
 * Handling function/global variable scopes.
-* Automatic implements `IList<T>` on array type for explicitly length.
+* Automatic implements `IList<T>` on value array type.
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Handling for target framework moniker.

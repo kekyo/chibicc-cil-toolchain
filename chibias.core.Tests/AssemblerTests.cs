@@ -947,6 +947,75 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
+    public Task ValueArray1()
+    {
+        var actual = Run(@"
+            .function int8[6] foo
+                ldsfld bar
+                ret
+            .global int8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray2()
+    {
+        var actual = Run(@"
+            .function uint8[6]* foo
+                ldsfld bar
+                ret
+            .global uint8[6]* bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray3()
+    {
+        var actual = Run(@"
+            .function uint8*[6] foo
+                ldsfld bar
+                ret
+            .global uint8*[6] bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray4()
+    {
+        var actual = Run(@"
+            .function uint8&[6] foo
+                ldsfld bar
+                ret
+            .global uint8&[6] bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray5()
+    {
+        var actual = Run(@"
+            .function uint8[3][6] foo
+                ldsfld bar
+                ret
+            .global uint8[3][6] bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task ValueArray6()
+    {
+        var actual = Run(@"
+            .function uint8[3]*[6] foo
+                ldsfld bar
+                ret
+            .global uint8[3]*[6] bar");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+
+    [Test]
     public Task Structure1()
     {
         var actual = Run(@"
