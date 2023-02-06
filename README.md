@@ -2,19 +2,36 @@
 
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 
-This is a CIL/MSIL assembler, backend for porting C language compiler implementation derived from [chibicc](https://github.com/rui314/chibicc) on .NET CIL/CLR.
-It is WIP and broadcasting side-by-side GIT commit portion on [YouTube (In Japanese)](https://bit.ly/3XbqPSQ).
-
-[chibicc-cil](https://github.com/kekyo/chibicc-cil) will be made available as the porting progresses to some extent, please wait.
-
-
-### NuGet
+## NuGet
 
 | Package  | NuGet                                                                                                                |
 |:---------|:---------------------------------------------------------------------------------------------------------------------|
 | chibias-cli (dotnet CLI) | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibias-cli.svg?style=flat)](https://www.nuget.org/packages/chibias-cli) |
 | chibias.core (Core library) | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
 | chibias.build (MSBuild scripting) | [![NuGet chibias.build](https://img.shields.io/nuget/v/chibias.build.svg?style=flat)](https://www.nuget.org/packages/chibias.build) |
+
+## What is this?
+
+[![Japanese language](Images/Japanese.256.png)](https://github.com/kekyo/chibias-cil/blob/main/README.ja.md)
+
+This is a CIL/MSIL assembler, backend for porting C language compiler implementation derived from [chibicc](https://github.com/rui314/chibicc) on .NET CIL/CLR.
+It is WIP and broadcasting side-by-side Git commit portion on [YouTube (In Japanese)](https://bit.ly/3XbqPSQ).
+
+[chibicc-cil](https://github.com/kekyo/chibicc-cil) will be made available as the porting progresses to some extent, please wait.
+
+
+----
+
+## chibias overview
+
+chibias takes multiple CIL source codes as input, performs assembly, and outputs the result as . NET assemblies. At this time, reference assemblies can be specified so that they can be referenced from the CIL source code.
+
+![chibias overview](Images/chibias.png)
+
+chibias was developed as a backend assembler for chibicc, but can also be used by us.
+The source code is easier to write for humans because it employs simplified syntax rules compared to ILAsm.
+
+The general C compiler generates intermediate object format files `*.o` by inputting them to the linker `ld` at the final stage. chibias does not handle such object files, but generates `exe` and `dll` directly. When dealing with split source code, you can consider the source code itself (`*.s`) as an intermediate object format file and treat it same way as a linker.
 
 
 ----
@@ -131,7 +148,17 @@ Hello world with chibias!
 ## Assembly syntax
 
 TODO: WIP, Specifications have not yet been finalized.
-To check the syntax, you should look at [the test code](https://github.com/kekyo/chibias-cil/blob/main/chibias.core.Tests/AssemblerTests.cs#L135).
+
+To check the syntax, you should look at [the test code](https://github.com/kekyo/chibias-cil/blob/main/chibias.core.Tests/AssemblerTests.cs).
+
+The syntax of chibias has the following features:
+
+* The body of the opcode can be written in almost the same way as in ILAsm.
+* Unnecessarily verbose descriptions are eliminated as much as possible.
+* Codes related to OOP cannot be written or have restrictions
+
+It is basically designed to achieve a "C language" like chibicc,
+but it should be much easier to write than ILAsm.
 
 ### Minimum, included only main entry point
 
@@ -145,12 +172,13 @@ To check the syntax, you should look at [the test code](https://github.com/kekyo
 * The line both pre-whitespaces and post-whitespaces are ignored.
   * That is, indentation is simply ignored.
 * The semicolon (';') starts comment, ignores all words at end of line.
-* Begin with dot ('.') declaration is "Assembler directives."
+* Begin a word with dot ('.') declaration is "Assembler directives."
   * `.function` directive is beginning function body with return type and function name.
   * The function body continues until the next function directive appears.
-* Automatic apply entry point when using `main` function name and assemble with `--exe` option.
+* Automatic apply entry point when using `main` function name and assemble executable file with same as `--exe` option.
 
 ### Literals
+
 ```
 .function int32 main
     ldc.i4 123
@@ -165,8 +193,8 @@ To check the syntax, you should look at [the test code](https://github.com/kekyo
   * Integer literal: `System.Int32.Parse()` and suitable types with `InvariantCulture`.
   * Floating point number literal: `System.Double.Parse()` and suitable types with `InvariantCulture`.
 * String literal is double-quoted ('"').
-  * Escape character is ('\'), same as C language specification except trigraph chars.
-  * Hex number ('\xnn') and UTF-16 ('\unnnn') numbers are acceptable.
+  * Escape character is ('\\'), same as C language specification except trigraph chars.
+  * Hex number ('\\xnn') and UTF-16 ('\\unnnn') numbers are acceptable.
 
 ### Labels
 
@@ -179,10 +207,10 @@ NAME:
     ret
 ```
 
-Label name ends with ':'.
+Label name ends with (':').
 Label name requires unique in the function scope.
 
-### Builtin types
+### Builtin type names
 
 |Type name|Exact type|Alias type names|
 |:----|:----|:----|
@@ -210,9 +238,14 @@ You can combine array/pointer/refernces.
 
 * `int[]`
 * `int[][]`
+* `int[4]`
+* `int[4][3]`
 * `int32*`
 * `int32**`
 * `int32&`
+
+A type that specifies the number of elements in an array is called a "Value array type" and is treated differently from an array in .NET CLR.
+See separate section for details.
 
 ### Local variables
 
@@ -262,8 +295,9 @@ The parameters are optional. Formats are:
 
 The function name both forward and backaward references are accepted.
 
-Important topic: The `call` operand is NOT containing any argument description.
-In other words, chibias cannot call .NET overloaded methods directly.
+Important: If you are calling a function defined in chibias,
+you do not need to specify any argument type list for the `call` operand.
+In another hand, .NET overloaded methods, an argument type list is required.
 
 ### Call external function
 
@@ -330,7 +364,7 @@ This is named "CABI (chibicc application binary interface) specification."
 
 ### Call external method
 
-Simply specify a method with full name and parameter types:
+Simply specify a .NET method with full name and parameter types:
 
 ```
 .function void main
@@ -375,6 +409,8 @@ However, excludes declarations outside function body:
 .global int32 foo
 ```
 
+The global variable name both forward and backaward references are accepted.
+
 Global variable name strategy complies with CABI excepts placing into `C.data` class.
 
 Pseudo code in C#:
@@ -399,7 +435,7 @@ public static class text
 
 ### Initializing data
 
-The global variable declares with initializing data.
+The global variable declares with initializing data:
 
 ```
 .function int32 bar
@@ -410,7 +446,6 @@ The global variable declares with initializing data.
 ```
 
 The data must be fill in bytes.
-
 In addition, since the placed data will be writable,
 care must be taken in handling it.
 
@@ -429,7 +464,7 @@ To use a value array type, declare the type as follows:
 .global int8[5] foo 0x10 0x32 0x54 0x76 0x98
 ```
 
-At this time, the actual type of the `bar` function and the `foo` variable will be of type `System.Int8_len5`.
+At this time, the actual type of the `bar` function and the `foo` variable will be of type `System.SByte_len5`.
 Specifically, the following structure is declared automatically.
 
 Pseudo code in C#:
@@ -438,7 +473,7 @@ Pseudo code in C#:
 namespace System;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct Int8_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
+public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 {
     private sbyte item0;
     private sbyte item1;
@@ -460,10 +495,10 @@ This structure can behave likes an array outside of chibias (and chibicc).
 The natural interpretation of types is also performed.
 For example:
 
-* `int8[5]*` --> `System.Int8_len5*`
-* `int8*[5]` --> `System.Int8_ptr_len5`
-* `int8[5][3]` --> `System.Int8_len5_len3`
-* `int8[5]*[3]` --> `System.Int8_len5_ptr_len3`
+* `int8[5]*` --> `System.SByte_len5*`
+* `int8*[5]` --> `System.SByte_ptr_len5`
+* `int8[5][3]` --> `System.SByte_len5_len3`
+* `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
 ### Structure type
 
@@ -514,6 +549,13 @@ By arbitrarily adjusting the offset, we can reproduce the union type in the C la
 
 ### Explicitly location information
 
+The file and location directive will produce sequence points into debugging information.
+Sequence points are used to locate where the code being executed corresponds to in the source code.
+In other words, when this information is given,
+the debugger will be able to indicate the location of the code being executed in the source code.
+
+This information is optional and does not affect assembly task if it is not present.
+
 ```
 .file 1 "/home/kouji/Projects/test.c" c
 .function int32 main
@@ -527,10 +569,8 @@ By arbitrarily adjusting the offset, we can reproduce the union type in the C la
     ret
 ```
 
-The file and location directive will produce sequence points into debugging information.
-
 * The file directive maps ID to source code file.
-  * First operand: ID (Valid any symbols include number, same as GAS's `.file` directive).
+  * First operand: ID (Valid any symbols include number, same as GAS's `.fil` directive).
   * Second operand: File path (or source code identity) string.
   * Third operand: Language indicator, see listing below. (Optional)
   * The file directive can always declare, and will overwrite same ID.
@@ -598,19 +638,24 @@ Initially I used [ILAsm.Managed](https://github.com/kekyo/ILAsm.Managed), but th
 * Debugging information:
   ILAsm can provide debugging information, but it also has the following problems:
   * Debugging information from CIL source code itself, but it is not possible to create references to the original source code.
-    This corresponds to `.file` and `.loc` directives in GNU assembler.
+    This corresponds to `.fil` and `.loc` directives in GNU assembler.
     Also, there was a possibility to provide richer debugging information in .NET assembly,
     but it is not possible as far as using ILAsm.
   * Managed debugging information is in "MDB" format, which is not suitable for the current situation.
     So it is necessary to be able to realize "Portable PDB" or "Embedded."
-    * This could be solved by using the ILAsm provided by MS, but we have decided not to use it because of [another problem](https://github.com/kekyo/ILAsm.Managed#background).
+    This could be solved by using the ILAsm provided by MS, but we have decided not to use it because of [another problem](https://github.com/kekyo/ILAsm.Managed#background).
 * ILAsm has complex and redundant syntax rules.
-  * Want to eliminate excessive block-quote syntax.
+  * Want to eliminate excessive curly-brace syntax. ('{ ... }')
   * Want to eliminate unusual optional member attributes.
-  * Want to eliminate chatty namespace/type member prefixes.
+  * Want to eliminate excessive namespace/type member prefixes.
 
 These were considered difficult to work around and led us to implement our own assembler with the minimum required functionality.
 
+I am implementing this in parallel with the porting of chibicc-cil, adding and changing features that we have newly discovered. For example:
+
+* Added value array type feature.
+* Combined initializer into global variables.
+* Definition of CABI
 
 ----
 
