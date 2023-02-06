@@ -19,7 +19,8 @@ partial class Parser
         string valueArrayTypeNamespace,
         string valueArrayTypeName,
         int length,
-        TypeReference elementType)
+        TypeReference elementType,
+        bool isReadOnly)
     {
         var valueArrayType = new TypeDefinition(
             valueArrayTypeNamespace,
@@ -29,6 +30,8 @@ partial class Parser
         //valueArrayType.PackingSize = 1;
         //valueArrayType.ClassSize = 0;
         this.module.Types.Add(valueArrayType);
+
+        ///////////////////////////////
 
         for (var index = 0; index < length; index++)
         {
@@ -78,6 +81,14 @@ partial class Parser
 
         ///////////////////////////////
 
+        var indexerProperty = new PropertyDefinition(
+            "Item",
+            PropertyAttributes.None,
+            elementType);
+        valueArrayType.Properties.Add(indexerProperty);
+
+        ///////////////////////////////
+
         var getItemMethod = new MethodDefinition(
             "get_Item",
             MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
@@ -89,188 +100,216 @@ partial class Parser
             this.module.TypeSystem.Int32));
         valueArrayType.Methods.Add(getItemMethod);
 
+        indexerProperty.GetMethod = getItemMethod;
+
         ///////////////////////////////
 
-        // TODO: IndexOutOfRangeException
+        var getItemInstructions = getItemMethod.Body.Instructions;
 
-        getItemMethod.Body.Instructions.Add(
+        // Guard
+        getItemInstructions.Add(
             Instruction.Create(OpCodes.Ldarg_1));
-        getItemMethod.Body.Instructions.Add(
+        getItemInstructions.Add(
+            Instruction.Create(OpCodes.Ldc_I4, length));
+        getItemInstructions.Add(
+            Instruction.Create(OpCodes.Clt));
+        var getItemNext = Instruction.Create(OpCodes.Ldarg_1);
+        getItemInstructions.Add(
+            Instruction.Create(OpCodes.Brtrue_S, getItemNext));
+
+        getItemInstructions.Add(
+            Instruction.Create(OpCodes.Newobj, this.indexOutOfRangeCtor.Value));
+        getItemInstructions.Add(
+            Instruction.Create(OpCodes.Throw));
+
+        // Body
+        getItemInstructions.Add(getItemNext);
+        getItemInstructions.Add(
             Instruction.Create(OpCodes.Sizeof, elementType));
-        getItemMethod.Body.Instructions.Add(
+        getItemInstructions.Add(
             Instruction.Create(OpCodes.Mul));
-        getItemMethod.Body.Instructions.Add(
+        getItemInstructions.Add(
             Instruction.Create(OpCodes.Ldarg_0));
-        getItemMethod.Body.Instructions.Add(
+        getItemInstructions.Add(
             Instruction.Create(OpCodes.Conv_U));
-        getItemMethod.Body.Instructions.Add(
+        getItemInstructions.Add(
             Instruction.Create(OpCodes.Add));
         switch (elementType.FullName)
         {
             case "System.Byte":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_U1));
                 break;
             case "System.SByte":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I1));
                 break;
             case "System.Int16":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I2));
                 break;
             case "System.UInt16":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_U2));
                 break;
             case "System.Int32":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I4));
                 break;
             case "System.UInt32":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_U4));
                 break;
             case "System.Int64":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I8));
                 break;
             case "System.UInt64":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I8));
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Conv_U8));
                 break;
             case "System.Single":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_R4));
                 break;
             case "System.Double":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_R8));
                 break;
             case "System.IntPtr":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I));
                 break;
             case "System.UIntPtr":
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I));
-                getItemMethod.Body.Instructions.Add(
+                getItemInstructions.Add(
                     Instruction.Create(OpCodes.Conv_U));
                 break;
             default:
                 if (elementType.IsValueType)
                 {
-                    getItemMethod.Body.Instructions.Add(
+                    getItemInstructions.Add(
                         Instruction.Create(OpCodes.Ldobj, elementType));
                 }
                 else
                 {
-                    getItemMethod.Body.Instructions.Add(
+                    getItemInstructions.Add(
                         Instruction.Create(OpCodes.Ldind_Ref));
                 }
                 break;
         }
-        getItemMethod.Body.Instructions.Add(
+        getItemInstructions.Add(
             Instruction.Create(OpCodes.Ret));
 
         ///////////////////////////////
 
-        var setItemMethod = new MethodDefinition(
-            "set_Item",
-            MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
-            this.module.TypeSystem.Void);
-        setItemMethod.HasThis = true;
-        setItemMethod.Parameters.Add(new(
-            "index",
-            ParameterAttributes.None,
-            this.module.TypeSystem.Int32));
-        setItemMethod.Parameters.Add(new(
-            "value",
-            ParameterAttributes.None,
-            elementType));
-        valueArrayType.Methods.Add(setItemMethod);
-
-        ///////////////////////////////
-
-        // TODO: IndexOutOfRangeException
-
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Ldarg_1));
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Sizeof, elementType));
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Mul));
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Ldarg_0));
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Conv_U));
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Add));
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Ldarg_2));
-        switch (elementType.FullName)
+        if (!isReadOnly)
         {
-            case "System.Byte":
-            case "System.SByte":
-                setItemMethod.Body.Instructions.Add(
-                    Instruction.Create(OpCodes.Stind_I1));
-                break;
-            case "System.Int16":
-            case "System.UInt16":
-                setItemMethod.Body.Instructions.Add(
-                    Instruction.Create(OpCodes.Stind_I2));
-                break;
-            case "System.Int32":
-            case "System.UInt32":
-                setItemMethod.Body.Instructions.Add(
-                    Instruction.Create(OpCodes.Stind_I4));
-                break;
-            case "System.Int64":
-            case "System.UInt64":
-                setItemMethod.Body.Instructions.Add(
-                    Instruction.Create(OpCodes.Stind_I8));
-                break;
-            case "System.Single":
-                setItemMethod.Body.Instructions.Add(
-                    Instruction.Create(OpCodes.Stind_R4));
-                break;
-            case "System.Double":
-                setItemMethod.Body.Instructions.Add(
-                    Instruction.Create(OpCodes.Stind_R8));
-                break;
-            case "System.IntPtr":
-            case "System.UIntPtr":
-                setItemMethod.Body.Instructions.Add(
-                    Instruction.Create(OpCodes.Stind_I));
-                break;
-            default:
-                if (elementType.IsValueType)
-                {
-                    setItemMethod.Body.Instructions.Add(
-                        Instruction.Create(OpCodes.Stobj, elementType));
-                }
-                else
-                {
-                    setItemMethod.Body.Instructions.Add(
-                        Instruction.Create(OpCodes.Stind_Ref));
-                }
-                break;
+            var setItemMethod = new MethodDefinition(
+                "set_Item",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
+                this.module.TypeSystem.Void);
+            setItemMethod.HasThis = true;
+            setItemMethod.Parameters.Add(new(
+                "index",
+                ParameterAttributes.None,
+                this.module.TypeSystem.Int32));
+            setItemMethod.Parameters.Add(new(
+                "value",
+                ParameterAttributes.None,
+                elementType));
+            valueArrayType.Methods.Add(setItemMethod);
+
+            indexerProperty.SetMethod = setItemMethod;
+
+            ///////////////////////////////
+
+            var setItemInstructions = setItemMethod.Body.Instructions;
+
+            // Guard
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Ldarg_1));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Ldc_I4, length));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Clt));
+            var setItemNext = Instruction.Create(OpCodes.Ldarg_1);
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Brtrue_S, setItemNext));
+
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Newobj, this.indexOutOfRangeCtor.Value));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Throw));
+
+            // Body
+            setItemInstructions.Add(setItemNext);
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Sizeof, elementType));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Mul));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Ldarg_0));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Conv_U));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Add));
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Ldarg_2));
+            switch (elementType.FullName)
+            {
+                case "System.Byte":
+                case "System.SByte":
+                    setItemInstructions.Add(
+                        Instruction.Create(OpCodes.Stind_I1));
+                    break;
+                case "System.Int16":
+                case "System.UInt16":
+                    setItemInstructions.Add(
+                        Instruction.Create(OpCodes.Stind_I2));
+                    break;
+                case "System.Int32":
+                case "System.UInt32":
+                    setItemInstructions.Add(
+                        Instruction.Create(OpCodes.Stind_I4));
+                    break;
+                case "System.Int64":
+                case "System.UInt64":
+                    setItemInstructions.Add(
+                        Instruction.Create(OpCodes.Stind_I8));
+                    break;
+                case "System.Single":
+                    setItemInstructions.Add(
+                        Instruction.Create(OpCodes.Stind_R4));
+                    break;
+                case "System.Double":
+                    setItemInstructions.Add(
+                        Instruction.Create(OpCodes.Stind_R8));
+                    break;
+                case "System.IntPtr":
+                case "System.UIntPtr":
+                    setItemInstructions.Add(
+                        Instruction.Create(OpCodes.Stind_I));
+                    break;
+                default:
+                    if (elementType.IsValueType)
+                    {
+                        setItemInstructions.Add(
+                            Instruction.Create(OpCodes.Stobj, elementType));
+                    }
+                    else
+                    {
+                        setItemInstructions.Add(
+                            Instruction.Create(OpCodes.Stind_Ref));
+                    }
+                    break;
+            }
+            setItemInstructions.Add(
+                Instruction.Create(OpCodes.Ret));
         }
-        setItemMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Ret));
-
-        ///////////////////////////////
-
-        var indexerProperty = new PropertyDefinition(
-            "Item",
-            PropertyAttributes.None,
-            elementType);
-        valueArrayType.Properties.Add(indexerProperty);
-
-        indexerProperty.GetMethod = getItemMethod;
-        indexerProperty.SetMethod = setItemMethod;
 
         return valueArrayType;
     }
@@ -325,7 +364,8 @@ partial class Parser
                 elementType.Namespace,
                 valueArrayTypeName,
                 length,
-                elementType);
+                elementType,
+                false);
         }
         return valueArrayType;
     }

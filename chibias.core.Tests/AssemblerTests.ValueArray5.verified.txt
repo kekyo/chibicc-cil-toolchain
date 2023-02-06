@@ -47,33 +47,49 @@
   .method public hidebysig specialname instance uint8 
           get_Item(int32 index) cil managed
   {
-    // Code size       13 (0xd)
+    // Code size       29 (0x1d)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  sizeof     [mscorlib]System.Byte
-    IL_0007:  mul
-    IL_0008:  ldarg.0
-    IL_0009:  conv.u
-    IL_000a:  add
-    IL_000b:  ldind.u1
-    IL_000c:  ret
+    IL_0001:  ldc.i4     0x3
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [System.Private.CoreLib]System.ValueType::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  sizeof     [mscorlib]System.Byte
+    IL_0017:  mul
+    IL_0018:  ldarg.0
+    IL_0019:  conv.u
+    IL_001a:  add
+    IL_001b:  ldind.u1
+    IL_001c:  ret
   } // end of method Byte_len3::get_Item
 
   .method public hidebysig specialname instance void 
           set_Item(int32 index,
                    uint8 'value') cil managed
   {
-    // Code size       14 (0xe)
+    // Code size       30 (0x1e)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  sizeof     [mscorlib]System.Byte
-    IL_0007:  mul
-    IL_0008:  ldarg.0
-    IL_0009:  conv.u
-    IL_000a:  add
-    IL_000b:  ldarg.2
-    IL_000c:  stind.i1
-    IL_000d:  ret
+    IL_0001:  ldc.i4     0x3
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [System.Private.CoreLib]System.ValueType::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  sizeof     [mscorlib]System.Byte
+    IL_0017:  mul
+    IL_0018:  ldarg.0
+    IL_0019:  conv.u
+    IL_001a:  add
+    IL_001b:  ldarg.2
+    IL_001c:  stind.i1
+    IL_001d:  ret
   } // end of method Byte_len3::set_Item
 
   .property instance callconv(8) int32 Length()
@@ -110,33 +126,49 @@
   .method public hidebysig specialname instance valuetype System.Byte_len3 
           get_Item(int32 index) cil managed
   {
-    // Code size       17 (0x11)
+    // Code size       33 (0x21)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  sizeof     System.Byte_len3
-    IL_0007:  mul
-    IL_0008:  ldarg.0
-    IL_0009:  conv.u
-    IL_000a:  add
-    IL_000b:  ldobj      System.Byte_len3
-    IL_0010:  ret
+    IL_0001:  ldc.i4     0x6
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [System.Private.CoreLib]System.ValueType::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  sizeof     System.Byte_len3
+    IL_0017:  mul
+    IL_0018:  ldarg.0
+    IL_0019:  conv.u
+    IL_001a:  add
+    IL_001b:  ldobj      System.Byte_len3
+    IL_0020:  ret
   } // end of method Byte_len3_len6::get_Item
 
   .method public hidebysig specialname instance void 
           set_Item(int32 index,
                    valuetype System.Byte_len3 'value') cil managed
   {
-    // Code size       18 (0x12)
+    // Code size       34 (0x22)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  sizeof     System.Byte_len3
-    IL_0007:  mul
-    IL_0008:  ldarg.0
-    IL_0009:  conv.u
-    IL_000a:  add
-    IL_000b:  ldarg.2
-    IL_000c:  stobj      System.Byte_len3
-    IL_0011:  ret
+    IL_0001:  ldc.i4     0x6
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [System.Private.CoreLib]System.ValueType::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  sizeof     System.Byte_len3
+    IL_0017:  mul
+    IL_0018:  ldarg.0
+    IL_0019:  conv.u
+    IL_001a:  add
+    IL_001b:  ldarg.2
+    IL_001c:  stobj      System.Byte_len3
+    IL_0021:  ret
   } // end of method Byte_len3_len6::set_Item
 
   .property instance callconv(8) int32 Length()

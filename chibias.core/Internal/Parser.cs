@@ -39,6 +39,7 @@ internal sealed partial class Parser
     private readonly List<Action> delayedLookupLocalMemberActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
+    private readonly Lazy<MethodReference> indexOutOfRangeCtor;
     private readonly bool produceExecutable;
     private readonly bool produceDebuggingInformation;
 
@@ -86,8 +87,17 @@ internal sealed partial class Parser
             type => type.FullName);
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
-        this.valueType = new(() =>
-            this.Import(this.referenceTypes.TryGetMember("System.ValueType", out var type) ? type : null!));
+
+        // Resolver for runtime members
+
+        TypeReference GetType(string typeName) =>
+            this.Import(this.referenceTypes.TryGetMember("System.ValueType", out var type) ? type : null!);
+
+        this.valueType = new(() => GetType("System.ValueType"));
+        this.indexOutOfRangeCtor = new(() => this.Import(
+            GetType("System.IndexOutOfRangeException").
+            Resolve()?.Methods.
+            FirstOrDefault(m => m.IsConstructor && !m.IsStatic && m.Parameters.Count == 0)!));
         this.currentFile = unknown;
 
         // Known types

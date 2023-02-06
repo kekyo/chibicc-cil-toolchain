@@ -295,6 +295,7 @@ partial class Parser
                 if (packSize is { } ps)
                 {
                     structureType.PackingSize = ps;
+                    structureType.ClassSize = 0;
                 }
 
                 this.module.Types.Add(structureType);
