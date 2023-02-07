@@ -44,4 +44,5 @@ public sealed class AssemblerOptions
     public AssembleOptions Options = AssembleOptions.Deterministic;
     public Version Version = new Version(1, 0, 0, 0);
     public string TargetFrameworkMoniker = ThisAssembly.AssemblyMetadata.TargetFramework;
+    public bool ProduceRuntimeConfigurationIfRequired = true;
 }

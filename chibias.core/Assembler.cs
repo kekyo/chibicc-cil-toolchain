@@ -234,7 +234,8 @@ public sealed class Assembler
                     },
                 });
 
-            if (produceExecutable &&
+            if (options.ProduceRuntimeConfigurationIfRequired &&
+                produceExecutable &&
                 targetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
             {
                 var runtimeConfigJsonPath = Path.Combine(
