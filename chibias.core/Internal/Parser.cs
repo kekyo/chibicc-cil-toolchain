@@ -21,16 +21,53 @@ namespace chibias.Internal;
 
 internal sealed partial class Parser
 {
+    private static readonly Dictionary<string, string> aliasTypeNames = new()
+    {
+        { "void", "System.Void" },
+        { "uint8", "System.Byte" },
+        { "int8", "System.SByte" },
+        { "int16", "System.Int16" },
+        { "uint16", "System.UInt16" },
+        { "int32", "System.Int32" },
+        { "uint32", "System.UInt32" },
+        { "int64", "System.Int64" },
+        { "uint64", "System.UInt64" },
+        { "float32", "System.Single" },
+        { "float64", "System.Double" },
+        { "intptr", "System.IntPtr" },
+        { "uintptr", "System.UIntPtr" },
+        { "bool", "System.Boolean" },
+        { "char", "System.Char" },
+        { "object", "System.Object" },
+        { "string", "System.String" },
+        { "typeref", "System.TypedReference" },
+        { "byte", "System.Byte" },
+        { "sbyte", "System.SByte" },
+        { "short", "System.Int16" },
+        { "ushort", "System.UInt16" },
+        { "int", "System.Int32" },
+        { "uint", "System.UInt32" },
+        { "long", "System.Int64" },
+        { "ulong", "System.UInt64" },
+        { "single", "System.Single" },
+        { "float", "System.Single" },
+        { "double", "System.Double" },
+        { "nint", "System.IntPtr" },
+        { "nuint", "System.UIntPtr" },
+        { "char16", "System.Char" },
+    };
+
     private static readonly FileDescriptor unknown = 
         new(null, "unknown.s", DocumentLanguage.Cil);
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
+    private readonly TargetFramework targetFramework;
     private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiDataType;
     private readonly MemberDictionary<MemberReference> cabiSpecificSymbols;
     private readonly MemberDictionary<TypeDefinition> referenceTypes;
-    private readonly Dictionary<string, TypeReference> knownTypes = new();
+    private readonly Dictionary<string, TypeReference> importantTypes = new();
     private readonly Dictionary<string, Instruction> labelTargets = new();
     private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
@@ -60,6 +97,7 @@ internal sealed partial class Parser
     public Parser(
         ILogger logger,
         ModuleDefinition module,
+        TargetFramework targetFramework,
         MemberDictionary<MemberReference> cabiSpecificSymbols,
         TypeDefinitionCache referenceTypes,
         bool produceExecutable,
@@ -68,6 +106,37 @@ internal sealed partial class Parser
         this.logger = logger;
         
         this.module = module;
+        this.targetFramework = targetFramework;
+        this.cabiSpecificSymbols = cabiSpecificSymbols;
+        this.referenceTypes = new(
+            referenceTypes.OfType<TypeDefinition>(),
+            type => type.FullName);
+        this.produceExecutable = produceExecutable;
+        this.produceDebuggingInformation = produceDebuggingInformation;
+
+        this.importantTypes.Add("System.Object", this.module.TypeSystem.Object);
+        this.importantTypes.Add("System.Void", this.module.TypeSystem.Void);
+        this.importantTypes.Add("System.Byte", this.module.TypeSystem.Byte);
+        this.importantTypes.Add("System.SByte", this.module.TypeSystem.SByte);
+        this.importantTypes.Add("System.Int16", this.module.TypeSystem.Int16);
+        this.importantTypes.Add("System.UInt16", this.module.TypeSystem.UInt16);
+        this.importantTypes.Add("System.Int32", this.module.TypeSystem.Int32);
+        this.importantTypes.Add("System.UInt32", this.module.TypeSystem.UInt32);
+        this.importantTypes.Add("System.Int64", this.module.TypeSystem.Int64);
+        this.importantTypes.Add("System.UInt64", this.module.TypeSystem.UInt64);
+        this.importantTypes.Add("System.Single", this.module.TypeSystem.Single);
+        this.importantTypes.Add("System.Double", this.module.TypeSystem.Double);
+        this.importantTypes.Add("System.Boolean", this.module.TypeSystem.Boolean);
+        this.importantTypes.Add("System.String", this.module.TypeSystem.String);
+        this.importantTypes.Add("System.IntPtr", this.module.TypeSystem.IntPtr);
+        this.importantTypes.Add("System.UIntPtr", this.module.TypeSystem.UIntPtr);
+        this.importantTypes.Add("System.TypedReference", this.module.TypeSystem.TypedReference);
+
+        this.valueType = new(() => this.UnsafeGetType("System.ValueType"));
+        this.indexOutOfRangeCtor = new(() => this.Import(
+            this.UnsafeGetType("System.IndexOutOfRangeException").
+            Resolve()?.Methods.
+            FirstOrDefault(m => m.IsConstructor && !m.IsStatic && m.Parameters.Count == 0)!));
 
         this.cabiTextType = new TypeDefinition(
             "C",
@@ -81,61 +150,7 @@ internal sealed partial class Parser
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
-
-        this.cabiSpecificSymbols = cabiSpecificSymbols;
-        this.referenceTypes = new(
-            referenceTypes.OfType<TypeDefinition>(),
-            type => type.FullName);
-        this.produceExecutable = produceExecutable;
-        this.produceDebuggingInformation = produceDebuggingInformation;
-
-        // Resolver for runtime members
-
-        TypeReference GetType(string typeName) =>
-            this.Import(this.referenceTypes.TryGetMember("System.ValueType", out var type) ? type : null!);
-
-        this.valueType = new(() => GetType("System.ValueType"));
-        this.indexOutOfRangeCtor = new(() => this.Import(
-            GetType("System.IndexOutOfRangeException").
-            Resolve()?.Methods.
-            FirstOrDefault(m => m.IsConstructor && !m.IsStatic && m.Parameters.Count == 0)!));
         this.currentFile = unknown;
-
-        // Known types
-        this.knownTypes.Add("void", module.TypeSystem.Void);
-        this.knownTypes.Add("uint8", module.TypeSystem.Byte);
-        this.knownTypes.Add("int8", module.TypeSystem.SByte);
-        this.knownTypes.Add("int16", module.TypeSystem.Int16);
-        this.knownTypes.Add("uint16", module.TypeSystem.UInt16);
-        this.knownTypes.Add("int32", module.TypeSystem.Int32);
-        this.knownTypes.Add("uint32", module.TypeSystem.UInt32);
-        this.knownTypes.Add("int64", module.TypeSystem.Int64);
-        this.knownTypes.Add("uint64", module.TypeSystem.UInt64);
-        this.knownTypes.Add("float32", module.TypeSystem.Single);
-        this.knownTypes.Add("float64", module.TypeSystem.Double);
-        this.knownTypes.Add("intptr", module.TypeSystem.IntPtr);
-        this.knownTypes.Add("uintptr", module.TypeSystem.UIntPtr);
-        this.knownTypes.Add("bool", module.TypeSystem.Boolean);
-        this.knownTypes.Add("char", module.TypeSystem.Char);
-        this.knownTypes.Add("object", module.TypeSystem.Object);
-        this.knownTypes.Add("string", module.TypeSystem.String);
-        this.knownTypes.Add("typeref", module.TypeSystem.TypedReference);
-
-        // Aliases
-        this.knownTypes.Add("byte", module.TypeSystem.Byte);
-        this.knownTypes.Add("sbyte", module.TypeSystem.SByte);
-        this.knownTypes.Add("short", module.TypeSystem.Int16);
-        this.knownTypes.Add("ushort", module.TypeSystem.UInt16);
-        this.knownTypes.Add("int", module.TypeSystem.Int32);
-        this.knownTypes.Add("uint", module.TypeSystem.UInt32);
-        this.knownTypes.Add("long", module.TypeSystem.Int64);
-        this.knownTypes.Add("ulong", module.TypeSystem.UInt64);
-        this.knownTypes.Add("single", module.TypeSystem.Single);
-        this.knownTypes.Add("float", module.TypeSystem.Single);
-        this.knownTypes.Add("double", module.TypeSystem.Double);
-        this.knownTypes.Add("nint", module.TypeSystem.IntPtr);
-        this.knownTypes.Add("nuint", module.TypeSystem.UIntPtr);
-        this.knownTypes.Add("char16", module.TypeSystem.Char);
     }
 
     /////////////////////////////////////////////////////////////////////
@@ -168,17 +183,17 @@ internal sealed partial class Parser
     /////////////////////////////////////////////////////////////////////
 
     private MethodDefinition CreateDummyMethod() =>
-        new($"<placeholder_method>_${placeholderIndex++}",
+        new($"<placeholder_method>_${this.placeholderIndex++}",
             MethodAttributes.Private | MethodAttributes.Abstract,
-            this.module.TypeSystem.Void);
+            this.UnsafeGetType("System.Void"));
 
     private FieldDefinition CreateDummyField() =>
-        new($"<placeholder_field>_${placeholderIndex++}",
+        new($"<placeholder_field>_${this.placeholderIndex++}",
             FieldAttributes.Private | FieldAttributes.InitOnly,
-            this.module.TypeSystem.Int32);
+            this.UnsafeGetType("System.Int32"));
 
     private TypeDefinition CreateDummyType() =>
-        new("", $"<placeholder_type>_${placeholderIndex++}",
+        new("", $"<placeholder_type>_${this.placeholderIndex++}",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
 
     private TypeReference Import(TypeReference type) =>
@@ -194,6 +209,18 @@ internal sealed partial class Parser
             field : this.module.ImportReference(field);
 
     /////////////////////////////////////////////////////////////////////
+
+    private TypeReference UnsafeGetType(string typeName)
+    {
+        if (!this.TryGetType(typeName, out var type))
+        {
+            this.caughtError = true;
+            this.logger.Error($"Could not find for important type: {typeName}");
+
+            type = this.CreateDummyType();
+        }
+        return type;
+    }
 
     public bool TryGetType(
         string name,
@@ -269,9 +296,13 @@ internal sealed partial class Parser
                     type = td2;
                     return true;
                 }
-                else if (this.knownTypes.TryGetValue(name, out type!))
+                else if (this.importantTypes.TryGetValue(name, out type!))
                 {
                     return true;
+                }
+                else if (aliasTypeNames.TryGetValue(name, out var knownTypeName))
+                {
+                    return this.TryGetType(knownTypeName, out type);
                 }
                 else if (this.referenceTypes.TryGetMember(name, out var td3))
                 {
@@ -624,23 +655,36 @@ internal sealed partial class Parser
     {
         this.FinishCurrentState();
 
-        // main entry point lookup.
-        if (this.produceExecutable)
-        {
-            if (this.cabiTextType.Methods.
-                FirstOrDefault(m => m.Name == "main") is { } main)
-            {
-                this.module.EntryPoint = main;
-            }
-            else
-            {
-                this.caughtError = true;
-                this.logger.Error($"{this.currentFile.RelativePath}(1,1): Could not find main entry point.");
-            }
-        }
-
         if (!this.caughtError)
         {
+            // main entry point lookup.
+            if (this.produceExecutable)
+            {
+                if (this.cabiTextType.Methods.
+                    FirstOrDefault(m => m.Name == "main") is { } main)
+                {
+                    this.module.EntryPoint = main;
+                }
+                else
+                {
+                    this.caughtError = true;
+                    this.logger.Error($"{this.currentFile.RelativePath}(1,1): Could not find main entry point.");
+                }
+            }
+
+            // Apply TFA if could be imported.
+            if (this.TryGetMethod(
+                "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
+                new[] { "System.String" },
+                out var tfctor))
+            {
+                var tfa = new CustomAttribute(tfctor);
+                tfa.ConstructorArguments.Add(new(
+                    this.UnsafeGetType("System.String"),
+                    this.targetFramework.ToString()));
+                this.module.Assembly.CustomAttributes.Add(tfa);
+            }
+
             if (this.cabiTextType.Methods.Count >= 1)
             {
                 this.module.Types.Add(this.cabiTextType);

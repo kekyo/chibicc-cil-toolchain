@@ -14,6 +14,7 @@ using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -45,7 +46,7 @@ public sealed class Assembler
     {
         var assemblies = referenceAssemblyPaths.
             Distinct().
-            Select(this.assemblyResolver.ReadAssemblyFrom).
+            Collect(this.assemblyResolver.ReadAssemblyFrom).
             ToArray();
 
         IEnumerable<AssemblyDefinition> ResolveDescendants(
@@ -68,13 +69,8 @@ public sealed class Assembler
         var saved = new HashSet<AssemblyNameReference>(
             AssemblyNameReferenceComparer.Instance);
 
-        var corlibAssemblies = assemblies.
-            Collect(assembly => assembly.MainModule.TypeSystem.CoreLibrary as AssemblyNameReference).
-            SelectMany(anr => ResolveDescendants(anr, saved)).
-            ToArray();
-
-        return new(corlibAssemblies.
-            Concat(assemblies).
+        return new(
+            assemblies.
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
             Distinct(TypeDefinitionComparer.Instance).
@@ -155,29 +151,44 @@ public sealed class Assembler
 
         var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
 
-        var referenceTypes = this.LoadPublicTypesFrom(
-            options.ReferenceAssemblyPaths);
-
-        var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
-            referenceTypes);
-
         //////////////////////////////////////////////////////////////
 
         var assemblyName = new AssemblyNameDefinition(
             Path.GetFileNameWithoutExtension(outputAssemblyFullPath),
             options.Version);
-        var assembly = AssemblyDefinition.CreateAssembly(
+
+        using var assembly = AssemblyDefinition.CreateAssembly(
             assemblyName,
             Path.GetFileName(outputAssemblyFullPath),
-            options.AssemblyType switch
+            new ModuleParameters
             {
-                AssemblyTypes.Dll => ModuleKind.Dll,
-                AssemblyTypes.WinExe => ModuleKind.Windows,
-                _ => ModuleKind.Console
+                Kind = options.AssemblyType switch
+                {
+                    AssemblyTypes.Dll => ModuleKind.Dll,
+                    AssemblyTypes.WinExe => ModuleKind.Windows,
+                    _ => ModuleKind.Console
+                },
+                Runtime = targetFramework.Runtime,
+                Architecture = TargetArchitecture.I386,
+                AssemblyResolver = this.assemblyResolver,
+                MetadataResolver = new MetadataResolver(this.assemblyResolver),
             });
-        assembly.MainModule.Runtime = targetFramework.Runtime;
 
         var module = assembly.MainModule;
+
+        // https://github.com/jbevain/cecil/issues/646
+        var coreLibraryReference = targetFramework.CoreLibraryReference;
+        module.AssemblyReferences.Add(coreLibraryReference);
+
+        Debug.Assert(module.TypeSystem.CoreLibrary.Name == coreLibraryReference.Name);
+
+        //////////////////////////////////////////////////////////////
+
+        var referenceTypes = this.LoadPublicTypesFrom(
+            options.ReferenceAssemblyPaths);
+
+        var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
+            referenceTypes);
 
         //////////////////////////////////////////////////////////////
 
@@ -187,6 +198,7 @@ public sealed class Assembler
         var parser = new Parser(
             this.logger,
             module,
+            targetFramework,
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,
@@ -201,18 +213,6 @@ public sealed class Assembler
 
         if (allFinished)
         {
-            // Apply TFA if could be imported.
-            if (parser.TryGetMethod(
-                "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
-                new[] { "string" },
-                out var tfctor))
-            {
-                var tfa = new CustomAttribute(tfctor);
-                tfa.ConstructorArguments.Add(
-                    new(module.TypeSystem.String, targetFramework.ToString()));
-                assembly.CustomAttributes.Add(tfa);
-            }
-
             this.logger.Information(
                 $"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
 

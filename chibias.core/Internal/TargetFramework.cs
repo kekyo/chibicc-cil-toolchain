@@ -24,6 +24,11 @@ internal enum TargetFrameworkIdentifiers
 
 internal readonly struct TargetFramework
 {
+    private static readonly byte[] netFrameworkCoreLibraryToken = 
+        new byte[] { 0xb7, 0x7a, 0x5c, 0x56, 0x19, 0x34, 0xe0, 0x89 };
+    private static readonly byte[] netCoreCoreLibraryToken = 
+        new byte[] { 0x7c, 0xec, 0x85, 0xd7, 0xbe, 0xa7, 0x79, 0x8e };
+
     private static readonly char[] versionSeparators = { '.' };
     private static readonly char[] postfixSeparators = { '-' };
 
@@ -54,6 +59,40 @@ internal readonly struct TargetFramework
                 },
             _ => TargetRuntime.Net_4_0,
         };
+
+    public AssemblyNameReference CoreLibraryReference
+    {
+        get
+        {
+            var coreLibName = new AssemblyNameReference(
+                this.Identifier switch
+                {
+                    TargetFrameworkIdentifiers.NETFramework => "mscorlib",
+                    _ => "System.Private.CoreLib",
+                },
+                this.Runtime switch
+                {
+                    TargetRuntime.Net_1_0 => new(1, 0, 0, 0),
+                    TargetRuntime.Net_1_1 => new(1, 1, 0, 0),
+                    TargetRuntime.Net_2_0 => new(2, 0, 0, 0),
+                    _ => this.Identifier switch
+                    {
+                        TargetFrameworkIdentifiers.NETFramework => new(4, 0, 0, 0),
+                        _ => new Version(
+                            this.Version.Major < 4 ? 4 : this.Version.Major,
+                            0, 0, 0),
+                    },
+                });
+
+            coreLibName.PublicKeyToken = this.Identifier switch
+            {
+                TargetFrameworkIdentifiers.NETFramework => netFrameworkCoreLibraryToken,
+                _ => netCoreCoreLibraryToken,
+            };
+
+            return coreLibName;
+        }
+    }
 
     private static int[] ParseVersion(string versionString) =>
         versionString.Split(versionSeparators, StringSplitOptions.RemoveEmptyEntries).

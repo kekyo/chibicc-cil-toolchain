@@ -9,15 +9,15 @@
   .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
   .ver 4:0:0:0
 }
-.assembly extern System.Private.CoreLib
+.assembly extern mscorlib as mscorlib_1
 {
-  .publickeytoken = (7C EC 85 D7 BE A7 79 8E )                         // |.....y.
-  .ver 6:0:0:0
+  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
+  .ver 4:0:0:0
 }
 .assembly output
 {
-  .custom instance void [System.Private.CoreLib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
-                                                                                                                      2C 56 65 72 73 69 6F 6E 3D 76 34 2E 38 00 00 )    // ,Version=v4.8..
+  .custom instance void [mscorlib_1]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
+                                                                                                          2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
   .ver 1:0:0:0
 }
 .module output.dll
@@ -41,8 +41,8 @@
     IL_0000:  ldc.i4.1
     IL_0001:  box        [mscorlib]System.Int32
     IL_0006:  ldc.i4.3
-    IL_0007:  call       valuetype [System.Private.CoreLib]System.Runtime.InteropServices.GCHandle [System.Private.CoreLib]System.Runtime.InteropServices.GCHandle::Alloc(object,
-                                                                                                                                                                          valuetype [System.Private.CoreLib]System.Runtime.InteropServices.GCHandleType)
+    IL_0007:  call       valuetype [mscorlib_1]System.Runtime.InteropServices.GCHandle [mscorlib_1]System.Runtime.InteropServices.GCHandle::Alloc(object,
+                                                                                                                                                  valuetype [mscorlib_1]System.Runtime.InteropServices.GCHandleType)
     IL_000c:  pop
     IL_000d:  ret
   } // end of method text::main

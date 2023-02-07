@@ -50,7 +50,7 @@ partial class Parser
             var defaultMemberCustomAttribute = new CustomAttribute(
                 defaultMemberAttributeConstructor);
             defaultMemberCustomAttribute.ConstructorArguments.Add(
-                new(this.module.TypeSystem.String, "Item"));
+                new(this.UnsafeGetType("System.String"), "Item"));
 
             valueArrayType.CustomAttributes.Add(defaultMemberCustomAttribute);
         }
@@ -60,7 +60,7 @@ partial class Parser
         var getLengthMethod = new MethodDefinition(
             "get_Length",
             MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
-            this.module.TypeSystem.Int32);
+            this.UnsafeGetType("System.Int32"));
         getLengthMethod.HasThis = true;
         valueArrayType.Methods.Add(getLengthMethod);
 
@@ -74,7 +74,7 @@ partial class Parser
         var lengthProperty = new PropertyDefinition(
             "Length",
             PropertyAttributes.None,
-            this.module.TypeSystem.Int32);
+            this.UnsafeGetType("System.Int32"));
         valueArrayType.Properties.Add(lengthProperty);
 
         lengthProperty.GetMethod = getLengthMethod;
@@ -97,7 +97,7 @@ partial class Parser
         getItemMethod.Parameters.Add(new(
             "index",
             ParameterAttributes.None,
-            this.module.TypeSystem.Int32));
+            this.UnsafeGetType("System.Int32")));
         valueArrayType.Methods.Add(getItemMethod);
 
         indexerProperty.GetMethod = getItemMethod;
@@ -211,12 +211,12 @@ partial class Parser
             var setItemMethod = new MethodDefinition(
                 "set_Item",
                 MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
-                this.module.TypeSystem.Void);
+                this.UnsafeGetType("System.Void"));
             setItemMethod.HasThis = true;
             setItemMethod.Parameters.Add(new(
                 "index",
                 ParameterAttributes.None,
-                this.module.TypeSystem.Int32));
+                this.UnsafeGetType("System.Int32")));
             setItemMethod.Parameters.Add(new(
                 "value",
                 ParameterAttributes.None,
