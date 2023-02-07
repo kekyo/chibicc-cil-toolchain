@@ -175,6 +175,7 @@ public sealed class Assembler
                 AssemblyTypes.WinExe => ModuleKind.Windows,
                 _ => ModuleKind.Console
             });
+        assembly.MainModule.Runtime = targetFramework.Runtime;
 
         var module = assembly.MainModule;
 

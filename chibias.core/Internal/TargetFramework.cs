@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using Mono.Cecil;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -39,6 +40,20 @@ internal readonly struct TargetFramework
         this.Version = version;
         this.Profile = profile;
     }
+
+    public TargetRuntime Runtime =>
+        this.Identifier switch
+        {
+            TargetFrameworkIdentifiers.NETFramework =>
+                this.Version.Major switch
+                {
+                    1 => this.Version.Minor == 0 ?
+                        TargetRuntime.Net_1_0 : TargetRuntime.Net_1_1,
+                    4 => TargetRuntime.Net_4_0,
+                    _ => TargetRuntime.Net_2_0,
+                },
+            _ => TargetRuntime.Net_4_0,
+        };
 
     private static int[] ParseVersion(string versionString) =>
         versionString.Split(versionSeparators, StringSplitOptions.RemoveEmptyEntries).
