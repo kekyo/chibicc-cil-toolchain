@@ -208,9 +208,27 @@ internal sealed class Options
 
         if (options.OutputAssemblyPath == null)
         {
-            options.OutputAssemblyPath = Path.GetFullPath(
-                options.AssemblerOptions.AssemblyType == AssemblyTypes.Dll ?
-                    "a.out.dll" : "a.out.exe");
+            switch (options.AssemblerOptions.AssemblyType)
+            {
+                case AssemblyTypes.Exe:
+                case AssemblyTypes.WinExe:
+                    options.OutputAssemblyPath = Path.GetFullPath("a.out.exe");
+                    break;
+                default:
+                    switch (options.SourceCodePaths.FirstOrDefault())
+                    {
+                        case null:
+                        case "-":
+                            options.OutputAssemblyPath = Path.GetFullPath("a.out.dll");
+                            break;
+                        case { } path:
+                            options.OutputAssemblyPath = Path.Combine(
+                                Utilities.GetDirectoryPath(path),
+                                Path.GetFileNameWithoutExtension(path) + ".dll");
+                            break;
+                    }
+                    break;
+            }
         }
 
         options.AssemblerOptions.ReferenceAssemblyPaths =
