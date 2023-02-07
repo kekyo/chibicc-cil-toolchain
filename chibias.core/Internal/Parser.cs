@@ -51,7 +51,8 @@ internal sealed partial class Parser
     private MethodDefinition? method;
     private MethodBody? body;
     private ICollection<Instruction>? instructions;
-    private TypeDefinition? structure;
+    private TypeDefinition? structureType;
+    private int checkingStructureMemberIndex = -1;
     private bool caughtError;
 
     /////////////////////////////////////////////////////////////////////
@@ -559,7 +560,7 @@ internal sealed partial class Parser
                     break;
                 // Is it a structure member?
                 case TokenTypes.Identity
-                    when this.structure != null:
+                    when this.structureType != null:
                     this.ParseStructureMember(tokens);
                     break;
                 // Other, invalid syntax.
@@ -578,7 +579,7 @@ internal sealed partial class Parser
         {
             Debug.Assert(this.instructions != null);
             Debug.Assert(this.body != null);
-            Debug.Assert(this.structure == null);
+            Debug.Assert(this.structureType == null);
 
             if (!this.caughtError)
             {
@@ -596,7 +597,7 @@ internal sealed partial class Parser
             this.method = null;
         }
 
-        if (this.structure != null)
+        if (this.structureType != null)
         {
             Debug.Assert(this.method == null);
             Debug.Assert(this.instructions == null);
@@ -606,7 +607,16 @@ internal sealed partial class Parser
             Debug.Assert(this.labelTargets.Count == 0);
             Debug.Assert(this.willApplyLabelingNames.Count == 0);
 
-            this.structure = null;
+            if (this.checkingStructureMemberIndex >= 0 &&
+                this.checkingStructureMemberIndex < this.structureType.Fields.Count)
+            {
+                this.caughtError = true;
+                this.logger.Error(
+                    $"Structure member difference exists before declared type: {this.structureType.Name}");
+            }
+
+            this.structureType = null;
+            this.checkingStructureMemberIndex = -1;
         }
     }
 
