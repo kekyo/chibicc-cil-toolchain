@@ -9,12 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
-    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
+    <None Remove="Internal\runtimeconfig.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- <None Include="..\Images\chibias.100.png" Pack="true" PackagePath="" /> -->
+    <EmbeddedResource Include="Internal\runtimeconfig.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.4" />
   </ItemGroup>
 
 </Project>

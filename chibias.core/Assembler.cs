@@ -16,11 +16,17 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace chibias;
 
 public sealed class Assembler
 {
+    private static readonly string runtimeConfigJsonTemplate =
+        new StreamReader(typeof(Assembler).Assembly.GetManifestResourceStream(
+            "chibias.Internal.runtimeconfig.json")!).
+        ReadToEnd();
+
     private readonly ILogger logger;
     private readonly AssemblyResolver assemblyResolver;
 
@@ -135,6 +141,18 @@ public sealed class Assembler
         AssemblerOptions options,
         Action<Parser> runner)
     {
+        if (!TargetFramework.TryParse(
+            options.TargetFrameworkMoniker,
+            out var targetFramework))
+        {
+            this.logger.Error(
+                $"Unknown target framework moniker: {options.TargetFrameworkMoniker}");
+            return false;
+        }
+
+        this.logger.Information(
+            $"Detected target framework: {targetFramework} [{options.TargetFrameworkMoniker}]");
+
         var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
 
         var referenceTypes = this.LoadPublicTypesFrom(
@@ -182,7 +200,20 @@ public sealed class Assembler
 
         if (allFinished)
         {
-            this.logger.Information($"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
+            // Apply TFA if could be imported.
+            if (parser.TryGetMethod(
+                "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
+                new[] { "string" },
+                out var tfctor))
+            {
+                var tfa = new CustomAttribute(tfctor);
+                tfa.ConstructorArguments.Add(
+                    new(module.TypeSystem.String, targetFramework.ToString()));
+                assembly.CustomAttributes.Add(tfa);
+            }
+
+            this.logger.Information(
+                $"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
 
             module.Write(
                 outputAssemblyFullPath,
@@ -201,6 +232,33 @@ public sealed class Assembler
                         _ => new PortablePdbWriterProvider(),
                     },
                 });
+
+            if (produceExecutable &&
+                targetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
+            {
+                var runtimeConfigJsonPath = Path.Combine(
+                    Utilities.GetDirectoryPath(outputAssemblyFullPath),
+                    Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + ".runtimeconfig.json");
+
+                this.logger.Information(
+                    $"Writing: {Path.GetFileName(runtimeConfigJsonPath)}");
+
+                using var tw = File.CreateText(runtimeConfigJsonPath);
+
+                var sb = new StringBuilder(runtimeConfigJsonTemplate);
+                sb.Replace("{tfm}", options.TargetFrameworkMoniker);
+                if (targetFramework.Version.Build >= 0)
+                {
+                    sb.Replace("{tfv}", targetFramework.Version.ToString(3));
+                }
+                else
+                {
+                    sb.Replace("{tfv}", targetFramework.Version.ToString(2) + ".0");
+                }
+
+                tw.Write(sb.ToString());
+                tw.Flush();
+            }
         }
 
         return allFinished;
@@ -216,7 +274,8 @@ public sealed class Assembler
             options,
             parser =>
             {
-                this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
+                this.logger.Information(
+                    $"Assembling: {sourcePathDebuggerHint}");
 
                 this.AssembleFromSource(
                     parser,
@@ -245,7 +304,8 @@ public sealed class Assembler
                 Select(path => path.Split(Path.DirectorySeparatorChar)).
                 Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
 
-        this.logger.Information($"Source code base path: {baseSourcePath}");
+        this.logger.Information(
+            $"Source code base path: {baseSourcePath}");
 
         //////////////////////////////////////////////////////////////
 
@@ -268,7 +328,8 @@ public sealed class Assembler
                         var sourcePathDebuggerHint = sourceFullPath.
                             Substring(baseSourcePath.Length + 1);
 
-                        this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
+                        this.logger.Information(
+                            $"Assembling: {sourcePathDebuggerHint}");
 
                         this.AssembleFromSource(
                             parser,
@@ -278,7 +339,8 @@ public sealed class Assembler
                     }
                     else
                     {
-                        this.logger.Information("Assembling: <stdin>");
+                        this.logger.Information(
+                            "Assembling: <stdin>");
 
                         this.AssembleFromSource(
                             parser,

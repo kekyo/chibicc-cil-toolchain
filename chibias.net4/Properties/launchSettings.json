@@ -2,7 +2,7 @@
   "profiles": {
     "chibias": {
       "commandName": "Project",
-      "commandLineArgs": "-r ..\\..\\..\\..\\..\\chibicc-cil\\mscorlib.dll ..\\..\\..\\..\\..\\chibicc-cil\\test\\struct.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common_s"
+      "commandLineArgs": "-f net40 -r ..\\..\\..\\..\\..\\chibicc-cil\\mscorlib.dll ..\\..\\..\\..\\..\\chibicc-cil\\test\\struct.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common_s"
     }
   }
 }

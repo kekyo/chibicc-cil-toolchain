@@ -195,7 +195,7 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    private bool TryGetType(
+    public bool TryGetType(
         string name,
         out TypeReference type)
     {
@@ -286,7 +286,7 @@ internal sealed partial class Parser
         }
     }
 
-    private bool TryGetMethod(
+    public bool TryGetMethod(
         string name, string[] parameterTypeNames, out MethodReference method)
     {
         var methodNameIndex = name.LastIndexOf('.');
@@ -355,7 +355,7 @@ internal sealed partial class Parser
         }
     }
 
-    private bool TryGetField(
+    public bool TryGetField(
         string name, out FieldReference field)
     {
         var fieldNameIndex = name.LastIndexOf('.');
