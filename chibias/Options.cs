@@ -136,6 +136,9 @@ internal sealed class Options
                                 continue;
                             }
                             break;
+                        case 's':
+                            options.AssemblerOptions.ProduceRuntimeConfigurationIfRequired = false;
+                            continue;
                         case 'v':
                             if (arg.Length >= 2 &&
                                 Version.TryParse(args[index + 1], out var version))
@@ -208,9 +211,27 @@ internal sealed class Options
 
         if (options.OutputAssemblyPath == null)
         {
-            options.OutputAssemblyPath = Path.GetFullPath(
-                options.AssemblerOptions.AssemblyType == AssemblyTypes.Dll ?
-                    "a.out.dll" : "a.out.exe");
+            switch (options.AssemblerOptions.AssemblyType)
+            {
+                case AssemblyTypes.Exe:
+                case AssemblyTypes.WinExe:
+                    options.OutputAssemblyPath = Path.GetFullPath("a.out.exe");
+                    break;
+                default:
+                    switch (options.SourceCodePaths.FirstOrDefault())
+                    {
+                        case null:
+                        case "-":
+                            options.OutputAssemblyPath = Path.GetFullPath("a.out.dll");
+                            break;
+                        case { } path:
+                            options.OutputAssemblyPath = Path.Combine(
+                                Utilities.GetDirectoryPath(path),
+                                Path.GetFileNameWithoutExtension(path) + ".dll");
+                            break;
+                    }
+                    break;
+            }
         }
 
         options.AssemblerOptions.ReferenceAssemblyPaths =
@@ -246,6 +267,7 @@ internal sealed class Options
         logger.Information($"AssemblyType={this.AssemblerOptions.AssemblyType}");
         logger.Information($"DebugSymbolType={this.AssemblerOptions.DebugSymbolType}");
         logger.Information($"Options={this.AssemblerOptions.Options}");
+        logger.Information($"ProduceRuntimeConfigurationIfRequired={this.AssemblerOptions.ProduceRuntimeConfigurationIfRequired}");
         logger.Information($"Version={this.AssemblerOptions.Version}");
         logger.Information($"TargetFrameworkMoniker={this.AssemblerOptions.TargetFrameworkMoniker}");
     }
@@ -263,7 +285,7 @@ internal sealed class Options
         tw.WriteLine("  -c, --dll         Produce dll assembly");
         tw.WriteLine("      --exe         Produce executable assembly (defaulted)");
         tw.WriteLine("      --winexe      Produce Windows executable assembly");
-        tw.WriteLine("  -r                Reference assembly path");
+        tw.WriteLine("  -r <path>         Reference assembly path");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");
@@ -271,6 +293,7 @@ internal sealed class Options
         tw.WriteLine("      -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
+        tw.WriteLine("  -s                Suppress runtime configuration file");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFramework})");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent]");

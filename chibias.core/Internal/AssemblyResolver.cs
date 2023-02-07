@@ -62,7 +62,8 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
 
     public AssemblyDefinition ReadAssemblyFrom(string assemblyName)
     {
-        if (!this.loadedAssemblies.TryGetValue(assemblyName, out var assmebly))
+        var name = Path.GetFileNameWithoutExtension(assemblyName);
+        if (!this.loadedAssemblies.TryGetValue(name, out var assmebly))
         {
             var parameters = new ReaderParameters()
             {

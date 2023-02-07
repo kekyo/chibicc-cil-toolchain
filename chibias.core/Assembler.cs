@@ -14,13 +14,20 @@ using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace chibias;
 
 public sealed class Assembler
 {
+    private static readonly string runtimeConfigJsonTemplate =
+        new StreamReader(typeof(Assembler).Assembly.GetManifestResourceStream(
+            "chibias.Internal.runtimeconfig.json")!).
+        ReadToEnd();
+
     private readonly ILogger logger;
     private readonly AssemblyResolver assemblyResolver;
 
@@ -39,7 +46,7 @@ public sealed class Assembler
     {
         var assemblies = referenceAssemblyPaths.
             Distinct().
-            Select(this.assemblyResolver.ReadAssemblyFrom).
+            Collect(this.assemblyResolver.ReadAssemblyFrom).
             ToArray();
 
         IEnumerable<AssemblyDefinition> ResolveDescendants(
@@ -62,13 +69,8 @@ public sealed class Assembler
         var saved = new HashSet<AssemblyNameReference>(
             AssemblyNameReferenceComparer.Instance);
 
-        var corlibAssemblies = assemblies.
-            Collect(assembly => assembly.MainModule.TypeSystem.CoreLibrary as AssemblyNameReference).
-            SelectMany(anr => ResolveDescendants(anr, saved)).
-            ToArray();
-
-        return new(corlibAssemblies.
-            Concat(assemblies).
+        return new(
+            assemblies.
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
             Distinct(TypeDefinitionComparer.Instance).
@@ -135,7 +137,52 @@ public sealed class Assembler
         AssemblerOptions options,
         Action<Parser> runner)
     {
+        if (!TargetFramework.TryParse(
+            options.TargetFrameworkMoniker,
+            out var targetFramework))
+        {
+            this.logger.Error(
+                $"Unknown target framework moniker: {options.TargetFrameworkMoniker}");
+            return false;
+        }
+
+        this.logger.Information(
+            $"Detected target framework: {targetFramework} [{options.TargetFrameworkMoniker}]");
+
         var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
+
+        //////////////////////////////////////////////////////////////
+
+        var assemblyName = new AssemblyNameDefinition(
+            Path.GetFileNameWithoutExtension(outputAssemblyFullPath),
+            options.Version);
+
+        using var assembly = AssemblyDefinition.CreateAssembly(
+            assemblyName,
+            Path.GetFileName(outputAssemblyFullPath),
+            new ModuleParameters
+            {
+                Kind = options.AssemblyType switch
+                {
+                    AssemblyTypes.Dll => ModuleKind.Dll,
+                    AssemblyTypes.WinExe => ModuleKind.Windows,
+                    _ => ModuleKind.Console
+                },
+                Runtime = targetFramework.Runtime,
+                Architecture = TargetArchitecture.I386,
+                AssemblyResolver = this.assemblyResolver,
+                MetadataResolver = new MetadataResolver(this.assemblyResolver),
+            });
+
+        var module = assembly.MainModule;
+
+        // https://github.com/jbevain/cecil/issues/646
+        var coreLibraryReference = targetFramework.CoreLibraryReference;
+        module.AssemblyReferences.Add(coreLibraryReference);
+
+        Debug.Assert(module.TypeSystem.CoreLibrary.Name == coreLibraryReference.Name);
+
+        //////////////////////////////////////////////////////////////
 
         var referenceTypes = this.LoadPublicTypesFrom(
             options.ReferenceAssemblyPaths);
@@ -145,29 +192,13 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        var assemblyName = new AssemblyNameDefinition(
-            Path.GetFileNameWithoutExtension(outputAssemblyFullPath),
-            options.Version);
-        var assembly = AssemblyDefinition.CreateAssembly(
-            assemblyName,
-            Path.GetFileName(outputAssemblyFullPath),
-            options.AssemblyType switch
-            {
-                AssemblyTypes.Dll => ModuleKind.Dll,
-                AssemblyTypes.WinExe => ModuleKind.Windows,
-                _ => ModuleKind.Console
-            });
-
-        var module = assembly.MainModule;
-
-        //////////////////////////////////////////////////////////////
-
         var produceExecutable =
             options.AssemblyType != AssemblyTypes.Dll;
 
         var parser = new Parser(
             this.logger,
             module,
+            targetFramework,
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,
@@ -182,7 +213,8 @@ public sealed class Assembler
 
         if (allFinished)
         {
-            this.logger.Information($"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
+            this.logger.Information(
+                $"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
 
             module.Write(
                 outputAssemblyFullPath,
@@ -201,6 +233,34 @@ public sealed class Assembler
                         _ => new PortablePdbWriterProvider(),
                     },
                 });
+
+            if (options.ProduceRuntimeConfigurationIfRequired &&
+                produceExecutable &&
+                targetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
+            {
+                var runtimeConfigJsonPath = Path.Combine(
+                    Utilities.GetDirectoryPath(outputAssemblyFullPath),
+                    Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + ".runtimeconfig.json");
+
+                this.logger.Information(
+                    $"Writing: {Path.GetFileName(runtimeConfigJsonPath)}");
+
+                using var tw = File.CreateText(runtimeConfigJsonPath);
+
+                var sb = new StringBuilder(runtimeConfigJsonTemplate);
+                sb.Replace("{tfm}", options.TargetFrameworkMoniker);
+                if (targetFramework.Version.Build >= 0)
+                {
+                    sb.Replace("{tfv}", targetFramework.Version.ToString(3));
+                }
+                else
+                {
+                    sb.Replace("{tfv}", targetFramework.Version.ToString(2) + ".0");
+                }
+
+                tw.Write(sb.ToString());
+                tw.Flush();
+            }
         }
 
         return allFinished;
@@ -216,7 +276,8 @@ public sealed class Assembler
             options,
             parser =>
             {
-                this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
+                this.logger.Information(
+                    $"Assembling: {sourcePathDebuggerHint}");
 
                 this.AssembleFromSource(
                     parser,
@@ -245,7 +306,8 @@ public sealed class Assembler
                 Select(path => path.Split(Path.DirectorySeparatorChar)).
                 Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
 
-        this.logger.Information($"Source code base path: {baseSourcePath}");
+        this.logger.Information(
+            $"Source code base path: {baseSourcePath}");
 
         //////////////////////////////////////////////////////////////
 
@@ -268,7 +330,8 @@ public sealed class Assembler
                         var sourcePathDebuggerHint = sourceFullPath.
                             Substring(baseSourcePath.Length + 1);
 
-                        this.logger.Information($"Assembling: {sourcePathDebuggerHint}");
+                        this.logger.Information(
+                            $"Assembling: {sourcePathDebuggerHint}");
 
                         this.AssembleFromSource(
                             parser,
@@ -278,7 +341,8 @@ public sealed class Assembler
                     }
                     else
                     {
-                        this.logger.Information("Assembling: <stdin>");
+                        this.logger.Information(
+                            "Assembling: <stdin>");
 
                         this.AssembleFromSource(
                             parser,

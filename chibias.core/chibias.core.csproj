@@ -14,7 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- <None Include="..\Images\chibias.100.png" Pack="true" PackagePath="" /> -->
+    <None Remove="Internal\runtimeconfig.json" />
+    <EmbeddedResource Include="Internal\runtimeconfig.json" />
   </ItemGroup>
 
 </Project>

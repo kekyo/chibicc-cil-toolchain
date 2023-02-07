@@ -37,7 +37,7 @@ partial class Parser
             var memberName = memberNameToken.Text;
 
             int? memberOffset = null;
-            if (this.structure!.Attributes.HasFlag(TypeAttributes.SequentialLayout))
+            if (this.structureType!.Attributes.HasFlag(TypeAttributes.SequentialLayout))
             {
                 if (tokens.Length == 3)
                 {
@@ -48,7 +48,7 @@ partial class Parser
             }
             else
             {
-                Debug.Assert(this.structure!.Attributes.HasFlag(TypeAttributes.ExplicitLayout));
+                Debug.Assert(this.structureType!.Attributes.HasFlag(TypeAttributes.ExplicitLayout));
 
                 if (tokens.Length == 2)
                 {
@@ -69,25 +69,65 @@ partial class Parser
                 }
             }
 
-            FieldDefinition field = null!;
-            if (!this.TryGetType(memberTypeName, out var memberType))
+            // Checks existing structure member declaration.
+            if (this.checkingStructureMemberIndex >= 0)
             {
-                memberType = this.CreateDummyType();
+                var field = this.structureType!.Fields[this.checkingStructureMemberIndex];
 
-                this.DelayLookingUpType(
-                    memberTypeNameToken,
-                    type => field.FieldType = type);
+                if (field.Name != memberName)
+                {
+                    this.OutputError(
+                        memberNameToken,
+                        $"Struct member name difference exists before declared type: {field.Name}");
+                }
+                else if (field.Attributes != FieldAttributes.Public)
+                {
+                    this.OutputError(
+                        memberTypeNameToken,
+                        $"Struct member attributes difference exists before declared type: {field.Attributes}");
+                }
+                // This attempt `TryGetType()` will always succeed.
+                // Because it is a member of an already defined structure when it equals.
+                else if (!this.TryGetType(memberTypeName, out var memberType) ||
+                    field.FieldType.FullName != memberType.FullName)
+                {
+                    this.OutputError(
+                        memberTypeNameToken,
+                        $"Struct member type difference exists before declared type: {field.FieldType.FullName}");
+                }
+                else if (memberOffset is { } mo &&
+                    field.Offset != mo)
+                {
+                    this.OutputError(
+                        memberTypeNameToken,
+                        $"Struct member offset difference exists before declared type: {field.Offset}");
+                }
+
+                this.checkingStructureMemberIndex++;
             }
-
-            field = new FieldDefinition(
-                memberName, FieldAttributes.Public, memberType);
-
-            if (memberOffset is { } mo)
+            // Create a field into this structure.
+            else
             {
-                field.Offset = mo;
-            }
+                FieldDefinition field = null!;
+                if (!this.TryGetType(memberTypeName, out var memberType))
+                {
+                    memberType = this.CreateDummyType();
 
-            this.structure!.Fields.Add(field);
+                    this.DelayLookingUpType(
+                        memberTypeNameToken,
+                        type => field.FieldType = type);
+                }
+
+                field = new FieldDefinition(
+                    memberName, FieldAttributes.Public, memberType);
+
+                if (memberOffset is { } mo)
+                {
+                    field.Offset = mo;
+                }
+
+                this.structureType!.Fields.Add(field);
+            }
         }
     }
 }

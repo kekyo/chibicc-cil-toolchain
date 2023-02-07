@@ -244,9 +244,9 @@ partial class Parser
         {
             var typeAttributes = TypeAttributes.Public | TypeAttributes.Sealed;
             short? packSize = null;
-            if (tokens.Length == 3)
+            var aligningToken = tokens.ElementAtOrDefault(2);
+            if (aligningToken is { })
             {
-                var aligningToken = tokens[2];
                 var aligning = aligningToken.Text;
                 if (aligning == "explicit")
                 {
@@ -279,9 +279,33 @@ partial class Parser
             var structureTypeToken = tokens[1];
             var structureTypeName = structureTypeToken.Text;
 
-            if (this.TryGetType(structureTypeName, out var st))
+            if (this.TryGetType(structureTypeName, out var stref))
             {
-                // TODO: checks equality
+                // Checks equality
+                var structureType = stref.Resolve();
+                if (structureType.Attributes != typeAttributes)
+                {
+                    this.OutputError(
+                        structureTypeToken,
+                        $"Type attribute difference exists before declared type: {structureType.Attributes}");
+                }
+                else if (packSize is { } ps &&
+                    structureType.PackingSize != ps)
+                {
+                    this.OutputError(
+                        aligningToken!,
+                        $"Packing size difference exists before declared type: {structureType.PackingSize}");
+                }
+                else if (packSize == null &&
+                    structureType.PackingSize >= 1)
+                {
+                    this.OutputError(
+                        aligningToken!,
+                        $"Packing size difference exists before declared type: {structureType.PackingSize}");
+                }
+
+                this.structureType = structureType;
+                this.checkingStructureMemberIndex = 0;
             }
             else
             {
@@ -295,10 +319,11 @@ partial class Parser
                 if (packSize is { } ps)
                 {
                     structureType.PackingSize = ps;
+                    structureType.ClassSize = 0;
                 }
 
                 this.module.Types.Add(structureType);
-                this.structure = structureType;
+                this.structureType = structureType;
             }
         }
     }

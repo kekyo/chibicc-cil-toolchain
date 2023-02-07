@@ -9,7 +9,6 @@
 
 using chibias.Internal;
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -45,17 +44,16 @@ partial class AssemblerTests
             var logger = new TextWriterLogger(
                 LogLevels.Debug, logtw);
 
-            logger.Information($"Test runnner BasePath={basePath}");
+            logger.Information($"Test runner BasePath={basePath}");
 
             try
             {
-                var corlibPath = typeof(object).Assembly.Location;
+                var coreLibPath = Path.GetFullPath("mscorlib.dll");
                 var tmp2Path = Path.GetFullPath("tmp2.dll");
 
                 var referenceAssemblyBasePaths = new[]
                 {
-                    //corlibPath,
-                    tmp2Path,
+                    coreLibPath, tmp2Path,
                 }.
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
                     Select(Utilities.GetDirectoryPath).
@@ -63,8 +61,7 @@ partial class AssemblerTests
                     ToArray();
                 var referenceAssemblyPaths = new[]
                 {
-                    //corlibPath,
-                    tmp2Path,
+                    coreLibPath, tmp2Path,
                 }.
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
                     ToArray();
@@ -81,7 +78,7 @@ partial class AssemblerTests
                     {
                         ReferenceAssemblyPaths = referenceAssemblyPaths,
                         AssemblyType = assemblyType,
-                        TargetFrameworkMoniker = "net48",
+                        TargetFrameworkMoniker = "net45",
                         DebugSymbolType = DebugSymbolTypes.Embedded,
                     },
                     "source.s",

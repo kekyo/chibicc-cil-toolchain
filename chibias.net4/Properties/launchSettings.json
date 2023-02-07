@@ -2,7 +2,7 @@
   "profiles": {
     "chibias": {
       "commandName": "Project",
-      "commandLineArgs": "-r ..\\..\\..\\..\\..\\chibicc-cil\\mscorlib.dll ..\\..\\..\\..\\..\\chibicc-cil\\test\\struct.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common_s"
+      "commandLineArgs": "-f net6.0 -r \"C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\6.0.12\\System.Private.CoreLib.dll\" -r \"C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\6.0.12\\System.Console.dll\" ..\\\\..\\\\..\\\\..\\\\..\\\\chibicc-cil\\\\test\\\\struct.s ..\\\\..\\\\..\\\\..\\\\..\\\\chibicc-cil\\\\test\\\\common_s"
     }
   }
 }

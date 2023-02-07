@@ -49,7 +49,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.15.0,net6.0]
+chibias [0.18.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -60,7 +60,7 @@ usage: chibias [options] <source path> [<source path> ...]
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
       --winexe      Produce Windows executable assembly
-  -r                Reference assembly path
+  -r <path>         Reference assembly path
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
@@ -68,6 +68,7 @@ usage: chibias [options] <source path> [<source path> ...]
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
+  -s                Suppress runtime configuration file
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
       --log <level> Log level [debug|trace|information|warning|error|silent]
@@ -95,7 +96,7 @@ You should create a new source code file `hello.s` with the contents only need 4
 Then invoke chibias with:
 
 ```bash
-$ chibias -r /mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/mscorlib.dll -o hello.exe hello.s
+$ chibias -f net45 -r /mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/mscorlib.dll -o hello.exe hello.s
 ```
 
 Run it:
@@ -120,7 +121,7 @@ Or, if you have assembled code that is purely computational, you do not need any
 ```
 
 ```bash
-$ chibias -o adder.exe adder.s
+$ chibias -f net45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -610,8 +611,6 @@ Might be implemented:
 * Automatic implements `IList<T>` on value array type.
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
-* Handling for target framework moniker.
-  * Refers `System.Object` from `C.text` base class, is it referenced to `mscorlib` or `System.Runtime` ?
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
 * And chibicc-cil specific requirements...
 

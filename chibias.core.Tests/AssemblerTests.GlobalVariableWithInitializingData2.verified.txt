@@ -9,13 +9,15 @@
   .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
   .ver 4:0:0:0
 }
-.assembly extern System.Private.CoreLib
+.assembly extern mscorlib as mscorlib_1
 {
-  .publickeytoken = (7C EC 85 D7 BE A7 79 8E )                         // |.....y.
-  .ver 6:0:0:0
+  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
+  .ver 4:0:0:0
 }
 .assembly output
 {
+  .custom instance void [mscorlib_1]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
+                                                                                                          2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
   .ver 1:0:0:0
 }
 .module output.dll
@@ -29,9 +31,9 @@
 // =============== CLASS MEMBERS DECLARATION ===================
 
 .class public sequential ansi sealed System.Byte_len6
-       extends [System.Private.CoreLib]System.ValueType
+       extends [mscorlib_1]System.ValueType
 {
-  .custom instance void [System.Private.CoreLib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .custom instance void [mscorlib_1]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
   .field private uint8 item0
   .field private uint8 item1
   .field private uint8 item2
@@ -50,33 +52,49 @@
   .method public hidebysig specialname instance uint8 
           get_Item(int32 index) cil managed
   {
-    // Code size       13 (0xd)
+    // Code size       29 (0x1d)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  sizeof     [mscorlib]System.Byte
-    IL_0007:  mul
-    IL_0008:  ldarg.0
-    IL_0009:  conv.u
-    IL_000a:  add
-    IL_000b:  ldind.u1
-    IL_000c:  ret
+    IL_0001:  ldc.i4     0x6
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [mscorlib_1]System.IndexOutOfRangeException::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  sizeof     [mscorlib]System.Byte
+    IL_0017:  mul
+    IL_0018:  ldarg.0
+    IL_0019:  conv.u
+    IL_001a:  add
+    IL_001b:  ldind.u1
+    IL_001c:  ret
   } // end of method Byte_len6::get_Item
 
   .method public hidebysig specialname instance void 
           set_Item(int32 index,
                    uint8 'value') cil managed
   {
-    // Code size       14 (0xe)
+    // Code size       30 (0x1e)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  sizeof     [mscorlib]System.Byte
-    IL_0007:  mul
-    IL_0008:  ldarg.0
-    IL_0009:  conv.u
-    IL_000a:  add
-    IL_000b:  ldarg.2
-    IL_000c:  stind.i1
-    IL_000d:  ret
+    IL_0001:  ldc.i4     0x6
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [mscorlib_1]System.IndexOutOfRangeException::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  sizeof     [mscorlib]System.Byte
+    IL_0017:  mul
+    IL_0018:  ldarg.0
+    IL_0019:  conv.u
+    IL_001a:  add
+    IL_001b:  ldarg.2
+    IL_001c:  stind.i1
+    IL_001d:  ret
   } // end of method Byte_len6::set_Item
 
   .property instance callconv(8) int32 Length()
@@ -108,12 +126,12 @@
 .class public abstract auto ansi sealed beforefieldinit C.data
        extends [mscorlib]System.Object
 {
-  .field public static valuetype System.Byte_len6 bar at I_0000207C
+  .field public static valuetype System.Byte_len6 bar at I_0000209C
 } // end of class C.data
 
 
 // =============================================================
 
-.data cil I_0000207C = bytearray (
+.data cil I_0000209C = bytearray (
                  01 02 31 32 B1 B2)                               // ..12..
 // *********** DISASSEMBLY COMPLETE ***********************
