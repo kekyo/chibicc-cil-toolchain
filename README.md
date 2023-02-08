@@ -22,7 +22,7 @@ It is WIP and broadcasting side-by-side Git commit portion on [YouTube (In Japan
 
 ----
 
-## chibias overview
+## Overview
 
 chibias takes multiple CIL source codes as input, performs assembly, and outputs the result as . NET assemblies. At this time, reference assemblies can be specified so that they can be referenced from the CIL source code.
 
@@ -166,11 +166,11 @@ Hello world with chibias!
 In any case, if you want to refer to the complete `mscorlib.dll` or `System.Private.CoreLib.dll` files,
 it may be better to simply install mono and/or .NET SDK and reference the files in that directory.
 
-At the moment, chibias does not automatically detect these core assembly files.
+At the moment, chibias does not automatically detect these assembly files installed on the system.
 This is by design as stand-alone independent assembler, like the GNU assembler.
 In the future, it may be possible to resolve assembly files automatically via the MSBuild script.
 
-(The `chibias.build` package is available for this purpose.)
+(The `chibias.build` package is available for this purpose. But it is still incomplete and cannot be used now.)
 
 
 ----
