@@ -78,29 +78,37 @@ partial class Parser
                 {
                     this.OutputError(
                         memberNameToken,
-                        $"Struct member name difference exists before declared type: {field.Name}");
+                        $"Structure member name difference exists before declared type: {field.Name}");
                 }
                 else if (field.Attributes != FieldAttributes.Public)
                 {
                     this.OutputError(
                         memberTypeNameToken,
-                        $"Struct member attributes difference exists before declared type: {field.Attributes}");
-                }
-                // This attempt `TryGetType()` will always succeed.
-                // Because it is a member of an already defined structure when it equals.
-                else if (!this.TryGetType(memberTypeName, out var memberType) ||
-                    field.FieldType.FullName != memberType.FullName)
-                {
-                    this.OutputError(
-                        memberTypeNameToken,
-                        $"Struct member type difference exists before declared type: {field.FieldType.FullName}");
+                        $"Structure member attributes difference exists before declared type: {field.Attributes}");
                 }
                 else if (memberOffset is { } mo &&
                     field.Offset != mo)
                 {
                     this.OutputError(
                         memberTypeNameToken,
-                        $"Struct member offset difference exists before declared type: {field.Offset}");
+                        $"Structure member offset difference exists before declared type: {field.Offset}");
+                }
+                else
+                {
+                    var capturedField = field;
+                    var capturedMemberTypeName = memberTypeName;
+                    var capturedMemberTypeNameToken = memberTypeNameToken;
+                    this.delayedCheckAfterLookingupActions.Add(() =>
+                    {
+                        // Checkup its structure member type.
+                        if (!this.TryGetType(capturedMemberTypeName, out var memberType) ||
+                            capturedField.FieldType.FullName != memberType.FullName)
+                        {
+                            this.OutputError(
+                                capturedMemberTypeNameToken,
+                                $"Structure member type difference exists before declared type: {capturedField.FieldType.FullName}");
+                        }
+                    });
                 }
 
                 this.checkingStructureMemberIndex++;

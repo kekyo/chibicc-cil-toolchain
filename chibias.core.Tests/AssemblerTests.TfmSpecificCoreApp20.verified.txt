@@ -1,0 +1,58 @@
+﻿
+//  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
+
+
+
+// Metadata version: v4.0.30319
+.assembly extern System.Private.CoreLib
+{
+  .publickey = (00 24 00 00 04 80 00 00 94 00 00 00 06 02 00 00   // .$..............
+                00 24 00 00 52 53 41 31 00 04 00 00 01 00 01 00   // .$..RSA1........
+                8D 56 C7 6F 9E 86 49 38 30 49 F3 83 C4 4B E0 EC   // .V.o..I80I...K..
+                20 41 81 82 2A 6C 31 CF 5E B7 EF 48 69 44 D0 32   //  A..*l1.^..HiD.2
+                18 8E A1 D3 92 07 63 71 2C CB 12 D7 5F B7 7E 98   // ......cq,..._.~.
+                11 14 9E 61 48 E5 D3 2F BA AB 37 61 1C 18 78 DD   // ...aH../..7a..x.
+                C1 9E 20 EF 13 5D 0C B2 CF F2 BF EC 3D 11 58 10   // .. ..]......=.X.
+                C3 D9 06 96 38 FE 4B E2 15 DB F7 95 86 19 20 E5   // ....8.K....... .
+                AB 6F 7D B2 E2 CE EF 13 6A C2 3D 5D D2 BF 03 17   // .o}.....j.=]....
+                00 AE C2 32 F6 C6 B1 C7 85 B4 30 5C 12 3B 37 AB ) // ...2......0\.;7.
+  .ver 6:0:0:0
+}
+.assembly extern mscorlib
+{
+  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
+  .ver 4:0:0:0
+}
+.assembly output
+{
+  .custom instance void [mscorlib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 18 2E 4E 45 54 43 6F 72 65 41 70 70 2C 56   // ....NETCoreApp,V
+                                                                                                        65 72 73 69 6F 6E 3D 76 32 2E 30 00 00 )          // ersion=v2.0..
+  .ver 1:0:0:0
+}
+.module output.dll
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class public abstract auto ansi sealed C.text
+       extends [System.Private.CoreLib]System.Object
+{
+  .method public static int32  main() cil managed
+  {
+    // Code size       2 (0x2)
+    .maxstack  8
+    IL_0000:  ldc.i4.1
+    IL_0001:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
+
+// =============================================================
+
+// *********** DISASSEMBLY COMPLETE ***********************

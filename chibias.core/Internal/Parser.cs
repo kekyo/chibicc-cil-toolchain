@@ -74,6 +74,7 @@ internal sealed partial class Parser
     private readonly List<string> willApplyLabelingNames = new();
     private readonly List<Action> delayedLookupBranchTargetActions = new();
     private readonly List<Action> delayedLookupLocalMemberActions = new();
+    private readonly List<Action> delayedCheckAfterLookingupActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> valueType;
     private readonly Lazy<MethodReference> indexOutOfRangeCtor;
@@ -132,11 +133,10 @@ internal sealed partial class Parser
         this.importantTypes.Add("System.UIntPtr", this.module.TypeSystem.UIntPtr);
         this.importantTypes.Add("System.TypedReference", this.module.TypeSystem.TypedReference);
 
-        this.valueType = new(() => this.UnsafeGetType("System.ValueType"));
-        this.indexOutOfRangeCtor = new(() => this.Import(
-            this.UnsafeGetType("System.IndexOutOfRangeException").
-            Resolve()?.Methods.
-            FirstOrDefault(m => m.IsConstructor && !m.IsStatic && m.Parameters.Count == 0)!));
+        this.valueType = new(() =>
+            this.UnsafeGetType("System.ValueType"));
+        this.indexOutOfRangeCtor = new(() =>
+            this.UnsafeGetMethod("System.IndexOutOfRangeException..ctor", new string[0]));
 
         this.cabiTextType = new TypeDefinition(
             "C",
@@ -210,7 +210,8 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    private TypeReference UnsafeGetType(string typeName)
+    private TypeReference UnsafeGetType(
+        string typeName)
     {
         if (!this.TryGetType(typeName, out var type))
         {
@@ -221,6 +222,21 @@ internal sealed partial class Parser
         }
         return type;
     }
+
+    private MethodReference UnsafeGetMethod(
+        string methodName, string[] parameterTypeNames)
+    {
+        if (!this.TryGetMethod(methodName, parameterTypeNames, out var method))
+        {
+            this.caughtError = true;
+            this.logger.Error($"Could not find for important method: {methodName}");
+
+            method = this.CreateDummyMethod();
+        }
+        return method;
+    }
+
+    /////////////////////////////////////////////////////////////////////
 
     public bool TryGetType(
         string name,
@@ -701,6 +717,12 @@ internal sealed partial class Parser
                 action();
             }
 
+            // Fire lookup checker.
+            foreach (var action in this.delayedCheckAfterLookingupActions)
+            {
+                action();
+            }
+
             // (Completed all CIL implementations in this place.)
 
             ///////////////////////////////////////////////
@@ -770,6 +792,7 @@ internal sealed partial class Parser
         }
 
         this.delayedLookupLocalMemberActions.Clear();
+        this.delayedCheckAfterLookingupActions.Clear();
         this.files.Clear();
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();

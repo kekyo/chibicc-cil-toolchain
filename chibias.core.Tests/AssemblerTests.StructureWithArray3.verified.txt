@@ -6,18 +6,13 @@
 // Metadata version: v4.0.30319
 .assembly extern mscorlib
 {
-  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
-  .ver 4:0:0:0
-}
-.assembly extern mscorlib as mscorlib_1
-{
-  .publickeytoken = (B7 7A 5C 56 19 34 E0 89 )                         // .z\V.4..
+  .publickey = (00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 ) 
   .ver 4:0:0:0
 }
 .assembly output
 {
-  .custom instance void [mscorlib_1]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
-                                                                                                          2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
+  .custom instance void [mscorlib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
+                                                                                                        2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
   .ver 1:0:0:0
 }
 .module output.dll
@@ -31,7 +26,7 @@
 // =============== CLASS MEMBERS DECLARATION ===================
 
 .class public sequential ansi sealed C.type.foo
-       extends [mscorlib_1]System.ValueType
+       extends [mscorlib]System.ValueType
 {
   .field public int32 a
   .field public valuetype C.type.bar_len3 b
@@ -39,7 +34,7 @@
 } // end of class C.type.foo
 
 .class public sequential ansi sealed C.type.bar
-       extends [mscorlib_1]System.ValueType
+       extends [mscorlib]System.ValueType
 {
   .field public int32 a
   .field public valuetype System.SByte_len4 b
@@ -47,9 +42,9 @@
 } // end of class C.type.bar
 
 .class public sequential ansi sealed System.SByte_len4
-       extends [mscorlib_1]System.ValueType
+       extends [mscorlib]System.ValueType
 {
-  .custom instance void [mscorlib_1]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
   .field private int8 item0
   .field private int8 item1
   .field private int8 item2
@@ -73,7 +68,7 @@
     IL_0006:  clt
     IL_0008:  brtrue.s   IL_0010
 
-    IL_000a:  newobj     instance void [mscorlib_1]System.IndexOutOfRangeException::.ctor()
+    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
     IL_000f:  throw
 
     IL_0010:  ldarg.1
@@ -97,7 +92,7 @@
     IL_0006:  clt
     IL_0008:  brtrue.s   IL_0010
 
-    IL_000a:  newobj     instance void [mscorlib_1]System.IndexOutOfRangeException::.ctor()
+    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
     IL_000f:  throw
 
     IL_0010:  ldarg.1
@@ -139,9 +134,9 @@
 } // end of class C.text
 
 .class public sequential ansi sealed C.type.bar_len3
-       extends [mscorlib_1]System.ValueType
+       extends [mscorlib]System.ValueType
 {
-  .custom instance void [mscorlib_1]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
   .field private valuetype C.type.bar item0
   .field private valuetype C.type.bar item1
   .field private valuetype C.type.bar item2
@@ -164,7 +159,7 @@
     IL_0006:  clt
     IL_0008:  brtrue.s   IL_0010
 
-    IL_000a:  newobj     instance void [mscorlib_1]System.IndexOutOfRangeException::.ctor()
+    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
     IL_000f:  throw
 
     IL_0010:  ldarg.1
@@ -188,7 +183,7 @@
     IL_0006:  clt
     IL_0008:  brtrue.s   IL_0010
 
-    IL_000a:  newobj     instance void [mscorlib_1]System.IndexOutOfRangeException::.ctor()
+    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
     IL_000f:  throw
 
     IL_0010:  ldarg.1

@@ -29,16 +29,28 @@ public sealed class Assembler
         ReadToEnd();
 
     private readonly ILogger logger;
-    private readonly AssemblyResolver assemblyResolver;
+    private readonly DefaultAssemblyResolver assemblyResolver;
+    private readonly ReaderParameters readerParameters;
 
     public Assembler(
         ILogger logger,
         params string[] referenceAssemblyBasePaths)
     {
         this.logger = logger;
-        this.assemblyResolver = new AssemblyResolver(
-            this.logger,
-            referenceAssemblyBasePaths);
+        this.assemblyResolver = new DefaultAssemblyResolver();
+        this.readerParameters = new(ReadingMode.Immediate)
+        {
+            InMemory = true,
+            ReadSymbols = false,
+            ReadWrite = false,
+            ThrowIfSymbolsAreNotMatching = false,
+            AssemblyResolver = this.assemblyResolver,
+        };
+
+        foreach (var basePath in referenceAssemblyBasePaths)
+        {
+            this.assemblyResolver.AddSearchDirectory(basePath);
+        }
     }
 
     private TypeDefinitionCache LoadPublicTypesFrom(
@@ -46,28 +58,23 @@ public sealed class Assembler
     {
         var assemblies = referenceAssemblyPaths.
             Distinct().
-            Collect(this.assemblyResolver.ReadAssemblyFrom).
+            Collect(path =>
+            {
+                try
+                {
+                    var assembly = AssemblyDefinition.ReadAssembly(path, this.readerParameters);
+                    this.logger.Information(
+                        $"Read reference assembly: {path}");
+                    return assembly;
+                }
+                catch (Exception ex)
+                {
+                    this.logger.Warning(
+                        $"Unable read reference assembly: {path}, {ex.GetType().FullName}: {ex.Message}");
+                    return null;
+                }
+            }).
             ToArray();
-
-        IEnumerable<AssemblyDefinition> ResolveDescendants(
-            AssemblyNameReference anr, HashSet<AssemblyNameReference> saved)
-        {
-            if (saved.Add(anr) &&
-                this.assemblyResolver.Resolve(anr) is { } assembly)
-            {
-                return new[] { assembly }.
-                    Concat(assembly.Modules.
-                        SelectMany(module => module.AssemblyReferences).
-                        SelectMany(anr => ResolveDescendants(anr, saved)));
-            }
-            else
-            {
-                return Utilities.Empty<AssemblyDefinition>();
-            }
-        }
-
-        var saved = new HashSet<AssemblyNameReference>(
-            AssemblyNameReferenceComparer.Instance);
 
         return new(
             assemblies.
@@ -169,18 +176,26 @@ public sealed class Assembler
                     _ => ModuleKind.Console
                 },
                 Runtime = targetFramework.Runtime,
-                Architecture = TargetArchitecture.I386,
                 AssemblyResolver = this.assemblyResolver,
-                MetadataResolver = new MetadataResolver(this.assemblyResolver),
             });
 
         var module = assembly.MainModule;
 
         // https://github.com/jbevain/cecil/issues/646
-        var coreLibraryReference = targetFramework.CoreLibraryReference;
-        module.AssemblyReferences.Add(coreLibraryReference);
+        var coreLibraryReference = this.assemblyResolver.Resolve(
+            targetFramework.CoreLibraryName,
+            this.readerParameters);
+        module.AssemblyReferences.Add(coreLibraryReference.Name);
 
-        Debug.Assert(module.TypeSystem.CoreLibrary.Name == coreLibraryReference.Name);
+        // The type system will be bring with explicitly assigned core library.
+        Debug.Assert(module.TypeSystem.CoreLibrary == coreLibraryReference.Name);
+
+        // Attention when different core library from target framework.
+        if (coreLibraryReference.Name.FullName != targetFramework.CoreLibraryName.FullName)
+        {
+            this.logger.Warning(
+                $"Core library mismatched: {coreLibraryReference.FullName}");
+        }
 
         //////////////////////////////////////////////////////////////
 

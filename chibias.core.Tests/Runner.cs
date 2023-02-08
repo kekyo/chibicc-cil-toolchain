@@ -26,6 +26,7 @@ partial class AssemblerTests
         string chibiasSourceCode,
         AssemblyTypes assemblyType = AssemblyTypes.Dll,
         string[]? additionalReferencePaths = null,
+        string targetFrameworkMoniker = "net45",
         [CallerMemberName] string memberName = null!)
     {
         var basePath = Path.GetFullPath(
@@ -78,7 +79,7 @@ partial class AssemblerTests
                     {
                         ReferenceAssemblyPaths = referenceAssemblyPaths,
                         AssemblyType = assemblyType,
-                        TargetFrameworkMoniker = "net45",
+                        TargetFrameworkMoniker = targetFrameworkMoniker,
                         DebugSymbolType = DebugSymbolTypes.Embedded,
                     },
                     "source.s",
