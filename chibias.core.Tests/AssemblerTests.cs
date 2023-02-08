@@ -1083,6 +1083,90 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
+    public Task Structure5()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int16 a
+                int64 b
+                int32 c
+            .structure foo
+                int16 a
+                int64 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure6()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo 2
+                int16 a
+                int64 b
+                int32 c
+            .structure foo 2
+                int16 a
+                int64 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure7()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo explicit
+                int16 a 0
+                int64 b 2
+                int32 c 4
+            .structure foo explicit
+                int16 a 0
+                int64 b 2
+                int32 c 4");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure8()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure foo
+                int32 a
+                bar b
+                int32 c
+            .structure bar
+                int16 a
+                int64 b
+                int32 c
+            .structure foo
+                int32 a
+                bar b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task StructureWithArray1()
     {
         var actual = Run(@"

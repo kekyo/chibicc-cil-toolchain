@@ -580,6 +580,9 @@ Or gives an offset to each member:
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
 
+A structure type has no problem if the definition of the same type name appears more than once,
+as long as the definitions are completely identical.
+
 Note: To use the value array type, references to the type `System.ValueType` must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
