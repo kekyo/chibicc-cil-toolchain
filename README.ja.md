@@ -78,6 +78,10 @@ usage: chibias [options] <source path> [<source path> ...]
 * chibiasは、コマンドラインで指摘された複数のソースコードをアセンブルして、1つの.NETアセンブリにまとめます。
 * 参照アセンブリパスは、`ld` のライブラリルックアップと同じように最後から順に評価されます。
   この機能は、重複するシンボル(関数/グローバル変数)にも適用されます。
+* ターゲットフレームワークのデフォルト(上記の例では`net6.0`)は、chibiasの動作環境に依存します。
+* ターゲットフレームワークの指定は、コアライブラリのバリエーションを仮定するだけで、
+  `mscorlib.dll`や`System.Private.CoreLib.dll`アセンブリを自動的に検出するわけではありません（別章参照）。
+
 
 ----
 
@@ -106,13 +110,13 @@ $ ./hello.exe
 Hello world with chibias!
 ```
 
-このサンプルは、 `mscorlib` アセンブリに定義されている `System.Console.WriteLine()` を参照します。
+このサンプルは、 `mscorlib.dll` アセンブリに定義されている `System.Console.WriteLine()` を参照します。
 そして、このファイルは Windows のシステムディレクトリに存在するものを、WSL環境から指定しているため、
 少々わかりにくいかもしれません。
 しかし、chibiasがどうやって参照するアセンブリを特定するのか、についてはこの例で十分でしょう。
 
 Linuxや他のOSでも、必要な参照を追加することで同じように使うことができます。
-また、純粋に計算だけのコードをアセンブルした場合は、他のアセンブリへの参照は必要ありません:
+また、ビルトイン型（後述）だけを使用するコードをアセンブルした場合は、他のアセンブリへの参照は必要ありません:
 
 ```
 .function int32 main
@@ -129,7 +133,22 @@ $ echo $?
 3
 ```
 
-### 参考: どうやってmscorlibなどを入手するか?
+### .NET 6や.NET Coreなどで動かすには
+
+ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
+
+```bash
+$ chibias -f net6.0 -r ~/.dotnet/shared/Microsoft.NETCore.App/6.0.13/System.Private.CoreLib.dll -o hello.exe hello.s
+```
+
+ターゲットフレームワークと、対応するコアライブラリのバージョンは一致する必要があります。
+`net6.0`と指定して、.NET Core 2.2のコアライブラリを使用すると、警告が表示されます。
+
+注意: 現在のところ、マイナーなターゲットフレームワークには対応していません。
+例えば、`uap10.0`、`tizen1`や`portable+net45+wp5+sl5`などです。
+標準となる、ターゲットフレームワークのパーサーが、BCLに含まれていない事が理由です。
+
+### 参考: どうやってコアアセンブリファイルを入手するか?
 
 `mscorlib.dll` ファイルを合法的に入手したい場合は、
 nugetで公開されている、[ReferenceAssemblies (net45)](https://www.nuget.org/packages/microsoft.netframework.referenceassemblies.net45) パッケージを利用することができます。
@@ -145,6 +164,16 @@ Linux環境などで実行する場合は、mono/.NET Coreなどのランタイ�
 $ mono ./hello.exe
 Hello world with chibias!
 ```
+
+いずれにしても、完全な `mscorlib.dll`や`System.Private.CoreLib.dll`ファイルを参照したい場合は、
+単にmonoや.NET SDKをインストールして、そのディレクトリ内のファイルを参照するほうが良いかもしれません。
+
+今のところ、chibiasは、これらのアセンブリファイルを自動的に検出しません。
+GNUアセンブラのように、単体で独立したアセンブラとして、意図的に設計した結果です。
+将来的には、MSBuildスクリプトを経由して、自動的にアセンブリファイルを解決出来るようになるかもしれません。
+
+(この目的のために、`chibias.build` パッケージを用意しています。)
+
 
 ----
 
@@ -499,6 +528,9 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 * `int8[5][3]` --> `System.SByte_len5_len3`
 * `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
+注意: 値型配列を使用するには、`System.ValueType` 型と `System.IndexOutOfRangeException` 型への参照が解決される必要があります。
+`mscorlib.dll` 又は `System.Private.CoreLib.dll` への参照を追加して下さい。
+
 ### 構造体型
 
 chibiasで定義できる型は構造体型のみです。
@@ -546,6 +578,9 @@ public struct foo
 
 オフセットを任意に調整することで、C言語における共用体型を再現することができます。
 
+注意: 構造体型を使用するには、`System.ValueType` 型への参照が解決される必要があります。
+`mscorlib.dll` 又は `System.Private.CoreLib.dll` への参照を追加して下さい。
+
 ### 位置情報を明示する
 
 `.file`と`.location`ディレクティブは、シーケンスポイントと呼ばれるデバッグ情報を生成します。
@@ -568,7 +603,7 @@ public struct foo
 ```
 
 * `.file`は，IDをソースコード・ファイルに対応付けます。
-  * 第1オペランド: ID (数値を含む任意のシンボル名。GAS の `.fil` ディレクティブと同じ)
+  * 第1オペランド: ID (数値を含む任意のシンボル名。GNUアセンブラの `.fil` ディレクティブと同じ)
   * 第2オペランド: ファイルパス（またはソースコードを識別する）文字列
   * 第3オペランド: 言語名称。以下のリストを参照(オプション)
   * `.file`ディレクティブは常に宣言することができ、同じIDを上書きします。
@@ -599,25 +634,7 @@ public struct foo
 
 ## TODO
 
-実装されるかもしれない:
-
-* `OperandType`
-  * InlineSwitch
-* Handling function/global variable scopes.
-* Automatic implements `IList<T>` on value array type.
-* Handling variable arguments.
-* Handling method optional attributes (inline, no-inline and no-optimizing?)
-* Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
-* And chibicc-cil specific requirements...
-
-実装されない可能性がある:
-
-* `OperandType`
-  * InlinePhi
-* Handling multi-dimensional array types.
-* Exception handling.
-* And NOT chibicc-cil specific requirements.
-
+[TODO (英語)](https://github.com/kekyo/chibias-cil#todo) を参照してください。
 
 ----
 

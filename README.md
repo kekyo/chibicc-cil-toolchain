@@ -78,7 +78,11 @@ usage: chibias [options] <source path> [<source path> ...]
 * chibias will combine multiple source code in command line pointed into one assembly.
 * Reference assembly paths evaluates last-to-first order, same as `ld` looking up.
   This feature applies to duplicated symbols (function/global variables).
-  
+* The default target framework moniker (`net6.0` in the above example) depends on the operating environment of chibias.
+* Specifying a target framework moniker only assumes a variation of the core library.
+  And it does NOT automatically detect the `mscorlib.dll` or `System.Private.CoreLib.dll` assembly files (see below).
+
+
 ----
 
 ## Hello world
@@ -106,11 +110,11 @@ $ ./hello.exe
 Hello world with chibias!
 ```
 
-Yes, this example uses the `System.Console.WriteLine()` defined in the `mscorlib` assembly file in the
+Yes, this example uses the `System.Console.WriteLine()` defined in the `mscorlib.dll` assembly file in the
 Windows environment (WSL). But now you know how to reference assemblies from chibias.
 
 Linux and other operating systems can be used in the same way, by adding references you need.
-Or, if you have assembled code that is purely computational, you do not need any references to other assemblies:
+Also, if you assemble code that uses only built-in types (see below), you do not need references to other assemblies:
 
 ```
 .function int32 main
@@ -127,7 +131,22 @@ $ echo $?
 3
 ```
 
-### FYI: How to get mscorlib or others?
+### To run with .NET 6, .NET Core and others
+
+Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
+
+```bash
+$ chibias -f net6.0 -r ~/.dotnet/shared/Microsoft.NETCore.App/6.0.13/System.Private.CoreLib.dll -o hello.exe hello.s
+```
+
+The version of the target framework moniker and the corresponding core library must match.
+If you specify `net6.0` and use the .NET Core 2.2 core library, you will get a warning.
+
+Note: Minor target framework monikers are not currently supported.
+For example, `uap10.0`, `tizen1` and `portable+net45+wp5+sl5`.
+This is because the standard target framework moniker parser is not included in the BCL.
+
+### FYI: How do I get the core assembly files?
 
 If you want to obtain `mscorlib.dll` legally,
 you can use the [ReferenceAssemblies (net45)](https://www.nuget.org/packages/microsoft.netframework.referenceassemblies.net45) package.
@@ -143,6 +162,16 @@ If you want to run it in a Linux environment or others, you will need a runtime 
 $ mono ./hello.exe
 Hello world with chibias!
 ```
+
+In any case, if you want to refer to the complete `mscorlib.dll` or `System.Private.CoreLib.dll` files,
+it may be better to simply install mono and/or .NET SDK and reference the files in that directory.
+
+At the moment, chibias does not automatically detect these core assembly files.
+This is by design as stand-alone independent assembler, like the GNU assembler.
+In the future, it may be possible to resolve assembly files automatically via the MSBuild script.
+
+(The `chibias.build` package is available for this purpose.)
+
 
 ----
 
@@ -501,6 +530,9 @@ For example:
 * `int8[5][3]` --> `System.SByte_len5_len3`
 * `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
+Note: To use the value array type, references to the types `System.ValueType` and `System.IndexOutOfRangeException` must be resolved.
+Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
+
 ### Structure type
 
 The only types that can be defined are structure types.
@@ -548,6 +580,9 @@ Or gives an offset to each member:
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
 
+Note: To use the value array type, references to the type `System.ValueType` must be resolved.
+Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
+
 ### Explicitly location information
 
 The file and location directive will produce sequence points into debugging information.
@@ -571,7 +606,7 @@ This information is optional and does not affect assembly task if it is not pres
 ```
 
 * The file directive maps ID to source code file.
-  * First operand: ID (Valid any symbols include number, same as GAS's `.fil` directive).
+  * First operand: ID (Valid any symbols include number, same as GNU assembler's `.fil` directive).
   * Second operand: File path (or source code identity) string.
   * Third operand: Language indicator, see listing below. (Optional)
   * The file directive can always declare, and will overwrite same ID.

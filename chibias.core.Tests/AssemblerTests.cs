@@ -1014,7 +1014,6 @@ public sealed partial class AssemblerTests
 
     /////////////////////////////////////////////////////////
 
-
     [Test]
     public Task Structure1()
     {
@@ -1132,6 +1131,272 @@ public sealed partial class AssemblerTests
                 int32 a
                 int8[4] b
                 int32 c");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task TfmSpecific10()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net10");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific11()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net11");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific20()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net20");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific30()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net30");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific35()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net35");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific35Client()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net35-client");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific40()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net40");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific40Client()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net40-client");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific45()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net45");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecific48()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net48");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificStandard10()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netstandard1.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificStandard16()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netstandard1.6");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificStandard20()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netstandard2.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificStandard21()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netstandard2.1");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp10()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netcoreapp1.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp11()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netcoreapp1.1");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp20()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netcoreapp2.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp21()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netcoreapp2.1");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp22()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netcoreapp2.2");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp30()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netcoreapp3.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp31()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "netcoreapp3.1");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp50()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net5.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp60()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net6.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp70()
+    {
+        var actual = Run(@"
+            .function int32 main
+                ldc.i4.1
+                ret",
+                targetFrameworkMoniker: "net7.0");
         return Verify(actual);
     }
 }

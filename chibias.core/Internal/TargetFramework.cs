@@ -60,7 +60,7 @@ internal readonly struct TargetFramework
             _ => TargetRuntime.Net_4_0,
         };
 
-    public AssemblyNameReference CoreLibraryReference
+    public AssemblyNameReference CoreLibraryName
     {
         get
         {
