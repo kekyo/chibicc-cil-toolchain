@@ -27,16 +27,16 @@ internal sealed class Token
     public readonly TokenTypes Type;
 
     public readonly string Text;
-    public readonly int Line;
-    public readonly int StartColumn;
-    public readonly int EndColumn;
+    public readonly uint Line;
+    public readonly uint StartColumn;
+    public readonly uint EndColumn;
 
     public Token(
         TokenTypes type,
         string text,
-        int line,
-        int startColumn,
-        int endColumn)
+        uint line,
+        uint startColumn,
+        uint endColumn)
     {
         this.Type = type;
         this.Text = text;
@@ -61,7 +61,7 @@ internal sealed class Tokenizer
         Byte0,
     }
 
-    private int lineIndex;
+    private uint lineIndex;
 
     public Token[] TokenizeLine(string line)
     {
@@ -95,8 +95,8 @@ internal sealed class Tokenizer
                         TokenTypes.Directive,
                         line.Substring(start, index - start),
                         this.lineIndex,
-                        start,
-                        index));
+                        (uint)start,
+                        (uint)index));
                 }
                 else if (inch == '"')
                 {
@@ -204,8 +204,8 @@ internal sealed class Tokenizer
                         TokenTypes.String,
                         sb.ToString(),
                         this.lineIndex,
-                        start,
-                        index));
+                        (uint)start,
+                        (uint)index));
                     hex.Clear();
                     sb.Clear();
                 }
@@ -229,8 +229,8 @@ internal sealed class Tokenizer
                             TokenTypes.Label,
                             line.Substring(start, index - start - 1),
                             this.lineIndex,
-                            start,
-                            index - 1));
+                            (uint)start,
+                            (uint)index - 1));
                     }
                     else
                     {
@@ -238,8 +238,8 @@ internal sealed class Tokenizer
                             TokenTypes.Identity,
                             line.Substring(start, index - start),
                             this.lineIndex,
-                            start,
-                            index));
+                            (uint)start,
+                            (uint)index));
                     }
                 }
             }

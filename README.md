@@ -533,10 +533,60 @@ For example:
 Note: To use the value array type, references to the types `System.ValueType` and `System.IndexOutOfRangeException` must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
+### Enumeration type
+
+The enumeration type that can be defined in chibias are the same as enumeration type in .NET,
+which implicitly inherit from `System.Enum`.
+
+```
+.enumeration foo
+    beef
+    pork
+    chicken
+```
+
+Pseudo code in C#:
+
+```csharp
+namespace C.type;
+
+public enum foo
+{
+    beef,
+    pork,
+    chicken
+}
+```
+
+By default, values assigned to enumeration values are incremented sequentially from 0.
+To specify explicitly:
+
+```
+.enumeration foo
+    beef 5
+    pork 13
+    chicken 42
+```
+
+Enums allow you to explicitly specify the type of the source number:
+
+```
+.enumeration foo int64   ; value as underlying int64
+    beef 5
+    pork 13
+    chicken 42
+```
+
+An enumeration type can appear multiple times with the same type name,
+as long as the definitions are completely identical.
+
+Note: To use an enumerated type, a reference to the `System.Enum` type must be resolved.
+Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
+
 ### Structure type
 
-The only types that can be defined are structure types.
-That is, types that inherit implicitly from `System.ValueType`:
+The structure types that can be defined in chibias are the same as structure types in .NET,
+which implicitly inherit from `System.ValueType`.
 
 ```
 .structure foo
@@ -580,10 +630,10 @@ Or gives an offset to each member:
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
 
-A structure type has no problem if the definition of the same type name appears more than once,
+An structure type can appear multiple times with the same type name,
 as long as the definitions are completely identical.
 
-Note: To use the value array type, references to the type `System.ValueType` must be resolved.
+Note: To use an structure type, a reference to the `System.ValueType` type must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
 ### Explicitly location information

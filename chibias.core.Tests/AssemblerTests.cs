@@ -1218,6 +1218,169 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task Enumeration1()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo
+                beef
+                poke
+                chicken");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration2()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration3()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo int8
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration4()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo uint8
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration5()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo int16
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration6()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo uint16
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration7()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo int32
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration8()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo uint32
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration9()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo int64
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Enumeration10()
+    {
+        var actual = Run(@"
+            .function void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration foo uint64
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]

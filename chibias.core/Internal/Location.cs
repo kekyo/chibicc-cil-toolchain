@@ -31,17 +31,17 @@ internal sealed class FileDescriptor
 internal sealed class Location
 {
     public readonly FileDescriptor File;
-    public readonly int StartLine;
-    public readonly int StartColumn;
-    public readonly int EndLine;
-    public readonly int EndColumn;
+    public readonly uint StartLine;
+    public readonly uint StartColumn;
+    public readonly uint EndLine;
+    public readonly uint EndColumn;
 
     public Location(
         FileDescriptor file,
-        int startLine,
-        int startColumn,
-        int endLine,
-        int endColumn)
+        uint startLine,
+        uint startColumn,
+        uint endLine,
+        uint endColumn)
     {
         this.File = file;
         this.StartLine = startLine;

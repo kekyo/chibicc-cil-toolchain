@@ -27,6 +27,49 @@ internal static class Utilities
         Select(field => (OpCode)field.GetValue(null)!).
         ToDictionary(opCode => opCode.Name.Replace('_', '.').ToLowerInvariant());
 
+    private static readonly Dictionary<string, string> aliasTypeNames =
+        new Dictionary<string, string>()
+    {
+        { "void", "System.Void" },
+        { "uint8", "System.Byte" },
+        { "int8", "System.SByte" },
+        { "int16", "System.Int16" },
+        { "uint16", "System.UInt16" },
+        { "int32", "System.Int32" },
+        { "uint32", "System.UInt32" },
+        { "int64", "System.Int64" },
+        { "uint64", "System.UInt64" },
+        { "float32", "System.Single" },
+        { "float64", "System.Double" },
+        { "intptr", "System.IntPtr" },
+        { "uintptr", "System.UIntPtr" },
+        { "bool", "System.Boolean" },
+        { "char", "System.Char" },
+        { "object", "System.Object" },
+        { "string", "System.String" },
+        { "typeref", "System.TypedReference" },
+        { "byte", "System.Byte" },
+        { "sbyte", "System.SByte" },
+        { "short", "System.Int16" },
+        { "ushort", "System.UInt16" },
+        { "int", "System.Int32" },
+        { "uint", "System.UInt32" },
+        { "long", "System.Int64" },
+        { "ulong", "System.UInt64" },
+        { "single", "System.Single" },
+        { "float", "System.Single" },
+        { "double", "System.Double" },
+        { "nint", "System.IntPtr" },
+        { "nuint", "System.UIntPtr" },
+        { "char16", "System.Char" },
+    };
+
+    private static readonly HashSet<string> enumerationUnderlyingTypes = new HashSet<string>()
+    {
+        "System.Byte", "System.SByte", "System.Int16", "System.UInt16",
+        "System.Int32", "System.UInt32", "System.Int64", "System.UInt64",
+    };
+
     public static int GetOpCodeStackSize(StackBehaviour sb) =>
         sb switch
         {
@@ -71,6 +114,12 @@ internal static class Utilities
             Instruction instruction => Instruction.Create(opCode, instruction),
             _ => throw new InvalidOperationException(),
         };
+
+    public static bool TryLookupOriginTypeName(string typeName, out string originTypeName) =>
+        aliasTypeNames.TryGetValue(typeName, out originTypeName!);
+
+    public static bool IsEnumerationUnderlyingType(string typeName) =>
+        enumerationUnderlyingTypes.Contains(typeName);
 
 #if NET40 || NET45
     private static class ArrayEmpty<T>
@@ -144,6 +193,32 @@ internal static class Utilities
             CultureInfo.InvariantCulture,
             out value));
 
+    public static bool TryParseInt16(string word, out short value) =>
+        short.TryParse(
+            word,
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out value) ||
+        (word.StartsWith("0x") &&
+         short.TryParse(
+            word.Substring(2),
+            NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture,
+            out value));
+
+    public static bool TryParseUInt16(string word, out ushort value) =>
+        ushort.TryParse(
+            word,
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out value) ||
+        (word.StartsWith("0x") &&
+         ushort.TryParse(
+            word.Substring(2),
+            NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture,
+            out value));
+
     public static bool TryParseInt32(string word, out int value) =>
         int.TryParse(
             word,
@@ -157,6 +232,19 @@ internal static class Utilities
             CultureInfo.InvariantCulture,
             out value));
 
+    public static bool TryParseUInt32(string word, out uint value) =>
+        uint.TryParse(
+            word,
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out value) ||
+        (word.StartsWith("0x") &&
+         uint.TryParse(
+            word.Substring(2),
+            NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture,
+            out value));
+
     public static bool TryParseInt64(string word, out long value) =>
         long.TryParse(
             word,
@@ -165,6 +253,19 @@ internal static class Utilities
             out value) ||
         (word.StartsWith("0x") &&
          long.TryParse(
+            word.Substring(2),
+            NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture,
+            out value));
+
+    public static bool TryParseUInt64(string word, out ulong value) =>
+        ulong.TryParse(
+            word,
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out value) ||
+        (word.StartsWith("0x") &&
+         ulong.TryParse(
             word.Substring(2),
             NumberStyles.HexNumber,
             CultureInfo.InvariantCulture,

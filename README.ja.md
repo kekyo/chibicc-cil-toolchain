@@ -531,10 +531,57 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 注意: 値型配列を使用するには、`System.ValueType` 型と `System.IndexOutOfRangeException` 型への参照が解決される必要があります。
 `mscorlib.dll` 又は `System.Private.CoreLib.dll` への参照を追加して下さい。
 
+### 列挙体型
+
+chibiasで定義できる列挙体型は、.NETでの列挙体型と同様で、`System.Enum` を暗黙のうちに継承した型です。
+
+```
+.enumeration foo
+    beef
+    pork
+    chicken
+```
+
+疑似的にC#で記述すると:
+
+```csharp
+namespace C.type;
+
+public enum foo
+{
+    beef,
+    pork,
+    chicken
+}
+```
+
+デフォルトでは、列挙値に割り当てられる値は、0から順にインクリメントされた値となります。
+明示的に指定する場合は:
+
+```
+.enumeration foo
+    beef 5
+    pork 13
+    chicken 42
+```
+
+列挙体型は、元となる数値の型を明示的に指定することが出来ます:
+
+```
+.enumeration foo int64   ; 値をint64として定義
+    beef 5
+    pork 13
+    chicken 42
+```
+
+列挙体型は、完全に同一の定義であれば、複数回同じ型名の定義が現れても問題ありません。
+
+注意: 列挙体型を使用するには、`System.Enum` 型への参照が解決される必要があります。
+`mscorlib.dll` 又は `System.Private.CoreLib.dll` への参照を追加して下さい。
+
 ### 構造体型
 
-chibiasで定義できる型は構造体型のみです。
-つまり、`System.ValueType` を暗黙のうちに継承した型です。
+chibiasで定義できる構造体型は、.NETでの構造体型と同様で、`System.ValueType` を暗黙のうちに継承した型です。
 
 ```
 .structure foo

@@ -70,11 +70,18 @@ partial class Parser
             }
 
             // Checks existing structure member declaration.
-            if (this.checkingStructureMemberIndex >= 0)
+            if (this.checkingMemberIndex >= 0)
             {
-                var field = this.structureType!.Fields[this.checkingStructureMemberIndex];
+                var field = this.structureType!.Fields.
+                    ElementAtOrDefault(this.checkingMemberIndex);
 
-                if (field.Name != memberName)
+                if (field == null)
+                {
+                    this.OutputError(
+                        memberNameToken,
+                        $"Structure member difference exists before declared type: {memberName}");
+                }
+                else if (field.Name != memberName)
                 {
                     this.OutputError(
                         memberNameToken,
@@ -111,7 +118,7 @@ partial class Parser
                     });
                 }
 
-                this.checkingStructureMemberIndex++;
+                this.checkingMemberIndex++;
             }
             // Create a field into this structure.
             else
