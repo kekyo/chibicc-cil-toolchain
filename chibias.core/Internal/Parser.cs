@@ -1,4 +1,4 @@
-﻿/////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibias-cil - The specialized backend CIL assembler for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -21,42 +21,6 @@ namespace chibias.Internal;
 
 internal sealed partial class Parser
 {
-    private static readonly Dictionary<string, string> aliasTypeNames = new()
-    {
-        { "void", "System.Void" },
-        { "uint8", "System.Byte" },
-        { "int8", "System.SByte" },
-        { "int16", "System.Int16" },
-        { "uint16", "System.UInt16" },
-        { "int32", "System.Int32" },
-        { "uint32", "System.UInt32" },
-        { "int64", "System.Int64" },
-        { "uint64", "System.UInt64" },
-        { "float32", "System.Single" },
-        { "float64", "System.Double" },
-        { "intptr", "System.IntPtr" },
-        { "uintptr", "System.UIntPtr" },
-        { "bool", "System.Boolean" },
-        { "char", "System.Char" },
-        { "object", "System.Object" },
-        { "string", "System.String" },
-        { "typeref", "System.TypedReference" },
-        { "byte", "System.Byte" },
-        { "sbyte", "System.SByte" },
-        { "short", "System.Int16" },
-        { "ushort", "System.UInt16" },
-        { "int", "System.Int32" },
-        { "uint", "System.UInt32" },
-        { "long", "System.Int64" },
-        { "ulong", "System.UInt64" },
-        { "single", "System.Single" },
-        { "float", "System.Single" },
-        { "double", "System.Double" },
-        { "nint", "System.IntPtr" },
-        { "nuint", "System.UIntPtr" },
-        { "char16", "System.Char" },
-    };
-
     private static readonly FileDescriptor unknown = 
         new(null, "unknown.s", DocumentLanguage.Cil);
 
@@ -76,7 +40,8 @@ internal sealed partial class Parser
     private readonly List<Action> delayedLookupLocalMemberActions = new();
     private readonly List<Action> delayedCheckAfterLookingupActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
-    private readonly Lazy<TypeReference> valueType;
+    private readonly Lazy<TypeReference> systemValueTypeType;
+    private readonly Lazy<TypeReference> systemEnumType;
     private readonly Lazy<MethodReference> indexOutOfRangeCtor;
     private readonly bool produceExecutable;
     private readonly bool produceDebuggingInformation;
@@ -90,7 +55,10 @@ internal sealed partial class Parser
     private MethodBody? body;
     private ICollection<Instruction>? instructions;
     private TypeDefinition? structureType;
-    private int checkingStructureMemberIndex = -1;
+    private TypeDefinition? enumerationType;
+    private TypeReference? enumerationUnderlyingType;
+    private EnumerationMemberValueManipulator? enumerationManipulator;
+    private int checkingMemberIndex = -1;
     private bool caughtError;
 
     /////////////////////////////////////////////////////////////////////
@@ -133,8 +101,10 @@ internal sealed partial class Parser
         this.importantTypes.Add("System.UIntPtr", this.module.TypeSystem.UIntPtr);
         this.importantTypes.Add("System.TypedReference", this.module.TypeSystem.TypedReference);
 
-        this.valueType = new(() =>
+        this.systemValueTypeType = new(() =>
             this.UnsafeGetType("System.ValueType"));
+        this.systemEnumType = new(() =>
+            this.UnsafeGetType("System.Enum"));
         this.indexOutOfRangeCtor = new(() =>
             this.UnsafeGetMethod("System.IndexOutOfRangeException..ctor", new string[0]));
 
@@ -316,9 +286,9 @@ internal sealed partial class Parser
                 {
                     return true;
                 }
-                else if (aliasTypeNames.TryGetValue(name, out var knownTypeName))
+                else if (Utilities.TryLookupOriginTypeName(name, out var originTypeName))
                 {
-                    return this.TryGetType(knownTypeName, out type);
+                    return this.TryGetType(originTypeName, out type);
                 }
                 else if (this.referenceTypes.TryGetMember(name, out var td3))
                 {
@@ -605,6 +575,11 @@ internal sealed partial class Parser
                          Utilities.TryParseOpCode(token0.Text, out var opCode):
                     this.ParseInstruction(opCode, tokens);
                     break;
+                // Is it an enumeration member?
+                case TokenTypes.Identity
+                    when this.enumerationType != null:
+                    this.ParseEnumerationMember(tokens);
+                    break;
                 // Is it a structure member?
                 case TokenTypes.Identity
                     when this.structureType != null:
@@ -627,6 +602,7 @@ internal sealed partial class Parser
             Debug.Assert(this.instructions != null);
             Debug.Assert(this.body != null);
             Debug.Assert(this.structureType == null);
+            Debug.Assert(this.enumerationType == null);
 
             if (!this.caughtError)
             {
@@ -643,19 +619,41 @@ internal sealed partial class Parser
             this.body = null;
             this.method = null;
         }
-
-        if (this.structureType != null)
+        else if (this.enumerationType != null)
         {
             Debug.Assert(this.method == null);
             Debug.Assert(this.instructions == null);
             Debug.Assert(this.body == null);
+            Debug.Assert(this.structureType == null);
+
+            if (this.checkingMemberIndex >= 0 &&
+                this.checkingMemberIndex < this.enumerationType.Fields.
+                Count(f => f.IsPublic && f.IsStatic && f.IsLiteral))
+            {
+                this.caughtError = true;
+                this.logger.Error(
+                    $"Enumeration member difference exists before declared type: {this.enumerationType.Name}");
+            }
+
+            this.enumerationType = null;
+            this.checkingMemberIndex = -1;
+
+            this.enumerationUnderlyingType = null;
+            this.enumerationManipulator = null;
+        }
+        else if (this.structureType != null)
+        {
+            Debug.Assert(this.method == null);
+            Debug.Assert(this.instructions == null);
+            Debug.Assert(this.body == null);
+            Debug.Assert(this.enumerationType == null);
             
             Debug.Assert(this.delayedLookupBranchTargetActions.Count == 0);
             Debug.Assert(this.labelTargets.Count == 0);
             Debug.Assert(this.willApplyLabelingNames.Count == 0);
 
-            if (this.checkingStructureMemberIndex >= 0 &&
-                this.checkingStructureMemberIndex < this.structureType.Fields.Count)
+            if (this.checkingMemberIndex >= 0 &&
+                this.checkingMemberIndex < this.structureType.Fields.Count)
             {
                 this.caughtError = true;
                 this.logger.Error(
@@ -663,7 +661,7 @@ internal sealed partial class Parser
             }
 
             this.structureType = null;
-            this.checkingStructureMemberIndex = -1;
+            this.checkingMemberIndex = -1;
         }
     }
 
@@ -767,10 +765,10 @@ internal sealed partial class Parser
                                 var sequencePoint = new SequencePoint(
                                     instruction, document);
 
-                                sequencePoint.StartLine = location.StartLine + 1;
-                                sequencePoint.StartColumn = location.StartColumn + 1;
-                                sequencePoint.EndLine = location.EndLine + 1;
-                                sequencePoint.EndColumn = location.EndColumn + 1;
+                                sequencePoint.StartLine = (int)(location.StartLine + 1);
+                                sequencePoint.StartColumn = (int)(location.StartColumn + 1);
+                                sequencePoint.EndLine = (int)(location.EndLine + 1);
+                                sequencePoint.EndColumn = (int)(location.EndColumn + 1);
 
                                 method.DebugInformation.SequencePoints.Add(
                                     sequencePoint);

@@ -9,7 +9,9 @@
 
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -23,8 +25,6 @@ partial class Parser
         ParameterDefinition[] parameters,
         bool isPublic)
     {
-        this.FinishCurrentState();
-
         this.method = new MethodDefinition(
             functionName,
             isPublic ?
@@ -46,9 +46,13 @@ partial class Parser
         return this.method;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private void ParseFunctionDirective(
         Token directive, Token[] tokens)
     {
+        this.FinishCurrentState();
+
         if (tokens.Length < 3)
         {
             this.OutputError(directive, $"Missing directive operand.");
@@ -115,17 +119,19 @@ partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private void ParseGlobalDirective(
         Token directive, Token[] tokens)
     {
+        this.FinishCurrentState();
+
         if (tokens.Length < 3)
         {
             this.OutputError(directive, $"Missing global variable operand.");
         }
         else
         {
-            this.FinishCurrentState();
-
             var data = tokens.Skip(3).
                 Select(token =>
                 {
@@ -165,6 +171,8 @@ partial class Parser
             this.cabiDataType.Fields.Add(field);
         }
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private void ParseLocalDirective(
         Token directive, Token[] tokens)
@@ -225,9 +233,136 @@ partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
+    private void ParseEnumerationDirective(
+        Token directive, Token[] tokens)
+    {
+        this.FinishCurrentState();
+
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens.Last(),
+                $"Missing enumeration operand.");
+        }
+        else if (tokens.Length > 3)
+        {
+            this.OutputError(
+                tokens.Last(),
+                $"Too many operands.");
+        }
+        else
+        {
+            var typeAttributes =
+                TypeAttributes.Public | TypeAttributes.Sealed;
+            var valueFieldAttributes =
+                FieldAttributes.Public | FieldAttributes.SpecialName | FieldAttributes.RTSpecialName;
+
+            var underlyingType = this.UnsafeGetType("System.Int32");
+            var underlyingTypeNameToken = tokens.ElementAtOrDefault(2);
+
+            if (underlyingTypeNameToken?.Text is { } underlyingTypeName)
+            {
+                if (Utilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
+                {
+                    underlyingTypeName = originName;
+                }
+
+                if (!Utilities.IsEnumerationUnderlyingType(underlyingTypeName))
+                {
+                    this.OutputError(
+                        underlyingTypeNameToken,
+                        $"Invalid enumeration underlying type: {underlyingTypeName}");
+                }
+                else
+                {
+                    underlyingType = this.UnsafeGetType(underlyingTypeName);
+                }
+            }
+
+            var enumerationTypeNameToken = tokens[1];
+            var enumerationTypeName = enumerationTypeNameToken.Text;
+
+            if (this.TryGetType(enumerationTypeName, out var etref))
+            {
+                // Checks equality
+                var enumerationType = etref.Resolve();
+                if ((enumerationType.Attributes & typeAttributes) != typeAttributes)
+                {
+                    this.OutputError(
+                        enumerationTypeNameToken,
+                        $"Type attribute difference exists before declared type: {enumerationType.Attributes}");
+                }
+                else if (enumerationType.BaseType.FullName != "System.Enum")
+                {
+                    this.OutputError(
+                        enumerationTypeNameToken,
+                        $"Base type difference exists before declared type: {enumerationType.BaseType.FullName}");
+                }
+                else if (enumerationType.GetEnumUnderlyingType() is { } ut &&
+                    ut.FullName != underlyingType.FullName)
+                {
+                    this.OutputError(
+                        enumerationTypeNameToken,
+                        $"Enumeration underlying type difference exists before declared type: {ut.FullName}");
+                }
+                else if (!(enumerationType.Fields.FirstOrDefault(f => f.Name == "value__") is { } enumerationValueField))
+                {
+                    this.OutputError(
+                        enumerationTypeNameToken,
+                        "Enumeration value field type is not declared.");
+                }
+                else if (enumerationValueField.FieldType.FullName != underlyingType.FullName)
+                {
+                    this.OutputError(
+                        enumerationTypeNameToken,
+                        $"Enumeration value field type difference exists before declared type: {enumerationValueField.FieldType.FullName}");
+                }
+                else if ((enumerationValueField.Attributes & valueFieldAttributes) != valueFieldAttributes)
+                {
+                    this.OutputError(
+                        enumerationTypeNameToken,
+                        $"Enumeration value field type attribute difference exists before declared type: {enumerationType.Attributes}");
+                }
+
+                this.enumerationType = enumerationType;
+                this.checkingMemberIndex = 0;
+            }
+            else
+            {
+                var enumerationType = new TypeDefinition(
+                    "C.type",
+                    enumerationTypeName,
+                    typeAttributes,
+                    this.systemEnumType.Value);
+
+                var enumerationValueField = new FieldDefinition(
+                    "value__",
+                    valueFieldAttributes,
+                    underlyingType);
+                enumerationType.Fields.Add(enumerationValueField);
+
+                this.module.Types.Add(enumerationType);
+                this.enumerationType = enumerationType;
+
+                Debug.Assert(this.checkingMemberIndex == -1);
+            }
+
+            this.enumerationUnderlyingType =
+                underlyingType;
+            this.enumerationManipulator =
+                EnumerationMemberValueManipulator.GetInstance(underlyingType);
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////
+
     private void ParseStructureDirective(
         Token directive, Token[] tokens)
     {
+        this.FinishCurrentState();
+
         if (tokens.Length < 2)
         {
             this.OutputError(
@@ -243,8 +378,10 @@ partial class Parser
         else
         {
             var typeAttributes = TypeAttributes.Public | TypeAttributes.Sealed;
+
             short? packSize = null;
             var aligningToken = tokens.ElementAtOrDefault(2);
+
             if (aligningToken is { })
             {
                 var aligning = aligningToken.Text;
@@ -252,7 +389,7 @@ partial class Parser
                 {
                     typeAttributes |= TypeAttributes.ExplicitLayout;
                 }
-                else if (short.TryParse(aligning, out var ps))
+                else if (Utilities.TryParseInt16(aligning, out var ps))
                 {
                     typeAttributes |= TypeAttributes.SequentialLayout;
                     if (ps >= 1)
@@ -276,17 +413,17 @@ partial class Parser
                 typeAttributes |= TypeAttributes.SequentialLayout;
             }
 
-            var structureTypeToken = tokens[1];
-            var structureTypeName = structureTypeToken.Text;
+            var structureTypeNameToken = tokens[1];
+            var structureTypeName = structureTypeNameToken.Text;
 
             if (this.TryGetType(structureTypeName, out var stref))
             {
                 // Checks equality
                 var structureType = stref.Resolve();
-                if (structureType.Attributes != typeAttributes)
+                if ((structureType.Attributes & typeAttributes) != typeAttributes)
                 {
                     this.OutputError(
-                        structureTypeToken,
+                        structureTypeNameToken,
                         $"Type attribute difference exists before declared type: {structureType.Attributes}");
                 }
                 else if (packSize is { } ps &&
@@ -305,17 +442,15 @@ partial class Parser
                 }
 
                 this.structureType = structureType;
-                this.checkingStructureMemberIndex = 0;
+                this.checkingMemberIndex = 0;
             }
             else
             {
-                this.FinishCurrentState();
-
                 var structureType = new TypeDefinition(
                     "C.type",
                     structureTypeName,
                     typeAttributes,
-                    this.valueType.Value);
+                    this.systemValueTypeType.Value);
                 if (packSize is { } ps)
                 {
                     structureType.PackingSize = ps;
@@ -324,9 +459,13 @@ partial class Parser
 
                 this.module.Types.Add(structureType);
                 this.structureType = structureType;
+
+                Debug.Assert(this.checkingMemberIndex == -1);
             }
         }
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private void ParseFileDirective(
         Token directive, Token[] tokens)
@@ -366,6 +505,8 @@ partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private void ParseLocationDirective(
         Token directive, Token[] tokens)
     {
@@ -398,8 +539,8 @@ partial class Parser
             var vs = tokens.
                 Skip(2).
                 Collect(token =>
-                    (int.TryParse(token.Text, out var vi) && vi >= 0) ?
-                        vi : default(int?)).
+                    (Utilities.TryParseUInt32(token.Text, out var vi) && vi >= 0) ?
+                        vi : default(uint?)).
                 ToArray();
             if ((vs.Length != (tokens.Length - 2)) ||
                 (vs[0] > vs[2]) ||
@@ -419,6 +560,8 @@ partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private void ParseDirective(Token directive, Token[] tokens)
     {
         switch (directive.Text)
@@ -434,6 +577,10 @@ partial class Parser
             // Local variable directive:
             case "local":
                 this.ParseLocalDirective(directive, tokens);
+                break;
+            // Enumeration directive:
+            case "enumeration":
+                this.ParseEnumerationDirective(directive, tokens);
                 break;
             // Structure directive:
             case "structure":

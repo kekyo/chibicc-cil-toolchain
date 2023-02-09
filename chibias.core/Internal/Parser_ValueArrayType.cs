@@ -26,7 +26,7 @@ partial class Parser
             valueArrayTypeNamespace,
             valueArrayTypeName,
             TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.SequentialLayout,
-            this.valueType.Value);
+            this.systemValueTypeType.Value);
         //valueArrayType.PackingSize = 1;
         //valueArrayType.ClassSize = 0;
         this.module.Types.Add(valueArrayType);

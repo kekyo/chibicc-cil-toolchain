@@ -76,11 +76,15 @@ partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineNone(
         OpCode opCode, Token[] tokens) =>
         this.FetchOperands(tokens, 0) is { } ?
             Instruction.Create(opCode) :
             null;
+
+    /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineI(
         OpCode opCode, Token[] tokens)
@@ -136,6 +140,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineI8(
         OpCode opCode, Token[] tokens)
     {
@@ -154,6 +160,8 @@ partial class Parser
         }
         return null;
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineR(
         OpCode opCode, Token[] tokens)
@@ -174,6 +182,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseShortInlineR(
         OpCode opCode, Token[] tokens)
     {
@@ -192,6 +202,8 @@ partial class Parser
         }
         return null;
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineBrTarget(
         OpCode opCode, Token[] tokens)
@@ -225,6 +237,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineVar(
         OpCode opCode, Token[] tokens)
     {
@@ -253,6 +267,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineArg(
         OpCode opCode, Token[] tokens)
     {
@@ -279,6 +295,8 @@ partial class Parser
         }
         return null;
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineMethod(
         OpCode opCode, Token[] tokens)
@@ -317,6 +335,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineField(
         OpCode opCode, Token[] tokens)
     {
@@ -342,6 +362,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineType(
         OpCode opCode, Token[] tokens)
     {
@@ -365,6 +387,8 @@ partial class Parser
         }
         return null;
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineToken(
         OpCode opCode, Token[] tokens)
@@ -439,6 +463,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineSig(
         OpCode opCode, Token[] tokens)
     {
@@ -490,6 +516,8 @@ partial class Parser
         return null;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private Instruction? ParseInlineString(
         OpCode opCode, Token[] tokens)
     {
@@ -501,6 +529,8 @@ partial class Parser
 
         return null;
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private void AppendInstruction(
         Instruction instruction, Location currentLocation)
@@ -528,6 +558,8 @@ partial class Parser
                 currentLocation);
         }
     }
+
+    /////////////////////////////////////////////////////////////////////
 
     private void ParseInstruction(OpCode opCode, Token[] tokens)
     {
