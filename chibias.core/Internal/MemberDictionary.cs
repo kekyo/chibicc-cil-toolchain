@@ -16,20 +16,26 @@ namespace chibias.Internal;
 internal sealed class MemberDictionary<TMember>
     where TMember : MemberReference
 {
+    private readonly ILogger logger;
     private readonly Dictionary<string, TMember> cached = new();
     private readonly Func<TMember, string> getName;
     private IEnumerator<TMember>? source;
+    private int hit;
+    private int miss;
 
     public MemberDictionary(
+        ILogger logger,
         IEnumerable<TMember> source) :
-        this(source, m => m.Name)
+        this(logger, source, m => m.Name)
     {
     }
 
     public MemberDictionary(
+        ILogger logger,
         IEnumerable<TMember> source,
         Func<TMember, string> getName)
     {
+        this.logger = logger;
         this.getName = getName;
         this.source = source.GetEnumerator();
     }
@@ -42,6 +48,7 @@ internal sealed class MemberDictionary<TMember>
     {
         if (this.cached.TryGetValue(name, out var m))
         {
+            this.hit++;
             if (m is T tm)
             {
                 member = tm;
@@ -53,6 +60,8 @@ internal sealed class MemberDictionary<TMember>
                 return false;
             }
         }
+
+        this.miss++;
 
         if (this.source == null)
         {
@@ -93,5 +102,10 @@ internal sealed class MemberDictionary<TMember>
 
         member = default!;
         return false;
+    }
+
+    public void Finish()
+    {
+        this.logger.Trace($"Stat: MemberDictionary<{typeof(TMember).Name}>: Hit={this.hit}, Miss={this.miss}, Ratio={((double)this.hit / (this.hit + this.miss)):F2}");
     }
 }

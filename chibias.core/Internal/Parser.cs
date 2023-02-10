@@ -78,6 +78,7 @@ internal sealed partial class Parser
         this.targetFramework = targetFramework;
         this.cabiSpecificSymbols = cabiSpecificSymbols;
         this.referenceTypes = new(
+            this.logger,
             referenceTypes.OfType<TypeDefinition>(),
             type => type.FullName);
         this.produceExecutable = produceExecutable;
@@ -799,6 +800,8 @@ internal sealed partial class Parser
         this.currentFile = unknown;
         this.queuedLocation = null;
         this.lastLocation = null;
+
+        this.referenceTypes.Finish();
 
         var finished = !this.caughtError;
         this.caughtError = false;
