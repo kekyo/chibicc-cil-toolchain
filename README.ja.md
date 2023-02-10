@@ -91,7 +91,7 @@ chibiasを使って "Hello world" を実行してみましょう。
 新しいソースコード・ファイル `hello.s` を作り、以下のようにコードを書きます。この4行だけでOKです:
 
 ```
-.function void main
+.function public void main
     ldstr "Hello world with chibias!"
     call System.Console.WriteLine string
     ret
@@ -119,7 +119,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 また、ビルトイン型（後述）だけを使用するコードをアセンブルした場合は、他のアセンブリへの参照は必要ありません:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4.1
     ldc.i4.2
     add
@@ -195,7 +195,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 ### 最小でエントリーポイントのみ含む例
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123    ; これはコメントです
     ret
 ```
@@ -205,14 +205,28 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
   * つまり、インデントはすべて無視されます。
 * セミコロン (';') はコメントの開始を意味します。行末までがすべてコメントとみなされます。
 * ピリオド ('.') で始まる単語は、「アセンブラディレクティブ」とみなされます。
-  * `.function` ディレクティブは、関数の開始を意味していて、戻り値の型名と関数名が続きます。
+  * `.function` ディレクティブは、関数の開始を意味しています。以下の順にオペランドが続きます:
+    * スコープ記述子
+    * 戻り値の型名
+    * 関数名
+    * 追加引数群（もしあれば）
   * 次の関数ディレクティブが現れるまで、関数の本体が続きます。
+
+スコープ記述子は、他の宣言でも共通です。
+
+|スコープ記述子|内容|
+|:----|:----|
+|`public`|どのスコープからも参照可能。外部アセンブリからでも参照可能。|
+|`internal`|同じアセンブリ内でのみ参照可能。|
+|`file`|現在のソースコードファイルからのみ参照可能。|
+
 * コマンドラインのオプションに `--exe` を指定するなどして、実行可能形式を生成する場合、関数名が `main` であれば、自動的にエントリポイントとみなされます。
+  エントリポイントのスコープ記述子は任意です（無視されます）。
 
 ### リテラル
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     ldc.r8 1.234
     ldstr "abc\"def\"ghi"
@@ -231,7 +245,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 ### ラベル
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     br NAME
     nop
@@ -282,7 +296,7 @@ NAME:
 ### ローカル変数
 
 ```
-.function int32 main
+.function public int32 main
     .local int32
     .local int32 abc
     ldc.i4 1
@@ -298,7 +312,7 @@ NAME:
 また、オプコードのオペランドで、変数名を使用して参照することができます:
 
 ```
-.function void foo
+.function public void foo
     .local int32 abc
     ldc.i4 1
     stloc abc
@@ -308,12 +322,12 @@ NAME:
 ### 別の関数を呼び出す
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 1
     ldc.i4 2
     call add2
     ret
-.function int32 add2 x:int32 y:int32
+.function public int32 add2 x:int32 y:int32
     ldarg 0
     ldarg y   ; パラメータ名で参照することができる
     add
@@ -335,7 +349,7 @@ NAME:
 事前に `test.dll` を作っておきます。内容は以下の通りです:
 
 ```
-.function int32 add2 a:int32 b:int32
+.function public int32 add2 a:int32 b:int32
     ldarg 0
     ldarg 1
     add
@@ -349,7 +363,7 @@ $ chibias -c test.s
 その後、以下のように、上記アセンブリの関数を呼び出します:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -393,18 +407,21 @@ public static class text
 
 このような関数のメタデータ配置規則を、"CABI (chibicc application binary interface) 仕様" と呼びます。
 
+CABIが適用されるのは、外部アセンブリから参照可能な場合のみです。
+関数のスコープが `public` ではない場合は、外部のアセンブリから参照出来ず、CABI準拠ではなくなります。
+
 ### 外部アセンブリの.NETメソッドの呼び出し
 
 .NETのメソッドを呼び出す場合は、完全なメソッド名と引数型リストを指定します:
 
 ```
-.function void main
+.function public void main
     ldstr "Hello world"
     call System.Console.WriteLine string
     ret
 ```
 
-指定するメソッドは public でなければならず、ジェネリックパラメータを持つメソッドを指定することはできません。
+指定する.NETのメソッドは `public` でなければならず、ジェネリックパラメータを持つメソッドを指定することはできません。
 インスタンスメソッドも指定できますが、当然ながら `this` の参照が評価スタックにプッシュされる必要があります。
 
 引数型リストは、メソッドのオーバーロードを特定するために使用されます。
@@ -416,7 +433,7 @@ public static class text
 コールサイトとは、`calli` オペコードで指定する、呼び出し対象メソッドのシグネチャ記述子です。
 
 ```
-.function int32 main
+.function public int32 main
     ldstr "123"
     ldftn System.Int32.Parse string
     calli int32 string
@@ -431,7 +448,7 @@ public static class text
 ただし、関数本体定義の外側に配置します:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     stsfld foo
     ldsfld foo
@@ -468,7 +485,7 @@ public static class text
 グローバル変数の宣言は、初期化データを含むことが出来ます:
 
 ```
-.function int32 bar
+.function public int32 bar
     ldsfld foo
     ret
 ; int32 foo = 0x76543210
@@ -487,7 +504,7 @@ chibiasは、 `value array` 型を使ってこれを擬似的に実現するこ�
 値型の配列を使用するには、以下のように型を宣言します:
 
 ```
-.function int8[5] bar   ; <-- 値型の配列には要素数が必要
+.function public int8[5] bar   ; <-- 値型の配列には要素数が必要
     ldsfld foo
     ret
 .global int8[5] foo 0x10 0x32 0x54 0x76 0x98
@@ -640,7 +657,7 @@ public struct foo
 
 ```
 .file 1 "/home/kouji/Projects/test.c" c
-.function int32 main
+.function public int32 main
     .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456

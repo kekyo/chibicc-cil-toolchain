@@ -51,6 +51,7 @@ internal sealed partial class Parser
     private Location? queuedLocation;
     private Location? lastLocation;
     private bool isProducedOriginalSourceCodeLocation = true;
+    private TypeDefinition fileScopedType;
     private MethodDefinition? method;
     private MethodBody? body;
     private ICollection<Instruction>? instructions;
@@ -121,14 +122,38 @@ internal sealed partial class Parser
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
+
         this.currentFile = unknown;
+        this.fileScopedType = new(
+            "",
+            "unknown_s",
+            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class,
+            this.module.TypeSystem.Object);
     }
 
     /////////////////////////////////////////////////////////////////////
 
-    public void SetSourcePathDebuggerHint(string? basePath, string relativePath)
+    public void SetCilSourcePathDebuggerHint(string? basePath, string relativePath)
     {
+        var typeName = Utilities.SanitizeFileNameToMemberName(
+            Path.GetFileName(relativePath));
+
+        // Add latest file scoped type when incoming different file.
+        if (this.fileScopedType.Methods.Count >= 1 ||
+            this.fileScopedType.Fields.Count >= 1 &&
+            typeName != this.fileScopedType.Name)
+        {
+            this.module.Types.Add(this.fileScopedType);
+        }
+
         this.currentFile = new(basePath, relativePath, DocumentLanguage.Cil);
+        this.fileScopedType = new(
+            "",
+            typeName,
+            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class,
+            this.module.TypeSystem.Object);
         this.isProducedOriginalSourceCodeLocation = true;
         this.queuedLocation = null;
         this.lastLocation = null;
@@ -316,20 +341,25 @@ internal sealed partial class Parser
             methodNameIndex--;
         }
 
-        if (methodNameIndex <= 0)
+        // CABI specific case: No need to check any parameters.
+        if (methodNameIndex <= 0 &&
+            parameterTypeNames.Length == 0)
         {
-            if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m) &&
-                parameterTypeNames.Length == 0)
+            if (this.fileScopedType.Methods.
+                FirstOrDefault(method => method.Name == methodName) is { } m2)
             {
-                method = this.Import(m);
+                method = m2;
                 return true;
             }
             else if (this.cabiTextType.Methods.
-                FirstOrDefault(method => method.Name == methodName) is { } m2)
+                FirstOrDefault(method => method.Name == methodName) is { } m3)
             {
-                // In this case, we do not check matching any parameter types.
-                // Because this is in CABI specific.
-                method = m2;
+                method = m3;
+                return true;
+            }
+            else if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m))
+            {
+                method = this.Import(m);
                 return true;
             }
             else
@@ -361,9 +391,9 @@ internal sealed partial class Parser
         if (type.Methods.FirstOrDefault(method =>
             method.IsPublic && method.Name == methodName &&
             strictParameterTypeNames.SequenceEqual(
-                method.Parameters.Select(p => p.ParameterType.FullName))) is { } m3)
+                method.Parameters.Select(p => p.ParameterType.FullName))) is { } m4)
         {
-            method = this.Import(m3);
+            method = this.Import(m4);
             return true;
         }
         else
@@ -479,7 +509,7 @@ internal sealed partial class Parser
             {
                 this.OutputError(
                     fieldNameToken,
-                    $"Could not find type: {fieldNameToken.Text}");
+                    $"Could not find field: {fieldNameToken.Text}");
             }
         });
 
@@ -672,32 +702,12 @@ internal sealed partial class Parser
 
         if (!this.caughtError)
         {
-            // main entry point lookup.
-            if (this.produceExecutable)
+            // Add latest file scoped type.
+            if ((this.fileScopedType.Methods.Count >= 1 ||
+                this.fileScopedType.Fields.Count >= 1) &&
+                !this.module.Types.Contains(this.fileScopedType))
             {
-                if (this.cabiTextType.Methods.
-                    FirstOrDefault(m => m.Name == "main") is { } main)
-                {
-                    this.module.EntryPoint = main;
-                }
-                else
-                {
-                    this.caughtError = true;
-                    this.logger.Error($"{this.currentFile.RelativePath}(1,1): Could not find main entry point.");
-                }
-            }
-
-            // Apply TFA if could be imported.
-            if (this.TryGetMethod(
-                "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
-                new[] { "System.String" },
-                out var tfctor))
-            {
-                var tfa = new CustomAttribute(tfctor);
-                tfa.ConstructorArguments.Add(new(
-                    this.UnsafeGetType("System.String"),
-                    this.targetFramework.ToString()));
-                this.module.Assembly.CustomAttributes.Add(tfa);
+                this.module.Types.Add(this.fileScopedType);
             }
 
             if (this.cabiTextType.Methods.Count >= 1)
@@ -722,68 +732,100 @@ internal sealed partial class Parser
                 action();
             }
 
+            // Apply TFA if could be imported.
+            if (this.TryGetMethod(
+                "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
+                new[] { "System.String" },
+                out var tfctor))
+            {
+                var tfa = new CustomAttribute(tfctor);
+                tfa.ConstructorArguments.Add(new(
+                    this.UnsafeGetType("System.String"),
+                    this.targetFramework.ToString()));
+                this.module.Assembly.CustomAttributes.Add(tfa);
+            }
+
+            // main entry point lookup.
+            if (this.produceExecutable)
+            {
+                if (this.TryGetMethod("main", new string[0], out var mm) &&
+                    mm is MethodDefinition mainMethod)
+                {
+                    this.module.EntryPoint = mainMethod;
+                }
+                else
+                {
+                    this.caughtError = true;
+                    this.logger.Error($"{this.currentFile.RelativePath}(1,1): Could not find main entry point.");
+                }
+            }
+
             // (Completed all CIL implementations in this place.)
 
             ///////////////////////////////////////////////
 
             var documents = new Dictionary<string, Document>();
-            foreach (var method in this.cabiTextType.Methods)
+            foreach (var method in this.module.Types.
+                SelectMany(type => type.Methods).
+                Where(method =>
+                    !method.IsAbstract &&
+                    method.HasBody &&
+                    method.Body.Instructions.Count >= 1))
             {
-                if (method.Body.Instructions.Count >= 1)
+                var body = method.Body;
+
+                // Apply optimization.
+                if (applyOptimization)
                 {
-                    // Apply optimization.
-                    if (applyOptimization)
+                    body.Optimize();
+                }
+
+                // After optimization, the instructions maybe changed absolute layouts,
+                // so we could set debugging information scope after that.
+                if (this.produceDebuggingInformation)
+                {
+                    method.DebugInformation.Scope = new ScopeDebugInformation(
+                        body.Instructions.First(),
+                        body.Instructions.Last());
+
+                    // Will make sequence points:
+                    foreach (var instruction in body.Instructions)
                     {
-                        method.Body.Optimize();
+                        if (this.locationByInstructions.TryGetValue(instruction, out var location))
+                        {
+                            if (!documents.TryGetValue(location.File.RelativePath, out var document))
+                            {
+                                document = new(location.File.BasePath is { } basePath ?
+                                    Path.Combine(basePath, location.File.RelativePath) :
+                                    location.File.RelativePath);
+                                document.Type = DocumentType.Text;
+                                if (location.File.Language is { } language)
+                                {
+                                    document.Language = language;
+                                }
+                                documents.Add(location.File.RelativePath, document);
+                            }
+
+                            var sequencePoint = new SequencePoint(
+                                instruction, document);
+
+                            sequencePoint.StartLine = (int)(location.StartLine + 1);
+                            sequencePoint.StartColumn = (int)(location.StartColumn + 1);
+                            sequencePoint.EndLine = (int)(location.EndLine + 1);
+                            sequencePoint.EndColumn = (int)(location.EndColumn + 1);
+
+                            method.DebugInformation.SequencePoints.Add(
+                                sequencePoint);
+                        }
                     }
 
-                    // After optimization, the instructions maybe changed absolute layouts,
-                    // so we could set debugging information scope after that.
-                    if (this.produceDebuggingInformation)
+                    // Will make local variable naming.
+                    if (this.variableDebugInformationLists.TryGetValue(method.Name, out var list))
                     {
-                        method.DebugInformation.Scope = new ScopeDebugInformation(
-                            method.Body.Instructions.First(),
-                            method.Body.Instructions.Last());
-
-                        // Will make sequence points:
-                        foreach (var instruction in method.Body.Instructions)
+                        foreach (var variableDebugInformation in list)
                         {
-                            if (this.locationByInstructions.TryGetValue(instruction, out var location))
-                            {
-                                if (!documents.TryGetValue(location.File.RelativePath, out var document))
-                                {
-                                    document = new(location.File.BasePath is { } basePath ?
-                                        Path.Combine(basePath, location.File.RelativePath) :
-                                        location.File.RelativePath);
-                                    document.Type = DocumentType.Text;
-                                    if (location.File.Language is { } language)
-                                    {
-                                        document.Language = language;
-                                    }
-                                    documents.Add(location.File.RelativePath, document);
-                                }
-
-                                var sequencePoint = new SequencePoint(
-                                    instruction, document);
-
-                                sequencePoint.StartLine = (int)(location.StartLine + 1);
-                                sequencePoint.StartColumn = (int)(location.StartColumn + 1);
-                                sequencePoint.EndLine = (int)(location.EndLine + 1);
-                                sequencePoint.EndColumn = (int)(location.EndColumn + 1);
-
-                                method.DebugInformation.SequencePoints.Add(
-                                    sequencePoint);
-                            }
-                        }
-
-                        // Will make local variable naming.
-                        if (this.variableDebugInformationLists.TryGetValue(method.Name, out var list))
-                        {
-                            foreach (var variableDebugInformation in list)
-                            {
-                                method.DebugInformation.Scope.Variables.Add(
-                                    variableDebugInformation);
-                            }
+                            method.DebugInformation.Scope.Variables.Add(
+                                variableDebugInformation);
                         }
                     }
                 }

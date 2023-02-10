@@ -121,7 +121,7 @@ public sealed class Assembler
         string sourcePathDebuggerHint,
         TextReader sourceCodeReader)
     {
-        parser.SetSourcePathDebuggerHint(
+        parser.SetCilSourcePathDebuggerHint(
             baseSourcePath,
             sourcePathDebuggerHint);
 

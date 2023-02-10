@@ -10,7 +10,6 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -23,13 +22,17 @@ partial class Parser
         string functionName,
         TypeReference returnType,
         ParameterDefinition[] parameters,
-        bool isPublic)
+        ScopeDescriptors scopeDescriptor)
     {
         this.method = new MethodDefinition(
             functionName,
-            isPublic ?
-                (MethodAttributes.Public | MethodAttributes.Static) :
-                (MethodAttributes.Private | MethodAttributes.Static),
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
+                // File scope is public, because will place intenalized class type.
+                ScopeDescriptors.File => MethodAttributes.Public | MethodAttributes.Static,
+                _ => MethodAttributes.Private | MethodAttributes.Static,
+            },
             this.Import(returnType));
         this.method.HasThis = false;
 
@@ -53,14 +56,23 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 3)
+        if (tokens.Length < 4)
         {
-            this.OutputError(directive, $"Missing directive operand.");
+            this.OutputError(tokens.Last(), $"Missing directive operands.");
+        }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
         }
         else
         {
-            var returnTypeName = tokens[1].Text;
-            var functionName = tokens[2].Text;
+            var returnTypeNameToken = tokens[2];
+            var returnTypeName = returnTypeNameToken.Text;
+            var functionName = tokens[3].Text;
 
             MethodDefinition method = null!;
             if (!this.TryGetType(returnTypeName, out var returnType))
@@ -68,11 +80,11 @@ partial class Parser
                 returnType = this.CreateDummyType();
 
                 this.DelayLookingUpType(
-                    tokens[1],
+                    returnTypeNameToken,
                     type => method.ReturnType = type);   // (captured)
             }
 
-            var parameters = tokens.Skip(3).
+            var parameters = tokens.Skip(4).
                 Collect(parameterToken =>
                 {
                     var splitted = parameterToken.Text.Split(':');
@@ -114,8 +126,18 @@ partial class Parser
                 functionName,
                 returnType,
                 parameters,
-                true);
-            this.cabiTextType.Methods.Add(method);
+                scopeDescriptor);
+
+            switch (scopeDescriptor)
+            {
+                case ScopeDescriptors.Public:
+                case ScopeDescriptors.Internal:
+                    this.cabiTextType.Methods.Add(method);
+                    break;
+                default:
+                    this.fileScopedType.Methods.Add(method);
+                    break;
+            }
         }
     }
 
