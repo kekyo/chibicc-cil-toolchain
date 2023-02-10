@@ -558,7 +558,7 @@ The enumeration type that can be defined in chibias are the same as enumeration 
 which implicitly inherit from `System.Enum`.
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef
     pork
     chicken
@@ -569,7 +569,7 @@ Pseudo code in C#:
 ```csharp
 namespace C.type;
 
-public enum foo
+public enum foo : int
 {
     beef,
     pork,
@@ -581,20 +581,27 @@ By default, values assigned to enumeration values are incremented sequentially f
 To specify explicitly:
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef 5
     pork 13
     chicken 42
 ```
 
-Enums allow you to explicitly specify the type of the source number:
+Enumeration type allow you to explicitly specify underlying type of the source value:
 
 ```
-.enumeration foo int64   ; value as underlying int64
+.enumeration public int64 foo   ; Value as underlying int64
     beef 5
     pork 13
     chicken 42
 ```
+
+Only the following types can be specified as underlying types:
+
+* `int8`, `uint8`
+* `int16`, `uint16`
+* `int32`, `uint32`
+* `int64`, `uint64`
 
 An enumeration type can appear multiple times with the same type name,
 as long as the definitions are completely identical.

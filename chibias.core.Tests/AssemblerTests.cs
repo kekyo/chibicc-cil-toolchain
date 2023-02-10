@@ -1448,7 +1448,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo
+            .enumeration public int32 foo
                 beef
                 poke
                 chicken");
@@ -1464,7 +1464,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo
+            .enumeration public int32 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1480,7 +1480,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo int8
+            .enumeration public int8 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1496,7 +1496,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo uint8
+            .enumeration public uint8 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1512,7 +1512,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo int16
+            .enumeration public int16 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1528,7 +1528,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo uint16
+            .enumeration public uint16 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1544,7 +1544,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo int32
+            .enumeration public int32 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1560,7 +1560,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo uint32
+            .enumeration public uint32 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1576,7 +1576,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo int64
+            .enumeration public int64 foo
                 beef 5
                 poke 13
                 chicken 42");
@@ -1592,7 +1592,99 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .enumeration foo uint64
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InternalScopeEnumeration()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration internal uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeEnumeration()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration file uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InternalScopeEnumerationReference1()
+    {
+        var actual = Run(@"
+            .function internal int32 main
+                .local foo fv
+                ldloc 0
+                ret
+            .enumeration internal uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InternalScopeEnumerationReference2()
+    {
+        var actual = Run(@"
+            .function internal int32 main
+                .local foo fv
+                ldloc 0
+                ret
+            .enumeration file uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeEnumerationReference1()
+    {
+        var actual = Run(@"
+            .function file int32 main
+                .local foo fv
+                ldloc 0
+                ret
+            .enumeration internal uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeEnumerationReference2()
+    {
+        var actual = Run(@"
+            .function file int32 main
+                .local foo fv
+                ldloc 0
+                ret
+            .enumeration file uint64 foo
                 beef 5
                 poke 13
                 chicken 42");

@@ -553,7 +553,7 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 chibiasで定義できる列挙体型は、.NETでの列挙体型と同様で、`System.Enum` を暗黙のうちに継承した型です。
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef
     pork
     chicken
@@ -564,7 +564,7 @@ chibiasで定義できる列挙体型は、.NETでの列挙体型と同様で、
 ```csharp
 namespace C.type;
 
-public enum foo
+public enum foo : int
 {
     beef,
     pork,
@@ -576,20 +576,27 @@ public enum foo
 明示的に指定する場合は:
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef 5
     pork 13
     chicken 42
 ```
 
-列挙体型は、元となる数値の型を明示的に指定することが出来ます:
+列挙体型は、元となる数値の型を変更することが出来ます:
 
 ```
-.enumeration foo int64   ; 値をint64として定義
+.enumeration public int64 foo   ; 値をint64として定義
     beef 5
     pork 13
     chicken 42
 ```
+
+元となる型には、以下の型のみ指定可能です:
+
+* `int8`, `uint8`
+* `int16`, `uint16`
+* `int32`, `uint32`
+* `int64`, `uint64`
 
 列挙体型は、完全に同一の定義であれば、複数回同じ型名の定義が現れても問題ありません。
 

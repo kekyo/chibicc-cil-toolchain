@@ -134,26 +134,40 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    public void SetCilSourcePathDebuggerHint(string? basePath, string relativePath)
+    public void BeginNewCilSourceCode(
+        string? basePath,
+        string sourcePathDebuggerHint)
     {
-        var typeName = Utilities.SanitizeFileNameToMemberName(
-            Path.GetFileName(relativePath));
-
-        // Add latest file scoped type when incoming different file.
-        if (this.fileScopedType.Methods.Count >= 1 ||
-            this.fileScopedType.Fields.Count >= 1 &&
-            typeName != this.fileScopedType.Name)
+        // Add latest file scoped type.
+        if ((this.fileScopedType.Methods.Count >= 1 ||
+            this.fileScopedType.Fields.Count >= 1 ||
+            this.fileScopedType.NestedTypes.Count >= 1) &&
+            !this.module.Types.Contains(this.fileScopedType))
         {
             this.module.Types.Add(this.fileScopedType);
         }
 
-        this.currentFile = new(basePath, relativePath, DocumentLanguage.Cil);
-        this.fileScopedType = new(
-            "",
-            typeName,
-            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class,
-            this.module.TypeSystem.Object);
+        // Lookup exist type or create new type.
+        var typeName = Utilities.SanitizeFileNameToMemberName(
+            Path.GetFileName(sourcePathDebuggerHint));
+        if (this.module.Types.FirstOrDefault(type => type.Name == typeName) is { } type)
+        {
+            this.fileScopedType = type;
+        }
+        else
+        {
+            this.fileScopedType = new(
+                "",
+                typeName,
+                TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
+                TypeAttributes.Class,
+                this.module.TypeSystem.Object);
+        }
+
+        this.currentFile = new(
+            basePath,
+            sourcePathDebuggerHint,
+            DocumentLanguage.Cil);
         this.isProducedOriginalSourceCodeLocation = true;
         this.queuedLocation = null;
         this.lastLocation = null;
@@ -303,15 +317,24 @@ internal sealed partial class Parser
                 //   Will lookup before this module, because the types redefinition by C headers
                 //   each assembly (by generating chibias).
                 //   Always we use first finding type, silently ignored when multiple declarations.
-                if (this.cabiSpecificSymbols.TryGetMember<TypeReference>(name, out var tr1))
+                if (this.fileScopedType.NestedTypes.FirstOrDefault(type =>
+                    type.Name == name) is { } td2)
                 {
-                    type = this.Import(tr1);
+                    type = td2;
                     return true;
                 }
                 else if (this.module.Types.FirstOrDefault(type =>
-                    (type.Namespace == "C.type" ? type.Name : type.FullName) == name) is { } td2)
+                    (type.Namespace == "C.type" ?
+                        type.Name :
+                        // FullName is needed because the value array type name is not CABI.
+                        type.FullName) == name) is { } td3)
                 {
-                    type = td2;
+                    type = td3;
+                    return true;
+                }
+                else if (this.cabiSpecificSymbols.TryGetMember<TypeReference>(name, out var tr1))
+                {
+                    type = this.Import(tr1);
                     return true;
                 }
                 else if (this.importantTypes.TryGetValue(name, out type!))
@@ -322,9 +345,9 @@ internal sealed partial class Parser
                 {
                     return this.TryGetType(originTypeName, out type);
                 }
-                else if (this.referenceTypes.TryGetMember(name, out var td3))
+                else if (this.referenceTypes.TryGetMember(name, out var td4))
                 {
-                    type = this.Import(td3);
+                    type = this.Import(td4);
                     return true;
                 }
                 else
@@ -716,7 +739,8 @@ internal sealed partial class Parser
         {
             // Add latest file scoped type.
             if ((this.fileScopedType.Methods.Count >= 1 ||
-                this.fileScopedType.Fields.Count >= 1) &&
+                this.fileScopedType.Fields.Count >= 1 ||
+                this.fileScopedType.NestedTypes.Count >= 1) &&
                 !this.module.Types.Contains(this.fileScopedType))
             {
                 this.module.Types.Add(this.fileScopedType);

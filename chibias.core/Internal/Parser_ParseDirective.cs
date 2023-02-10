@@ -283,48 +283,59 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 2)
+        if (tokens.Length < 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Missing enumeration operand.");
         }
-        else if (tokens.Length > 3)
+        else if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
         }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+        }
         else
         {
-            var typeAttributes =
-                TypeAttributes.Public | TypeAttributes.Sealed;
+            var typeAttributes = scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
+                ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
+                _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+            };
             var valueFieldAttributes =
                 FieldAttributes.Public | FieldAttributes.SpecialName | FieldAttributes.RTSpecialName;
 
             var underlyingType = this.UnsafeGetType("System.Int32");
-            var underlyingTypeNameToken = tokens.ElementAtOrDefault(2);
 
-            if (underlyingTypeNameToken?.Text is { } underlyingTypeName)
+            var underlyingTypeNameToken = tokens[2];
+            var underlyingTypeName = underlyingTypeNameToken.Text;
+
+            if (Utilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
             {
-                if (Utilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
-                {
-                    underlyingTypeName = originName;
-                }
-
-                if (!Utilities.IsEnumerationUnderlyingType(underlyingTypeName))
-                {
-                    this.OutputError(
-                        underlyingTypeNameToken,
-                        $"Invalid enumeration underlying type: {underlyingTypeName}");
-                }
-                else
-                {
-                    underlyingType = this.UnsafeGetType(underlyingTypeName);
-                }
+                underlyingTypeName = originName;
             }
 
-            var enumerationTypeNameToken = tokens[1];
+            if (!Utilities.IsEnumerationUnderlyingType(underlyingTypeName))
+            {
+                this.OutputError(
+                    underlyingTypeNameToken,
+                    $"Invalid enumeration underlying type: {underlyingTypeName}");
+            }
+            else
+            {
+                underlyingType = this.UnsafeGetType(underlyingTypeName);
+            }
+
+            var enumerationTypeNameToken = tokens[3];
             var enumerationTypeName = enumerationTypeNameToken.Text;
 
             if (this.TryGetType(enumerationTypeName, out var etref))
@@ -375,7 +386,12 @@ partial class Parser
             else
             {
                 var enumerationType = new TypeDefinition(
-                    "C.type",
+                    scopeDescriptor switch
+                    {
+                        ScopeDescriptors.Public => "C.type",
+                        ScopeDescriptors.Internal => "C.type",
+                        _ => "",
+                    },
                     enumerationTypeName,
                     typeAttributes,
                     this.systemEnumType.Value);
@@ -386,7 +402,16 @@ partial class Parser
                     underlyingType);
                 enumerationType.Fields.Add(enumerationValueField);
 
-                this.module.Types.Add(enumerationType);
+                switch (scopeDescriptor)
+                {
+                    case ScopeDescriptors.Public:
+                    case ScopeDescriptors.Internal:
+                        this.module.Types.Add(enumerationType);
+                        break;
+                    case ScopeDescriptors.File:
+                        this.fileScopedType.NestedTypes.Add(enumerationType);
+                        break;
+                }
                 this.enumerationType = enumerationType;
 
                 Debug.Assert(this.checkingMemberIndex == -1);
