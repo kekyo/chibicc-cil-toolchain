@@ -446,7 +446,7 @@ The call site specifies the return type and a list of parameter types.
 
 ### Global variables
 
-Global variable directive format is same as local variable directive,
+Global variable format is same as local variable format plus scope descriptor.
 However, excludes declarations outside function body:
 
 ```
@@ -455,12 +455,12 @@ However, excludes declarations outside function body:
     stsfld foo
     ldsfld foo
     ret
-.global int32 foo
+.global public int32 foo
 ```
 
 The global variable name both forward and backaward references are accepted.
 
-Global variable name strategy complies with CABI excepts placing into `C.data` class.
+If the global variable is `public`, it is placed in the `C.data` class according to CABI.
 
 Pseudo code in C#:
 
@@ -491,7 +491,7 @@ The global variable declares with initializing data:
     ldsfld foo
     ret
 ; int32 foo = 0x76543210
-.global int32 foo 0x10 0x32 0x54 0x76
+.global internal int32 foo 0x10 0x32 0x54 0x76
 ```
 
 The data must be fill in bytes.
@@ -510,7 +510,7 @@ To use a value array type, declare the type as follows:
 .function public int8[5] bar   ; <-- Value array requres element length
     ldsfld foo
     ret
-.global int8[5] foo 0x10 0x32 0x54 0x76 0x98
+.global internal int8[5] foo 0x10 0x32 0x54 0x76 0x98
 ```
 
 At this time, the actual type of the `bar` function and the `foo` variable will be of type `System.SByte_len5`.

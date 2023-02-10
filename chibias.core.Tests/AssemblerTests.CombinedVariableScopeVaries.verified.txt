@@ -25,12 +25,17 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
+.class private abstract auto ansi sealed source_s
+       extends [mscorlib]System.Object
+{
+  .field static assembly int32 baz
+} // end of class source_s
+
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method assembly static int32  main() cil managed
+  .method public static int32  main() cil managed
   {
-    .entrypoint
     // Code size       2 (0x2)
     .maxstack  8
     IL_0000:  ldc.i4.1
@@ -38,6 +43,13 @@
   } // end of method text::main
 
 } // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static int32 foo
+  .field static assembly int32 bar
+} // end of class C.data
 
 
 // =============================================================

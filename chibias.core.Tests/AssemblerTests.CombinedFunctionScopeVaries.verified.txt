@@ -28,7 +28,7 @@
 .class private abstract auto ansi sealed source_s
        extends [mscorlib]System.Object
 {
-  .method public static int32  baz() cil managed
+  .method assembly static int32  baz() cil managed
   {
     // Code size       2 (0x2)
     .maxstack  8
@@ -49,7 +49,7 @@
     IL_0001:  ret
   } // end of method text::foo
 
-  .method private static int32  bar() cil managed
+  .method assembly static int32  bar() cil managed
   {
     // Code size       2 (0x2)
     .maxstack  8

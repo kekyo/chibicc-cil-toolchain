@@ -36,7 +36,7 @@
     IL_0005:  ret
   } // end of method text::main
 
-  .method private static int32  foo() cil managed
+  .method assembly static int32  foo() cil managed
   {
     // Code size       2 (0x2)
     .maxstack  8

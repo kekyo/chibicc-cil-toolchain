@@ -243,6 +243,87 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
+    public Task InternalScopeVariable()
+    {
+        var actual = Run(@"
+            .function public int32 main
+                ldsfld foo
+                ret
+            .global internal int32 foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeVariable()
+    {
+        var actual = Run(@"
+            .function public int32 main
+                ldsfld foo
+                ret
+            .global file int32 foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InternalScopeVariableReference1()
+    {
+        var actual = Run(@"
+            .function internal int32 main
+                ldsfld foo
+                ret
+            .global internal int32 foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InternalScopeVariableReference2()
+    {
+        var actual = Run(@"
+            .function internal int32 main
+                ldsfld foo
+                ret
+            .global file int32 foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeVariableReference1()
+    {
+        var actual = Run(@"
+            .function file int32 main
+                ldsfld foo
+                ret
+            .global internal int32 foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeVariableReference2()
+    {
+        var actual = Run(@"
+            .function file int32 main
+                ldsfld foo
+                ret
+            .global file int32 foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedVariableScopeVaries()
+    {
+        var actual = Run(@"
+            .function public int32 main
+                ldc.i4.1
+                ret
+            .global public int32 foo
+            .global internal int32 bar
+            .global file int32 baz");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
     public Task StringLiteral1()
     {
         var actual = Run(@"
@@ -662,7 +743,7 @@ public sealed partial class AssemblerTests
                 stsfld foo
                 ldsfld foo
                 ret
-            .global int32 foo");
+            .global public int32 foo");
         return Verify(actual);
     }
 
@@ -991,7 +1072,7 @@ public sealed partial class AssemblerTests
             .function public int32 foo
                 ldsfld bar
                 ret
-            .global int32 bar 0x10 0x32 0x54 0x76");
+            .global public int32 bar 0x10 0x32 0x54 0x76");
         return Verify(actual);
     }
 
@@ -1002,7 +1083,7 @@ public sealed partial class AssemblerTests
             .function public uint8[6] foo
                 ldsfld bar
                 ret
-            .global uint8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+            .global public uint8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
         return Verify(actual);
     }
 
@@ -1016,7 +1097,7 @@ public sealed partial class AssemblerTests
                 ldtoken bar
                 conv.i
                 ret
-            .global int32 bar");
+            .global public int32 bar");
         return Verify(actual);
     }
 
@@ -1090,7 +1171,7 @@ public sealed partial class AssemblerTests
             .function public int8[6] foo
                 ldsfld bar
                 ret
-            .global int8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+            .global public int8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
         return Verify(actual);
     }
 
@@ -1101,7 +1182,7 @@ public sealed partial class AssemblerTests
             .function public uint8[6]* foo
                 ldsfld bar
                 ret
-            .global uint8[6]* bar");
+            .global public uint8[6]* bar");
         return Verify(actual);
     }
 
@@ -1112,7 +1193,7 @@ public sealed partial class AssemblerTests
             .function public uint8*[6] foo
                 ldsfld bar
                 ret
-            .global uint8*[6] bar");
+            .global public uint8*[6] bar");
         return Verify(actual);
     }
 
@@ -1123,7 +1204,7 @@ public sealed partial class AssemblerTests
             .function public uint8&[6] foo
                 ldsfld bar
                 ret
-            .global uint8&[6] bar");
+            .global public uint8&[6] bar");
         return Verify(actual);
     }
 
@@ -1134,7 +1215,7 @@ public sealed partial class AssemblerTests
             .function public uint8[3][6] foo
                 ldsfld bar
                 ret
-            .global uint8[3][6] bar");
+            .global public uint8[3][6] bar");
         return Verify(actual);
     }
 
@@ -1145,7 +1226,7 @@ public sealed partial class AssemblerTests
             .function public uint8[3]*[6] foo
                 ldsfld bar
                 ret
-            .global uint8[3]*[6] bar");
+            .global public uint8[3]*[6] bar");
         return Verify(actual);
     }
 

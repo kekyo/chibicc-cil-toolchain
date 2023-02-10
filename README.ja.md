@@ -444,7 +444,7 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 
 ### グローバル変数
 
-グローバル変数の書式は、ローカル変数と同じです。
+グローバル変数の書式は、ローカル変数の書式にスコープ記述子を加えたものです。
 ただし、関数本体定義の外側に配置します:
 
 ```
@@ -453,12 +453,12 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
     stsfld foo
     ldsfld foo
     ret
-.global int32 foo
+.global public int32 foo
 ```
 
 グローバル変数名は、前方参照、後方参照のいずれも可能です。
 
-グローバル変数は CABIに従って、`C.data` クラス内に配置されます。
+グローバル変数は `public` の場合、CABIに従って、`C.data` クラス内に配置されます。
 
 疑似的にC#で記述すると:
 
@@ -489,7 +489,7 @@ public static class text
     ldsfld foo
     ret
 ; int32 foo = 0x76543210
-.global int32 foo 0x10 0x32 0x54 0x76
+.global internal int32 foo 0x10 0x32 0x54 0x76
 ```
 
 データはバイト単位で埋める必要があります。
@@ -507,7 +507,7 @@ chibiasは、 `value array` 型を使ってこれを擬似的に実現するこ�
 .function public int8[5] bar   ; <-- 値型の配列には要素数が必要
     ldsfld foo
     ret
-.global int8[5] foo 0x10 0x32 0x54 0x76 0x98
+.global internal int8[5] foo 0x10 0x32 0x54 0x76 0x98
 ```
 
 このとき、`bar` 関数の戻り値と `foo` 変数の型は、 `System.SByte_len5` 型になります。

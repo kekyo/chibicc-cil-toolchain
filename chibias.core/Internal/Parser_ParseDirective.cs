@@ -29,9 +29,7 @@ partial class Parser
             scopeDescriptor switch
             {
                 ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
-                // File scope is public, because will place intenalized class type.
-                ScopeDescriptors.File => MethodAttributes.Public | MethodAttributes.Static,
-                _ => MethodAttributes.Private | MethodAttributes.Static,
+                _ => MethodAttributes.Assembly | MethodAttributes.Static,
             },
             this.Import(returnType));
         this.method.HasThis = false;
@@ -148,13 +146,21 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 3)
+        if (tokens.Length < 4)
         {
             this.OutputError(directive, $"Missing global variable operand.");
         }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+        }
         else
         {
-            var data = tokens.Skip(3).
+            var data = tokens.Skip(4).
                 Select(token =>
                 {
                     if (Utilities.TryParseUInt8(token.Text, out var value))
@@ -169,8 +175,9 @@ partial class Parser
                 }).
                 ToArray();
 
-            var globalTypeName = tokens[1].Text;
-            var globalName = tokens[2].Text;
+            var globalTypeNameToken = tokens[2];
+            var globalTypeName = globalTypeNameToken.Text;
+            var globalName = tokens[3].Text;
 
             FieldDefinition field = null!;
             if (!this.TryGetType(globalTypeName, out var globalType))
@@ -178,19 +185,33 @@ partial class Parser
                 globalType = this.CreateDummyType();
 
                 this.DelayLookingUpType(
-                    tokens[1],
+                    globalTypeNameToken,
                     type => field.FieldType = type);   // (captured)
             }
 
             field = new FieldDefinition(
                 globalName,
-                FieldAttributes.Public | FieldAttributes.Static,
+                scopeDescriptor switch
+                {
+                    ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
+                    _ => FieldAttributes.Assembly | FieldAttributes.Static,
+                },
                 globalType);
             if (data.Length >= 1)
             {
                 field.InitialValue = data;
             }
-            this.cabiDataType.Fields.Add(field);
+
+            switch (scopeDescriptor)
+            {
+                case ScopeDescriptors.Public:
+                case ScopeDescriptors.Internal:
+                    this.cabiDataType.Fields.Add(field);
+                    break;
+                default:
+                    this.fileScopedType.Fields.Add(field);
+                    break;
+            }
         }
     }
 

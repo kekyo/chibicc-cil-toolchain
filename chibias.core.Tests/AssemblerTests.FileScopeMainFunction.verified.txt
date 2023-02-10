@@ -28,7 +28,7 @@
 .class private abstract auto ansi sealed source_s
        extends [mscorlib]System.Object
 {
-  .method public static int32  main() cil managed
+  .method assembly static int32  main() cil managed
   {
     .entrypoint
     // Code size       2 (0x2)

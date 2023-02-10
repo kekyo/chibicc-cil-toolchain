@@ -28,7 +28,7 @@
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method private static int32  foo() cil managed
+  .method assembly static int32  foo() cil managed
   {
     // Code size       2 (0x2)
     .maxstack  8

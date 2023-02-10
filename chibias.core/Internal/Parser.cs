@@ -277,14 +277,20 @@ internal sealed partial class Parser
                     // "aaa[10]"
                     else
                     {
-                        var length = int.Parse(
+                        if (Utilities.TryParseInt32(
                             name.Substring(startBracketIndex + 1, name.Length - startBracketIndex - 2),
-                            NumberStyles.Integer,
-                            CultureInfo.InvariantCulture);
-
-                        // "aaa_len10"
-                        type = this.GetValueArrayType(elementType, length);
-                        return true;
+                            out var length) &&
+                            length < 0)
+                        {
+                            type = null!;
+                            return false;
+                        }
+                        else
+                        {
+                            // "aaa_len10"
+                            type = this.GetValueArrayType(elementType, length);
+                            return true;
+                        }
                     }
                 }
                 else
@@ -410,15 +416,21 @@ internal sealed partial class Parser
         var fieldName = name.Substring(fieldNameIndex + 1);
         if (fieldNameIndex <= 0)
         {
-            if (this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
-            {
-                field = this.Import(f);
-                return true;
-            }
-            else if (this.cabiDataType.Fields.
+            if (this.fileScopedType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
+                return true;
+            }
+            else if (this.cabiDataType.Fields.
+                FirstOrDefault(field => field.Name == fieldName) is { } f3)
+            {
+                field = f3;
+                return true;
+            }
+            else if (this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
+            {
+                field = this.Import(f);
                 return true;
             }
             else
