@@ -77,7 +77,7 @@ jobs:
 
     - name: Deploy NuGet package (develop/ref1)
       if: startsWith( github.ref, 'refs/tags/' )
-      run: dotnet nuget push artifacts\\chibias*.nupkg --source ref1
+      run: dotnet nuget push artifacts\chibias*.nupkg --source ref1
 
     #-----------------------------------------------------------------------
     # Deploy packages (main)
