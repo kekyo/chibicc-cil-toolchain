@@ -25,7 +25,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed source_s
+.class private abstract auto ansi sealed source
        extends [mscorlib]System.Object
 {
   .field static assembly int32 foo
@@ -33,11 +33,11 @@
   {
     // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  ldsfld     int32 source_s::foo
+    IL_0000:  ldsfld     int32 source::foo
     IL_0005:  ret
-  } // end of method source_s::main
+  } // end of method source::main
 
-} // end of class source_s
+} // end of class source
 
 
 // =============================================================

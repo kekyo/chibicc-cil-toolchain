@@ -58,7 +58,7 @@ partial class Parser
         {
             this.OutputError(tokens.Last(), $"Missing directive operands.");
         }
-        else if (!Utilities.TryLookupScopeDescriptorName(
+        else if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {
@@ -150,7 +150,7 @@ partial class Parser
         {
             this.OutputError(directive, $"Missing global variable operand.");
         }
-        else if (!Utilities.TryLookupScopeDescriptorName(
+        else if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {
@@ -295,7 +295,7 @@ partial class Parser
                 tokens.Last(),
                 $"Too many operands.");
         }
-        else if (!Utilities.TryLookupScopeDescriptorName(
+        else if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {
@@ -319,12 +319,12 @@ partial class Parser
             var underlyingTypeNameToken = tokens[2];
             var underlyingTypeName = underlyingTypeNameToken.Text;
 
-            if (Utilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
+            if (CecilUtilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
             {
                 underlyingTypeName = originName;
             }
 
-            if (!Utilities.IsEnumerationUnderlyingType(underlyingTypeName))
+            if (!CecilUtilities.IsEnumerationUnderlyingType(underlyingTypeName))
             {
                 this.OutputError(
                     underlyingTypeNameToken,
@@ -443,7 +443,7 @@ partial class Parser
                 tokens.Last(),
                 $"Too many operands.");
         }
-        else if (!Utilities.TryLookupScopeDescriptorName(
+        else if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {

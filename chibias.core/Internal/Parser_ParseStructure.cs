@@ -29,7 +29,7 @@ partial class Parser
                 tokens.Last(),
                 $"Too many operands.");
         }
-        else if (!Utilities.TryLookupScopeDescriptorName(
+        else if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[0].Text,
             out var scopeDescriptor) ||
             scopeDescriptor == ScopeDescriptors.File)

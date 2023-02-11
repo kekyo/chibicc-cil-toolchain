@@ -340,9 +340,8 @@ public sealed class Assembler
 
         var baseSourcePath = sourceFullPaths.Length == 1 ?
             Utilities.GetDirectoryPath(sourceFullPaths[0]) :
-            Path.Combine(sourceFullPaths.
-                Select(path => path.Split(Path.DirectorySeparatorChar)).
-                Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
+            Utilities.IntersectStrings(sourceFullPaths).
+                TrimEnd(Path.DirectorySeparatorChar);
 
         this.logger.Information(
             $"Source code base path: {baseSourcePath}");
