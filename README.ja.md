@@ -29,7 +29,7 @@ chibiasは、複数のCILソースコードを入力として、アセンブル�
 ![chibias overview](Images/chibias.png)
 
 chibiasはchibiccのバックエンドアセンブラとして開発しましたが、単独でも使用可能です。
-ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、人間にとっても書きやすくなっています。
+ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、機械出力を行いやすく、かつ人間にとっても書きやすくなっています。
 
 一般的なCコンパイラは、最終段階でリンカ `ld` に中間形式ファイル `*.o` を入力して生成しますが、chibiasはこのようなファイルを扱わずに、直接 `exe` や `dll`を生成します。chibiasは、リンカの機能を兼ねていると考えることが出来て、分割されたソースコードを扱う場合は、ソースコード自体 (`*.s`) を中間形式ファイルとみなせば、リンカと同様に扱うことが出来ます。
 
@@ -608,7 +608,7 @@ public enum foo : int
 chibiasで定義できる構造体型は、.NETでの構造体型と同様で、`System.ValueType` を暗黙のうちに継承した型です。
 
 ```
-.structure foo
+.structure public foo
     int32 a
     int8 b
     int32 c
@@ -632,7 +632,7 @@ public struct foo
 明示的に指定する場合は:
 
 ```
-.structure foo 4  ; pack=4
+.structure public foo 4  ; pack=4
     int32 a
     int8 b
     int32 c
@@ -641,7 +641,7 @@ public struct foo
 または各メンバーにオフセットを与えます:
 
 ```
-.structure foo explicit
+.structure public foo explicit
     int32 a 0     ; offset=0
     int8 b 4      ; offset=4
     int32 c 5     ; offset=5

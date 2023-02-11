@@ -1241,7 +1241,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo
+            .structure public foo
                 int32 a
                 int8 b
                 int32 c");
@@ -1257,7 +1257,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo 2
+            .structure public foo 2
                 int32 a
                 int8 b
                 int32 c");
@@ -1273,7 +1273,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo explicit
+            .structure public foo explicit
                 int32 a 0
                 int8 b 2
                 int32 c 6");
@@ -1289,11 +1289,11 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo
+            .structure public foo
                 int32 a
                 bar b
                 int32 c
-            .structure bar
+            .structure public bar
                 int16 a
                 int64 b
                 int32 c");
@@ -1309,11 +1309,11 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo
+            .structure public foo
                 int16 a
                 int64 b
                 int32 c
-            .structure foo
+            .structure public foo
                 int16 a
                 int64 b
                 int32 c");
@@ -1329,11 +1329,11 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo 2
+            .structure public foo 2
                 int16 a
                 int64 b
                 int32 c
-            .structure foo 2
+            .structure public foo 2
                 int16 a
                 int64 b
                 int32 c");
@@ -1349,11 +1349,11 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo explicit
+            .structure public foo explicit
                 int16 a 0
                 int64 b 2
                 int32 c 4
-            .structure foo explicit
+            .structure public foo explicit
                 int16 a 0
                 int64 b 2
                 int32 c 4");
@@ -1369,15 +1369,15 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo
+            .structure public foo
                 int32 a
                 bar b
                 int32 c
-            .structure bar
+            .structure public bar
                 int16 a
                 int64 b
                 int32 c
-            .structure foo
+            .structure public foo
                 int32 a
                 bar b
                 int32 c");
@@ -1393,7 +1393,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo
+            .structure public foo
                 int32 a
                 int8[4] b
                 int32 c");
@@ -1409,7 +1409,7 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo
+            .structure public foo
                 int32 a
                 int8[4][3] b
                 int32 c");
@@ -1425,17 +1425,112 @@ public sealed partial class AssemblerTests
                 ldloca 0
                 initobj foo
                 ret
-            .structure foo
+            .structure public foo
                 int32 a
                 bar[3] b
                 int32 c
-            .structure bar
+            .structure public bar
                 int32 a
                 int8[4] b
                 int32 c");
         return Verify(actual);
     }
 
+    [Test]
+    public Task InternalScopeStructure()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure internal foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeStructure()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure file foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InternalScopeStructureReference1()
+    {
+        var actual = Run(@"
+            .function internal int32 main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure internal foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InternalScopeStructureReference2()
+    {
+        var actual = Run(@"
+            .function internal int32 main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure internal foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeStructureReference1()
+    {
+        var actual = Run(@"
+            .function file int32 main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure internal foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FileScopeStructureReference2()
+    {
+        var actual = Run(@"
+            .function file int32 main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure file foo
+                int32 a
+                int8 b
+                int32 c");
+        return Verify(actual);
+    }
 
     /////////////////////////////////////////////////////////
 

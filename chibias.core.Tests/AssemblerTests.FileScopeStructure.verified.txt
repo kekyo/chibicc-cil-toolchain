@@ -1,0 +1,59 @@
+﻿
+//  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
+
+
+
+// Metadata version: v4.0.30319
+.assembly extern mscorlib
+{
+  .publickey = (00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 ) 
+  .ver 4:0:0:0
+}
+.assembly output
+{
+  .custom instance void [mscorlib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
+                                                                                                        2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
+  .ver 1:0:0:0
+}
+.module output.dll
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class private abstract auto ansi sealed source_s
+       extends [mscorlib]System.Object
+{
+  .class sequential ansi sealed nested assembly foo
+         extends [mscorlib]System.ValueType
+  {
+    .field public int32 a
+    .field public int8 b
+    .field public int32 c
+  } // end of class foo
+
+} // end of class source_s
+
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static void  main() cil managed
+  {
+    // Code size       11 (0xb)
+    .maxstack  1
+    .locals (valuetype source_s/foo V_0)
+    IL_0000:  ldloca     V_0
+    IL_0004:  initobj    source_s/foo
+    IL_000a:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
+
+// =============================================================
+
+// *********** DISASSEMBLY COMPLETE ***********************

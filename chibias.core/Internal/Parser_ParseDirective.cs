@@ -431,24 +431,37 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 2)
+        if (tokens.Length < 3)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Missing structure operand.");
         }
-        else if (tokens.Length > 3)
+        else if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
         }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+        }
         else
         {
-            var typeAttributes = TypeAttributes.Public | TypeAttributes.Sealed;
+            var typeAttributes = scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
+                ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
+                _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+            };
 
             short? packSize = null;
-            var aligningToken = tokens.ElementAtOrDefault(2);
+            var aligningToken = tokens.ElementAtOrDefault(3);
 
             if (aligningToken is { })
             {
@@ -481,7 +494,7 @@ partial class Parser
                 typeAttributes |= TypeAttributes.SequentialLayout;
             }
 
-            var structureTypeNameToken = tokens[1];
+            var structureTypeNameToken = tokens[2];
             var structureTypeName = structureTypeNameToken.Text;
 
             if (this.TryGetType(structureTypeName, out var stref))
@@ -515,7 +528,12 @@ partial class Parser
             else
             {
                 var structureType = new TypeDefinition(
-                    "C.type",
+                    scopeDescriptor switch
+                    {
+                        ScopeDescriptors.Public => "C.type",
+                        ScopeDescriptors.Internal => "C.type",
+                        _ => "",
+                    },
                     structureTypeName,
                     typeAttributes,
                     this.systemValueTypeType.Value);
@@ -525,7 +543,16 @@ partial class Parser
                     structureType.ClassSize = 0;
                 }
 
-                this.module.Types.Add(structureType);
+                switch (scopeDescriptor)
+                {
+                    case ScopeDescriptors.Public:
+                    case ScopeDescriptors.Internal:
+                        this.module.Types.Add(structureType);
+                        break;
+                    case ScopeDescriptors.File:
+                        this.fileScopedType.NestedTypes.Add(structureType);
+                        break;
+                }
                 this.structureType = structureType;
 
                 Debug.Assert(this.checkingMemberIndex == -1);

@@ -29,7 +29,8 @@ chibias takes multiple CIL source codes as input, performs assembly, and outputs
 ![chibias overview](Images/chibias.png)
 
 chibias was developed as a backend assembler for chibicc, but can also be used by us.
-The source code is easier to write for humans because it employs simplified syntax rules compared to ILAsm.
+The source code employs simplified syntax rules compared to ILAsm,
+making it easier to machine generation and easier for humans to write.
 
 The general C compiler generates intermediate object format files `*.o` by inputting them to the linker `ld` at the final stage. chibias does not handle such object files, but generates `exe` and `dll` directly. When dealing with split source code, you can consider the source code itself (`*.s`) as an intermediate object format file and treat it same way as a linker.
 
@@ -615,7 +616,7 @@ The structure types that can be defined in chibias are the same as structure typ
 which implicitly inherit from `System.ValueType`.
 
 ```
-.structure foo
+.structure public foo
     int32 a
     int8 b
     int32 c
@@ -639,7 +640,7 @@ By default, structure packing is left to the CLR.
 To specify explicitly:
 
 ```
-.structure foo 4  ; pack=4
+.structure public foo 4  ; pack=4
     int32 a
     int8 b
     int32 c
@@ -648,7 +649,7 @@ To specify explicitly:
 Or gives an offset to each member:
 
 ```
-.structure foo explicit
+.structure public foo explicit
     int32 a 0     ; offset=0
     int8 b 4      ; offset=4
     int32 c 5     ; offset=5
