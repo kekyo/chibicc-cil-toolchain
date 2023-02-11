@@ -609,9 +609,9 @@ chibiasで定義できる構造体型は、.NETでの構造体型と同様で、
 
 ```
 .structure public foo
-    int32 a
-    int8 b
-    int32 c
+    public int32 a
+    internal int8 b
+    public int32 c
 ```
 
 疑似的にC#で記述すると:
@@ -623,28 +623,31 @@ namespace C.type;
 public struct foo
 {
     public int a;
-    public sbyte b;
+    internal sbyte b;
     public int c;
 }
 ```
+
+構造体の各メンバーには、スコープ記述子が指定出来ます。
+但し、`public` と `internal` のみで、`file` は指定出来ません。
 
 デフォルトでは、構造体のパッキングはCLRに任されています。
 明示的に指定する場合は:
 
 ```
 .structure public foo 4  ; pack=4
-    int32 a
-    int8 b
-    int32 c
+    public int32 a
+    public int8 b
+    public int32 c
 ```
 
 または各メンバーにオフセットを与えます:
 
 ```
 .structure public foo explicit
-    int32 a 0     ; offset=0
-    int8 b 4      ; offset=4
-    int32 c 5     ; offset=5
+    public int32 a 0     ; offset=0
+    public int8 b 4      ; offset=4
+    public int32 c 5     ; offset=5
 ```
 
 オフセットを任意に調整することで、C言語における共用体型を再現することができます。

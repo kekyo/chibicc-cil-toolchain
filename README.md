@@ -617,9 +617,9 @@ which implicitly inherit from `System.ValueType`.
 
 ```
 .structure public foo
-    int32 a
-    int8 b
-    int32 c
+    public int32 a
+    internal int8 b
+    public int32 c
 ```
 
 Pseudo code in C#:
@@ -631,28 +631,31 @@ namespace C.type;
 public struct foo
 {
     public int a;
-    public sbyte b;
+    internal sbyte b;
     public int c;
 }
 ```
+
+Each member of the structure can have a scope descriptor.
+However, only `public` and `internal` can be specified.
 
 By default, structure packing is left to the CLR.
 To specify explicitly:
 
 ```
 .structure public foo 4  ; pack=4
-    int32 a
-    int8 b
-    int32 c
+    public int32 a
+    public int8 b
+    public int32 c
 ```
 
 Or gives an offset to each member:
 
 ```
 .structure public foo explicit
-    int32 a 0     ; offset=0
-    int8 b 4      ; offset=4
-    int32 c 5     ; offset=5
+    public int32 a 0     ; offset=0
+    public int8 b 4      ; offset=4
+    public int32 c 5     ; offset=5
 ```
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
@@ -722,7 +725,6 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
-* Handling function/global variable scopes.
 * Automatic implements `IList<T>` on value array type.
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)

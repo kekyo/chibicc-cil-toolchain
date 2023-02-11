@@ -1242,9 +1242,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1258,9 +1258,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo 2
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1274,9 +1274,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo explicit
-                int32 a 0
-                int8 b 2
-                int32 c 6");
+                public int32 a 0
+                public int8 b 2
+                public int32 c 6");
         return Verify(actual);
     }
 
@@ -1290,13 +1290,13 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo
-                int32 a
-                bar b
-                int32 c
+                public int32 a
+                public bar b
+                public int32 c
             .structure public bar
-                int16 a
-                int64 b
-                int32 c");
+                public int16 a
+                public int64 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1310,13 +1310,13 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo
-                int16 a
-                int64 b
-                int32 c
+                public int16 a
+                public int64 b
+                public int32 c
             .structure public foo
-                int16 a
-                int64 b
-                int32 c");
+                public int16 a
+                public int64 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1330,13 +1330,13 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo 2
-                int16 a
-                int64 b
-                int32 c
+                public int16 a
+                public int64 b
+                public int32 c
             .structure public foo 2
-                int16 a
-                int64 b
-                int32 c");
+                public int16 a
+                public int64 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1350,13 +1350,13 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo explicit
-                int16 a 0
-                int64 b 2
-                int32 c 4
+                public int16 a 0
+                public int64 b 2
+                public int32 c 4
             .structure public foo explicit
-                int16 a 0
-                int64 b 2
-                int32 c 4");
+                public int16 a 0
+                public int64 b 2
+                public int32 c 4");
         return Verify(actual);
     }
 
@@ -1370,17 +1370,33 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo
-                int32 a
-                bar b
-                int32 c
+                public int32 a
+                public bar b
+                public int32 c
             .structure public bar
-                int16 a
-                int64 b
-                int32 c
+                public int16 a
+                public int64 b
+                public int32 c
             .structure public foo
-                int32 a
-                bar b
-                int32 c");
+                public int32 a
+                public bar b
+                public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure9()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int32 a
+                internal int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1394,9 +1410,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo
-                int32 a
-                int8[4] b
-                int32 c");
+                public int32 a
+                public int8[4] b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1410,9 +1426,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo
-                int32 a
-                int8[4][3] b
-                int32 c");
+                public int32 a
+                public int8[4][3] b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1426,13 +1442,13 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure public foo
-                int32 a
-                bar[3] b
-                int32 c
+                public int32 a
+                public bar[3] b
+                public int32 c
             .structure public bar
-                int32 a
-                int8[4] b
-                int32 c");
+                public int32 a
+                public int8[4] b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1446,9 +1462,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure internal foo
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1462,9 +1478,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure file foo
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1478,9 +1494,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure internal foo
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1494,9 +1510,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure internal foo
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1510,9 +1526,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure internal foo
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
@@ -1526,9 +1542,9 @@ public sealed partial class AssemblerTests
                 initobj foo
                 ret
             .structure file foo
-                int32 a
-                int8 b
-                int32 c");
+                public int32 a
+                public int8 b
+                public int32 c");
         return Verify(actual);
     }
 
