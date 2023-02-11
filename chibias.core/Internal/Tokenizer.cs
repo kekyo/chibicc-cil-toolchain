@@ -78,7 +78,7 @@ internal sealed class Tokenizer
                 {
                     break;
                 }
-                else if (inch == '.')
+                else if (inch == '.' && tokens.Count == 0)
                 {
                     index++;
                     var start = index;

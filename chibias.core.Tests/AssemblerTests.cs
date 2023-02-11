@@ -105,6 +105,19 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
+    public Task VariableArgumentsFunction()
+    {
+        var actual = Run(@"
+            .function internal void foo ...
+                .local System.ArgIterator va
+                ldloca.s 0
+                arglist
+                call System.ArgIterator..ctor System.RuntimeArgumentHandle
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task InternalScopeFunction()
     {
         var actual = Run(@"

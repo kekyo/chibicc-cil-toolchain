@@ -345,6 +345,27 @@ Important: If you are calling a function defined in chibias,
 you do not need to specify any argument type list for the `call` operand.
 In another hand, .NET overloaded methods, an argument type list is required.
 
+function can be defined to accept variable arguments:
+
+```
+.function public int32 addn a1:int32 ...
+    .local System.ArgIterator
+    ldloca.s 0
+    arglist
+    call System.ArgIterator..ctor System.RuntimeArgumentHandle
+    ; (Iterates with ArgIterator.)
+    ret
+```
+
+`...` can be specified only at the end of the parameter list.
+This allows the function to receive variable arguments.
+
+However, that this variable argument is handled differently from variable arguments (.NET array) in C#.
+chibias uses `arglist` semantics in defined CIL.
+
+`arglist` is enumerated using the `System.ArgIterator` type, as in the example above.
+For more information, look up the `__arglist` keyword or `ArgIterator` in C#.
+
 ### Call external function
 
 Before assemble to make `test.dll`
@@ -723,10 +744,7 @@ Will produce debugging information with CIL source file itself when does not app
 
 Might be implemented:
 
-* `OperandType`
-  * InlineSwitch
 * Automatic implements `IList<T>` on value array type.
-* Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
 * And chibicc-cil specific requirements...

@@ -73,12 +73,13 @@ public sealed class Assembler
                         $"Unable read reference assembly: {path}, {ex.GetType().FullName}: {ex.Message}");
                     return null;
                 }
-            }).
-            ToArray();
+            })
+#if DEBUG
+            .ToArray()
+#endif
+            ;
 
-        return new(
-            this.logger,
-            assemblies.
+        var types = assemblies.
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
             Distinct(TypeDefinitionComparer.Instance).
@@ -86,7 +87,13 @@ public sealed class Assembler
             Where(type =>
                 type.IsPublic &&
                 (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
-                type.GenericParameters.Count == 0));
+                type.GenericParameters.Count == 0)
+#if DEBUG
+            .ToArray()
+#endif
+            ;
+
+        return new(this.logger, types);
     }
 
     private MemberDictionary<MemberReference> AggregateCAbiSpecificSymbols(

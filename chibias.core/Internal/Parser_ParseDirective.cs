@@ -10,6 +10,7 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,11 +19,12 @@ namespace chibias.Internal;
 
 partial class Parser
 {
-    private MethodDefinition SetupFunctionBodyDirective(
+    private MethodDefinition SetupMethodDefinition(
         string functionName,
         TypeReference returnType,
         ParameterDefinition[] parameters,
-        ScopeDescriptors scopeDescriptor)
+        ScopeDescriptors scopeDescriptor,
+        bool varargs)
     {
         this.method = new MethodDefinition(
             functionName,
@@ -37,6 +39,11 @@ partial class Parser
         foreach (var parameter in parameters)
         {
             this.method.Parameters.Add(parameter);
+        }
+
+        if (varargs)
+        {
+            this.method.CallingConvention = MethodCallingConvention.VarArg;
         }
 
         this.body = this.method.Body;
@@ -82,49 +89,66 @@ partial class Parser
                     type => method.ReturnType = type);   // (captured)
             }
 
-            var parameters = tokens.Skip(4).
-                Collect(parameterToken =>
+            var parameters = new List<ParameterDefinition>();
+            var varargs = false;
+            for (var index = 4; index < tokens.Length; index++)
+            {
+                var parameterToken = tokens[index];
+                var parameterTokenText = parameterToken.Text;
+
+                var splitted = parameterTokenText.Split(':');
+                if (splitted.Length >= 3)
                 {
-                    var splitted = parameterToken.Text.Split(':');
-                    if (splitted.Length >= 3)
+                    this.OutputError(
+                        parameterToken,
+                        $"Invalid parameter: {parameterTokenText}");
+                }
+                else if (index == (tokens.Length - 1) &&
+                    splitted.Last() == "...")
+                {
+                    if (splitted.Length == 2)
                     {
                         this.OutputError(
                             parameterToken,
-                            $"Invalid parameter: {parameterToken.Text}");
-                        return null;
+                            $"Could not apply any types at the variable argument descriptor: {parameterTokenText}");
                     }
                     else
                     {
-                        var parameterTypeName = splitted.Last();
-
-                        ParameterDefinition parameter = null!;
-                        if (!this.TryGetType(parameterTypeName, out var parameterType))
-                        {
-                            parameterType = CreateDummyType();
-
-                            this.DelayLookingUpType(
-                                parameterTypeName,
-                                parameterToken,
-                                type => parameter.ParameterType = type);
-                        }
-
-                        parameter = new(parameterType);
-
-                        if (splitted.Length == 2)
-                        {
-                            parameter.Name = splitted[0];
-                        }
-
-                        return parameter;
+                        varargs = true;
                     }
-                }).
-                ToArray();
+                }
+                else
+                {
+                    var parameterTypeName = splitted.Last();
 
-            method = this.SetupFunctionBodyDirective(
+                    ParameterDefinition parameter = null!;
+                    if (!this.TryGetType(parameterTypeName, out var parameterType))
+                    {
+                        parameterType = CreateDummyType();
+
+                        this.DelayLookingUpType(
+                            parameterTypeName,
+                            parameterToken,
+                            type => parameter.ParameterType = type);
+                    }
+
+                    parameter = new(parameterType);
+
+                    if (splitted.Length == 2)
+                    {
+                        parameter.Name = splitted[0];
+                    }
+
+                    parameters.Add(parameter);
+                }
+            }
+
+            method = this.SetupMethodDefinition(
                 functionName,
                 returnType,
-                parameters,
-                scopeDescriptor);
+                parameters.ToArray(),
+                scopeDescriptor,
+                varargs);
 
             switch (scopeDescriptor)
             {
