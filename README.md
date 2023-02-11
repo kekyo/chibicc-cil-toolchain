@@ -29,7 +29,8 @@ chibias takes multiple CIL source codes as input, performs assembly, and outputs
 ![chibias overview](Images/chibias.png)
 
 chibias was developed as a backend assembler for chibicc, but can also be used by us.
-The source code is easier to write for humans because it employs simplified syntax rules compared to ILAsm.
+The source code employs simplified syntax rules compared to ILAsm,
+making it easier to machine generation and easier for humans to write.
 
 The general C compiler generates intermediate object format files `*.o` by inputting them to the linker `ld` at the final stage. chibias does not handle such object files, but generates `exe` and `dll` directly. When dealing with split source code, you can consider the source code itself (`*.s`) as an intermediate object format file and treat it same way as a linker.
 
@@ -91,7 +92,7 @@ Let's play "Hello world" with chibias.
 You should create a new source code file `hello.s` with the contents only need 4 lines:
 
 ```
-.function void main
+.function public void main
     ldstr "Hello world with chibias!"
     call System.Console.WriteLine string
     ret
@@ -117,7 +118,7 @@ Linux and other operating systems can be used in the same way, by adding referen
 Also, if you assemble code that uses only built-in types (see below), you do not need references to other assemblies:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4.1
     ldc.i4.2
     add
@@ -193,7 +194,7 @@ but it should be much easier to write than ILAsm.
 ### Minimum, included only main entry point
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123    ; This is comment.
     ret
 ```
@@ -203,14 +204,29 @@ but it should be much easier to write than ILAsm.
   * That is, indentation is simply ignored.
 * The semicolon (';') starts comment, ignores all words at end of line.
 * Begin a word with dot ('.') declaration is "Assembler directives."
-  * `.function` directive is beginning function body with return type and function name.
+  * The `.function` directive means the start of a function.
+    It is followed by operands in the following order:
+    * Scope descriptor
+    * Return type name
+    * Function name
+    * Parameter type list (when required)
   * The function body continues until the next function directive appears.
+
+Scope descriptors are common in other declarations.
+
+| Scope descriptor | Description |
+|:----|:----|
+| `public` | Can be referenced from any scope and any external assemblies. |
+| `internal` | Referenced only within the same assembly. |
+| `file` | Referenced only from the current source code file. |
+
 * Automatic apply entry point when using `main` function name and assemble executable file with same as `--exe` option.
+  The entry point is acceptable any scope descriptor (ignored).
 
 ### Literals
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     ldc.r8 1.234
     ldstr "abc\"def\"ghi"
@@ -229,7 +245,7 @@ but it should be much easier to write than ILAsm.
 ### Labels
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     br NAME
     nop
@@ -280,7 +296,7 @@ See separate section for details.
 ### Local variables
 
 ```
-.function int32 main
+.function public int32 main
     .local int32
     .local int32 abc
     ldc.i4 1
@@ -296,7 +312,7 @@ The local directive could have optional variable name.
 We can refer with variable name in operand:
 
 ```
-.function void foo
+.function public void foo
     .local int32 abc
     ldc.i4 1
     stloc abc
@@ -306,12 +322,12 @@ We can refer with variable name in operand:
 ### Call another function
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 1
     ldc.i4 2
     call add2
     ret
-.function int32 add2 x:int32 y:int32
+.function public int32 add2 x:int32 y:int32
     ldarg 0
     ldarg y   ; We can refer by parameter name
     add
@@ -334,7 +350,7 @@ In another hand, .NET overloaded methods, an argument type list is required.
 Before assemble to make `test.dll`
 
 ```
-.function int32 add2 a:int32 b:int32
+.function public int32 add2 a:int32 b:int32
     ldarg 0
     ldarg 1
     add
@@ -348,7 +364,7 @@ $ chibias -c test.s
 Then:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -392,18 +408,22 @@ public static class text
 
 This is named "CABI (chibicc application binary interface) specification."
 
+CABI only applies if the function can be referenced from an external assembly.
+If the scope of the function is not `public`,
+it cannot be referenced from external assemblies and is not CABI compliant.
+
 ### Call external method
 
 Simply specify a .NET method with full name and parameter types:
 
 ```
-.function void main
+.function public void main
     ldstr "Hello world"
     call System.Console.WriteLine string
     ret
 ```
 
-The method you specify must be public, and could not refer method with any generic parameters.
+The .NET method you specify must be `public`, and could not refer method with any generic parameters.
 Instance methods can also be specified, but of course `this` reference must be pushed onto the evaluation stack.
 
 A list of parameter types is used to identify overloads.
@@ -416,7 +436,7 @@ This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
 The call site is the signature descriptor of the target method that must be indicated by the `calli` opcode:
 
 ```
-.function int32 main
+.function public int32 main
     ldstr "123"
     ldftn System.Int32.Parse string
     calli int32 string
@@ -427,21 +447,21 @@ The call site specifies the return type and a list of parameter types.
 
 ### Global variables
 
-Global variable directive format is same as local variable directive,
+Global variable format is same as local variable format plus scope descriptor.
 However, excludes declarations outside function body:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     stsfld foo
     ldsfld foo
     ret
-.global int32 foo
+.global public int32 foo
 ```
 
 The global variable name both forward and backaward references are accepted.
 
-Global variable name strategy complies with CABI excepts placing into `C.data` class.
+If the global variable is `public`, it is placed in the `C.data` class according to CABI.
 
 Pseudo code in C#:
 
@@ -468,11 +488,11 @@ public static class text
 The global variable declares with initializing data:
 
 ```
-.function int32 bar
+.function public int32 bar
     ldsfld foo
     ret
 ; int32 foo = 0x76543210
-.global int32 foo 0x10 0x32 0x54 0x76
+.global internal int32 foo 0x10 0x32 0x54 0x76
 ```
 
 The data must be fill in bytes.
@@ -488,10 +508,10 @@ The value array type plays a very important role in the realization of the C lan
 To use a value array type, declare the type as follows:
 
 ```
-.function int8[5] bar   ; <-- Value array requres element length
+.function public int8[5] bar   ; <-- Value array requres element length
     ldsfld foo
     ret
-.global int8[5] foo 0x10 0x32 0x54 0x76 0x98
+.global internal int8[5] foo 0x10 0x32 0x54 0x76 0x98
 ```
 
 At this time, the actual type of the `bar` function and the `foo` variable will be of type `System.SByte_len5`.
@@ -539,7 +559,7 @@ The enumeration type that can be defined in chibias are the same as enumeration 
 which implicitly inherit from `System.Enum`.
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef
     pork
     chicken
@@ -550,7 +570,7 @@ Pseudo code in C#:
 ```csharp
 namespace C.type;
 
-public enum foo
+public enum foo : int
 {
     beef,
     pork,
@@ -562,20 +582,27 @@ By default, values assigned to enumeration values are incremented sequentially f
 To specify explicitly:
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef 5
     pork 13
     chicken 42
 ```
 
-Enums allow you to explicitly specify the type of the source number:
+Enumeration type allow you to explicitly specify underlying type of the source value:
 
 ```
-.enumeration foo int64   ; value as underlying int64
+.enumeration public int64 foo   ; Value as underlying int64
     beef 5
     pork 13
     chicken 42
 ```
+
+Only the following types can be specified as underlying types:
+
+* `int8`, `uint8`
+* `int16`, `uint16`
+* `int32`, `uint32`
+* `int64`, `uint64`
 
 An enumeration type can appear multiple times with the same type name,
 as long as the definitions are completely identical.
@@ -589,10 +616,10 @@ The structure types that can be defined in chibias are the same as structure typ
 which implicitly inherit from `System.ValueType`.
 
 ```
-.structure foo
-    int32 a
-    int8 b
-    int32 c
+.structure public foo
+    public int32 a
+    internal int8 b
+    public int32 c
 ```
 
 Pseudo code in C#:
@@ -604,28 +631,31 @@ namespace C.type;
 public struct foo
 {
     public int a;
-    public sbyte b;
+    internal sbyte b;
     public int c;
 }
 ```
+
+Each member of the structure can have a scope descriptor.
+However, only `public` and `internal` can be specified.
 
 By default, structure packing is left to the CLR.
 To specify explicitly:
 
 ```
-.structure foo 4  ; pack=4
-    int32 a
-    int8 b
-    int32 c
+.structure public foo 4  ; pack=4
+    public int32 a
+    public int8 b
+    public int32 c
 ```
 
 Or gives an offset to each member:
 
 ```
-.structure foo explicit
-    int32 a 0     ; offset=0
-    int8 b 4      ; offset=4
-    int32 c 5     ; offset=5
+.structure public foo explicit
+    public int32 a 0     ; offset=0
+    public int8 b 4      ; offset=4
+    public int32 c 5     ; offset=5
 ```
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
@@ -647,7 +677,7 @@ This information is optional and does not affect assembly task if it is not pres
 
 ```
 .file 1 "/home/kouji/Projects/test.c" c
-.function int32 main
+.function public int32 main
     .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456
@@ -695,7 +725,6 @@ Might be implemented:
 
 * `OperandType`
   * InlineSwitch
-* Handling function/global variable scopes.
 * Automatic implements `IList<T>` on value array type.
 * Handling variable arguments.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)

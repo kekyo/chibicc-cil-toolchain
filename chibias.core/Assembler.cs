@@ -77,6 +77,7 @@ public sealed class Assembler
             ToArray();
 
         return new(
+            this.logger,
             assemblies.
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
@@ -111,7 +112,7 @@ public sealed class Assembler
                 type.IsPublic && type.IsValueType &&
                 type.Namespace == "C.type");
 
-        return new(methods.Concat(fields).Concat(types));
+        return new(this.logger, methods.Concat(fields).Concat(types));
     }
 
     private void AssembleFromSource(
@@ -120,11 +121,15 @@ public sealed class Assembler
         string sourcePathDebuggerHint,
         TextReader sourceCodeReader)
     {
-        parser.SetSourcePathDebuggerHint(
+        parser.BeginNewCilSourceCode(
             baseSourcePath,
             sourcePathDebuggerHint);
 
         var tokenizer = new Tokenizer();
+
+        var tokenizeLap = new List<TimeSpan>();
+        var parseLap = new List<TimeSpan>();
+        var sw = Stopwatch.StartNew();
 
         while (true)
         {
@@ -134,9 +139,25 @@ public sealed class Assembler
                 break;
             }
 
+            var lap0 = sw.Elapsed;
             var tokens = tokenizer.TokenizeLine(line);
+
+            var lap1 = sw.Elapsed;
             parser.Parse(tokens);
+
+            var lap2 = sw.Elapsed;
+
+            tokenizeLap.Add(lap1 - lap0);
+            parseLap.Add(lap2 - lap1);
         }
+
+        var tokenizeTotal = tokenizeLap.Aggregate((t1, t2) => t1 + t2);
+        var tokenizeAverage = TimeSpan.FromTicks(tokenizeTotal.Ticks / tokenizeLap.Count);
+        var parseTotal = parseLap.Aggregate((t1, t2) => t1 + t2);
+        var parseAverage = TimeSpan.FromTicks(parseTotal.Ticks / parseLap.Count);
+
+        this.logger.Trace($"Stat: {sourcePathDebuggerHint}: Tokenize: Total={tokenizeTotal}, Average={tokenizeAverage}, Count={tokenizeLap.Count}");
+        this.logger.Trace($"Stat: {sourcePathDebuggerHint}: Parse: Total={parseTotal}, Average={parseAverage}, Count={parseLap.Count}");
     }
 
     private bool Run(
@@ -223,6 +244,8 @@ public sealed class Assembler
 
         var allFinished = parser.Finish(
             options.Options.HasFlag(AssembleOptions.ApplyOptimization));
+
+        cabiSpecificSymbols.Finish();
 
         //////////////////////////////////////////////////////////////
 

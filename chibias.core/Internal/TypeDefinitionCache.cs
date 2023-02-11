@@ -15,24 +15,35 @@ namespace chibias.Internal;
 
 internal sealed class TypeDefinitionCache : IEnumerable<TypeDefinition>
 {
+    private readonly ILogger logger;
     private readonly List<TypeDefinition> cached = new();
     private IEnumerator<TypeDefinition>? source;
 
-    public TypeDefinitionCache(IEnumerable<TypeDefinition> source) =>
+    public TypeDefinitionCache(
+        ILogger logger,
+        IEnumerable<TypeDefinition> source)
+    {
+        this.logger = logger;
         this.source = source.GetEnumerator();
+    }
 
     public IEnumerator<TypeDefinition> GetEnumerator()
     {
         var index = 0;
+        var hit = 0;
+        var miss = 0;
+
         while (true)
         {
             if (index < this.cached.Count)
             {
+                hit++;
                 var type = this.cached[index++];
                 yield return type;
             }
             else if (this.source != null)
             {
+                miss++;
                 if (this.source.MoveNext())
                 {
                     var type = this.source.Current;
@@ -52,6 +63,8 @@ internal sealed class TypeDefinitionCache : IEnumerable<TypeDefinition>
                 break;
             }
         }
+
+        this.logger.Trace($"Stat: TypeDefinitionCache: Hit={hit}, Miss={miss}, Ratio={((double)hit / (hit + miss)):F2}");
     }
 
     IEnumerator IEnumerable.GetEnumerator() =>

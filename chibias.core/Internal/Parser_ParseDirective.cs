@@ -10,7 +10,6 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -23,13 +22,15 @@ partial class Parser
         string functionName,
         TypeReference returnType,
         ParameterDefinition[] parameters,
-        bool isPublic)
+        ScopeDescriptors scopeDescriptor)
     {
         this.method = new MethodDefinition(
             functionName,
-            isPublic ?
-                (MethodAttributes.Public | MethodAttributes.Static) :
-                (MethodAttributes.Private | MethodAttributes.Static),
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
+                _ => MethodAttributes.Assembly | MethodAttributes.Static,
+            },
             this.Import(returnType));
         this.method.HasThis = false;
 
@@ -53,14 +54,23 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 3)
+        if (tokens.Length < 4)
         {
-            this.OutputError(directive, $"Missing directive operand.");
+            this.OutputError(tokens.Last(), $"Missing directive operands.");
+        }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
         }
         else
         {
-            var returnTypeName = tokens[1].Text;
-            var functionName = tokens[2].Text;
+            var returnTypeNameToken = tokens[2];
+            var returnTypeName = returnTypeNameToken.Text;
+            var functionName = tokens[3].Text;
 
             MethodDefinition method = null!;
             if (!this.TryGetType(returnTypeName, out var returnType))
@@ -68,11 +78,11 @@ partial class Parser
                 returnType = this.CreateDummyType();
 
                 this.DelayLookingUpType(
-                    tokens[1],
+                    returnTypeNameToken,
                     type => method.ReturnType = type);   // (captured)
             }
 
-            var parameters = tokens.Skip(3).
+            var parameters = tokens.Skip(4).
                 Collect(parameterToken =>
                 {
                     var splitted = parameterToken.Text.Split(':');
@@ -114,8 +124,18 @@ partial class Parser
                 functionName,
                 returnType,
                 parameters,
-                true);
-            this.cabiTextType.Methods.Add(method);
+                scopeDescriptor);
+
+            switch (scopeDescriptor)
+            {
+                case ScopeDescriptors.Public:
+                case ScopeDescriptors.Internal:
+                    this.cabiTextType.Methods.Add(method);
+                    break;
+                default:
+                    this.fileScopedType.Methods.Add(method);
+                    break;
+            }
         }
     }
 
@@ -126,13 +146,21 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 3)
+        if (tokens.Length < 4)
         {
             this.OutputError(directive, $"Missing global variable operand.");
         }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+        }
         else
         {
-            var data = tokens.Skip(3).
+            var data = tokens.Skip(4).
                 Select(token =>
                 {
                     if (Utilities.TryParseUInt8(token.Text, out var value))
@@ -147,8 +175,9 @@ partial class Parser
                 }).
                 ToArray();
 
-            var globalTypeName = tokens[1].Text;
-            var globalName = tokens[2].Text;
+            var globalTypeNameToken = tokens[2];
+            var globalTypeName = globalTypeNameToken.Text;
+            var globalName = tokens[3].Text;
 
             FieldDefinition field = null!;
             if (!this.TryGetType(globalTypeName, out var globalType))
@@ -156,19 +185,33 @@ partial class Parser
                 globalType = this.CreateDummyType();
 
                 this.DelayLookingUpType(
-                    tokens[1],
+                    globalTypeNameToken,
                     type => field.FieldType = type);   // (captured)
             }
 
             field = new FieldDefinition(
                 globalName,
-                FieldAttributes.Public | FieldAttributes.Static,
+                scopeDescriptor switch
+                {
+                    ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
+                    _ => FieldAttributes.Assembly | FieldAttributes.Static,
+                },
                 globalType);
             if (data.Length >= 1)
             {
                 field.InitialValue = data;
             }
-            this.cabiDataType.Fields.Add(field);
+
+            switch (scopeDescriptor)
+            {
+                case ScopeDescriptors.Public:
+                case ScopeDescriptors.Internal:
+                    this.cabiDataType.Fields.Add(field);
+                    break;
+                default:
+                    this.fileScopedType.Fields.Add(field);
+                    break;
+            }
         }
     }
 
@@ -240,48 +283,59 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 2)
+        if (tokens.Length < 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Missing enumeration operand.");
         }
-        else if (tokens.Length > 3)
+        else if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
         }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+        }
         else
         {
-            var typeAttributes =
-                TypeAttributes.Public | TypeAttributes.Sealed;
+            var typeAttributes = scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
+                ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
+                _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+            };
             var valueFieldAttributes =
                 FieldAttributes.Public | FieldAttributes.SpecialName | FieldAttributes.RTSpecialName;
 
             var underlyingType = this.UnsafeGetType("System.Int32");
-            var underlyingTypeNameToken = tokens.ElementAtOrDefault(2);
 
-            if (underlyingTypeNameToken?.Text is { } underlyingTypeName)
+            var underlyingTypeNameToken = tokens[2];
+            var underlyingTypeName = underlyingTypeNameToken.Text;
+
+            if (Utilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
             {
-                if (Utilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
-                {
-                    underlyingTypeName = originName;
-                }
-
-                if (!Utilities.IsEnumerationUnderlyingType(underlyingTypeName))
-                {
-                    this.OutputError(
-                        underlyingTypeNameToken,
-                        $"Invalid enumeration underlying type: {underlyingTypeName}");
-                }
-                else
-                {
-                    underlyingType = this.UnsafeGetType(underlyingTypeName);
-                }
+                underlyingTypeName = originName;
             }
 
-            var enumerationTypeNameToken = tokens[1];
+            if (!Utilities.IsEnumerationUnderlyingType(underlyingTypeName))
+            {
+                this.OutputError(
+                    underlyingTypeNameToken,
+                    $"Invalid enumeration underlying type: {underlyingTypeName}");
+            }
+            else
+            {
+                underlyingType = this.UnsafeGetType(underlyingTypeName);
+            }
+
+            var enumerationTypeNameToken = tokens[3];
             var enumerationTypeName = enumerationTypeNameToken.Text;
 
             if (this.TryGetType(enumerationTypeName, out var etref))
@@ -332,7 +386,12 @@ partial class Parser
             else
             {
                 var enumerationType = new TypeDefinition(
-                    "C.type",
+                    scopeDescriptor switch
+                    {
+                        ScopeDescriptors.Public => "C.type",
+                        ScopeDescriptors.Internal => "C.type",
+                        _ => "",
+                    },
                     enumerationTypeName,
                     typeAttributes,
                     this.systemEnumType.Value);
@@ -343,7 +402,16 @@ partial class Parser
                     underlyingType);
                 enumerationType.Fields.Add(enumerationValueField);
 
-                this.module.Types.Add(enumerationType);
+                switch (scopeDescriptor)
+                {
+                    case ScopeDescriptors.Public:
+                    case ScopeDescriptors.Internal:
+                        this.module.Types.Add(enumerationType);
+                        break;
+                    case ScopeDescriptors.File:
+                        this.fileScopedType.NestedTypes.Add(enumerationType);
+                        break;
+                }
                 this.enumerationType = enumerationType;
 
                 Debug.Assert(this.checkingMemberIndex == -1);
@@ -363,24 +431,37 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 2)
+        if (tokens.Length < 3)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Missing structure operand.");
         }
-        else if (tokens.Length > 3)
+        else if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
         }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+        }
         else
         {
-            var typeAttributes = TypeAttributes.Public | TypeAttributes.Sealed;
+            var typeAttributes = scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
+                ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
+                _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+            };
 
             short? packSize = null;
-            var aligningToken = tokens.ElementAtOrDefault(2);
+            var aligningToken = tokens.ElementAtOrDefault(3);
 
             if (aligningToken is { })
             {
@@ -413,7 +494,7 @@ partial class Parser
                 typeAttributes |= TypeAttributes.SequentialLayout;
             }
 
-            var structureTypeNameToken = tokens[1];
+            var structureTypeNameToken = tokens[2];
             var structureTypeName = structureTypeNameToken.Text;
 
             if (this.TryGetType(structureTypeName, out var stref))
@@ -447,7 +528,12 @@ partial class Parser
             else
             {
                 var structureType = new TypeDefinition(
-                    "C.type",
+                    scopeDescriptor switch
+                    {
+                        ScopeDescriptors.Public => "C.type",
+                        ScopeDescriptors.Internal => "C.type",
+                        _ => "",
+                    },
                     structureTypeName,
                     typeAttributes,
                     this.systemValueTypeType.Value);
@@ -457,7 +543,16 @@ partial class Parser
                     structureType.ClassSize = 0;
                 }
 
-                this.module.Types.Add(structureType);
+                switch (scopeDescriptor)
+                {
+                    case ScopeDescriptors.Public:
+                    case ScopeDescriptors.Internal:
+                        this.module.Types.Add(structureType);
+                        break;
+                    case ScopeDescriptors.File:
+                        this.fileScopedType.NestedTypes.Add(structureType);
+                        break;
+                }
                 this.structureType = structureType;
 
                 Debug.Assert(this.checkingMemberIndex == -1);

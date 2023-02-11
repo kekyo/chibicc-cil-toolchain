@@ -29,7 +29,7 @@ chibiasは、複数のCILソースコードを入力として、アセンブル�
 ![chibias overview](Images/chibias.png)
 
 chibiasはchibiccのバックエンドアセンブラとして開発しましたが、単独でも使用可能です。
-ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、人間にとっても書きやすくなっています。
+ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、機械出力を行いやすく、かつ人間にとっても書きやすくなっています。
 
 一般的なCコンパイラは、最終段階でリンカ `ld` に中間形式ファイル `*.o` を入力して生成しますが、chibiasはこのようなファイルを扱わずに、直接 `exe` や `dll`を生成します。chibiasは、リンカの機能を兼ねていると考えることが出来て、分割されたソースコードを扱う場合は、ソースコード自体 (`*.s`) を中間形式ファイルとみなせば、リンカと同様に扱うことが出来ます。
 
@@ -91,7 +91,7 @@ chibiasを使って "Hello world" を実行してみましょう。
 新しいソースコード・ファイル `hello.s` を作り、以下のようにコードを書きます。この4行だけでOKです:
 
 ```
-.function void main
+.function public void main
     ldstr "Hello world with chibias!"
     call System.Console.WriteLine string
     ret
@@ -119,7 +119,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 また、ビルトイン型（後述）だけを使用するコードをアセンブルした場合は、他のアセンブリへの参照は必要ありません:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4.1
     ldc.i4.2
     add
@@ -195,7 +195,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 ### 最小でエントリーポイントのみ含む例
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123    ; これはコメントです
     ret
 ```
@@ -205,14 +205,28 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
   * つまり、インデントはすべて無視されます。
 * セミコロン (';') はコメントの開始を意味します。行末までがすべてコメントとみなされます。
 * ピリオド ('.') で始まる単語は、「アセンブラディレクティブ」とみなされます。
-  * `.function` ディレクティブは、関数の開始を意味していて、戻り値の型名と関数名が続きます。
+  * `.function` ディレクティブは、関数の開始を意味しています。以下の順にオペランドが続きます:
+    * スコープ記述子
+    * 戻り値の型名
+    * 関数名
+    * 追加引数群（もしあれば）
   * 次の関数ディレクティブが現れるまで、関数の本体が続きます。
+
+スコープ記述子は、他の宣言でも共通です。
+
+|スコープ記述子|内容|
+|:----|:----|
+|`public`|どのスコープからも参照可能。外部アセンブリからでも参照可能。|
+|`internal`|同じアセンブリ内でのみ参照可能。|
+|`file`|現在のソースコードファイルからのみ参照可能。|
+
 * コマンドラインのオプションに `--exe` を指定するなどして、実行可能形式を生成する場合、関数名が `main` であれば、自動的にエントリポイントとみなされます。
+  エントリポイントのスコープ記述子は任意です（無視されます）。
 
 ### リテラル
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     ldc.r8 1.234
     ldstr "abc\"def\"ghi"
@@ -231,7 +245,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 ### ラベル
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     br NAME
     nop
@@ -282,7 +296,7 @@ NAME:
 ### ローカル変数
 
 ```
-.function int32 main
+.function public int32 main
     .local int32
     .local int32 abc
     ldc.i4 1
@@ -298,7 +312,7 @@ NAME:
 また、オプコードのオペランドで、変数名を使用して参照することができます:
 
 ```
-.function void foo
+.function public void foo
     .local int32 abc
     ldc.i4 1
     stloc abc
@@ -308,12 +322,12 @@ NAME:
 ### 別の関数を呼び出す
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 1
     ldc.i4 2
     call add2
     ret
-.function int32 add2 x:int32 y:int32
+.function public int32 add2 x:int32 y:int32
     ldarg 0
     ldarg y   ; パラメータ名で参照することができる
     add
@@ -335,7 +349,7 @@ NAME:
 事前に `test.dll` を作っておきます。内容は以下の通りです:
 
 ```
-.function int32 add2 a:int32 b:int32
+.function public int32 add2 a:int32 b:int32
     ldarg 0
     ldarg 1
     add
@@ -349,7 +363,7 @@ $ chibias -c test.s
 その後、以下のように、上記アセンブリの関数を呼び出します:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -393,18 +407,21 @@ public static class text
 
 このような関数のメタデータ配置規則を、"CABI (chibicc application binary interface) 仕様" と呼びます。
 
+CABIが適用されるのは、外部アセンブリから参照可能な場合のみです。
+関数のスコープが `public` ではない場合は、外部のアセンブリから参照出来ず、CABI準拠ではなくなります。
+
 ### 外部アセンブリの.NETメソッドの呼び出し
 
 .NETのメソッドを呼び出す場合は、完全なメソッド名と引数型リストを指定します:
 
 ```
-.function void main
+.function public void main
     ldstr "Hello world"
     call System.Console.WriteLine string
     ret
 ```
 
-指定するメソッドは public でなければならず、ジェネリックパラメータを持つメソッドを指定することはできません。
+指定する.NETのメソッドは `public` でなければならず、ジェネリックパラメータを持つメソッドを指定することはできません。
 インスタンスメソッドも指定できますが、当然ながら `this` の参照が評価スタックにプッシュされる必要があります。
 
 引数型リストは、メソッドのオーバーロードを特定するために使用されます。
@@ -416,7 +433,7 @@ public static class text
 コールサイトとは、`calli` オペコードで指定する、呼び出し対象メソッドのシグネチャ記述子です。
 
 ```
-.function int32 main
+.function public int32 main
     ldstr "123"
     ldftn System.Int32.Parse string
     calli int32 string
@@ -427,21 +444,21 @@ public static class text
 
 ### グローバル変数
 
-グローバル変数の書式は、ローカル変数と同じです。
+グローバル変数の書式は、ローカル変数の書式にスコープ記述子を加えたものです。
 ただし、関数本体定義の外側に配置します:
 
 ```
-.function int32 main
+.function public int32 main
     ldc.i4 123
     stsfld foo
     ldsfld foo
     ret
-.global int32 foo
+.global public int32 foo
 ```
 
 グローバル変数名は、前方参照、後方参照のいずれも可能です。
 
-グローバル変数は CABIに従って、`C.data` クラス内に配置されます。
+グローバル変数は `public` の場合、CABIに従って、`C.data` クラス内に配置されます。
 
 疑似的にC#で記述すると:
 
@@ -468,11 +485,11 @@ public static class text
 グローバル変数の宣言は、初期化データを含むことが出来ます:
 
 ```
-.function int32 bar
+.function public int32 bar
     ldsfld foo
     ret
 ; int32 foo = 0x76543210
-.global int32 foo 0x10 0x32 0x54 0x76
+.global internal int32 foo 0x10 0x32 0x54 0x76
 ```
 
 データはバイト単位で埋める必要があります。
@@ -487,10 +504,10 @@ chibiasは、 `value array` 型を使ってこれを擬似的に実現するこ�
 値型の配列を使用するには、以下のように型を宣言します:
 
 ```
-.function int8[5] bar   ; <-- 値型の配列には要素数が必要
+.function public int8[5] bar   ; <-- 値型の配列には要素数が必要
     ldsfld foo
     ret
-.global int8[5] foo 0x10 0x32 0x54 0x76 0x98
+.global internal int8[5] foo 0x10 0x32 0x54 0x76 0x98
 ```
 
 このとき、`bar` 関数の戻り値と `foo` 変数の型は、 `System.SByte_len5` 型になります。
@@ -536,7 +553,7 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 chibiasで定義できる列挙体型は、.NETでの列挙体型と同様で、`System.Enum` を暗黙のうちに継承した型です。
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef
     pork
     chicken
@@ -547,7 +564,7 @@ chibiasで定義できる列挙体型は、.NETでの列挙体型と同様で、
 ```csharp
 namespace C.type;
 
-public enum foo
+public enum foo : int
 {
     beef,
     pork,
@@ -559,20 +576,27 @@ public enum foo
 明示的に指定する場合は:
 
 ```
-.enumeration foo
+.enumeration public int32 foo
     beef 5
     pork 13
     chicken 42
 ```
 
-列挙体型は、元となる数値の型を明示的に指定することが出来ます:
+列挙体型は、元となる数値の型を変更することが出来ます:
 
 ```
-.enumeration foo int64   ; 値をint64として定義
+.enumeration public int64 foo   ; 値をint64として定義
     beef 5
     pork 13
     chicken 42
 ```
+
+元となる型には、以下の型のみ指定可能です:
+
+* `int8`, `uint8`
+* `int16`, `uint16`
+* `int32`, `uint32`
+* `int64`, `uint64`
 
 列挙体型は、完全に同一の定義であれば、複数回同じ型名の定義が現れても問題ありません。
 
@@ -584,10 +608,10 @@ public enum foo
 chibiasで定義できる構造体型は、.NETでの構造体型と同様で、`System.ValueType` を暗黙のうちに継承した型です。
 
 ```
-.structure foo
-    int32 a
-    int8 b
-    int32 c
+.structure public foo
+    public int32 a
+    internal int8 b
+    public int32 c
 ```
 
 疑似的にC#で記述すると:
@@ -599,28 +623,31 @@ namespace C.type;
 public struct foo
 {
     public int a;
-    public sbyte b;
+    internal sbyte b;
     public int c;
 }
 ```
+
+構造体の各メンバーには、スコープ記述子が指定出来ます。
+但し、`public` と `internal` のみで、`file` は指定出来ません。
 
 デフォルトでは、構造体のパッキングはCLRに任されています。
 明示的に指定する場合は:
 
 ```
-.structure foo 4  ; pack=4
-    int32 a
-    int8 b
-    int32 c
+.structure public foo 4  ; pack=4
+    public int32 a
+    public int8 b
+    public int32 c
 ```
 
 または各メンバーにオフセットを与えます:
 
 ```
-.structure foo explicit
-    int32 a 0     ; offset=0
-    int8 b 4      ; offset=4
-    int32 c 5     ; offset=5
+.structure public foo explicit
+    public int32 a 0     ; offset=0
+    public int8 b 4      ; offset=4
+    public int32 c 5     ; offset=5
 ```
 
 オフセットを任意に調整することで、C言語における共用体型を再現することができます。
@@ -640,7 +667,7 @@ public struct foo
 
 ```
 .file 1 "/home/kouji/Projects/test.c" c
-.function int32 main
+.function public int32 main
     .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456

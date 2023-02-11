@@ -17,51 +17,66 @@ partial class Parser
 {
     private void ParseStructureMember(Token[] tokens)
     {
-        if (tokens.Length < 2)
+        if (tokens.Length < 3)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Missing member operand.");
         }
-        else if (tokens.Length > 3)
+        else if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
         }
+        else if (!Utilities.TryLookupScopeDescriptorName(
+            tokens[0].Text,
+            out var scopeDescriptor) ||
+            scopeDescriptor == ScopeDescriptors.File)
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+        }
         else
         {
-            var memberTypeNameToken = tokens[0];
+            var fieldAttribute = scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => FieldAttributes.Public,
+                _ => FieldAttributes.Assembly,
+            };
+
+            var memberTypeNameToken = tokens[1];
             var memberTypeName = memberTypeNameToken.Text;
-            var memberNameToken = tokens[1];
+            var memberNameToken = tokens[2];
             var memberName = memberNameToken.Text;
 
             int? memberOffset = null;
             if (this.structureType!.Attributes.HasFlag(TypeAttributes.SequentialLayout))
             {
-                if (tokens.Length == 3)
+                if (tokens.Length == 4)
                 {
                     this.OutputError(
-                        tokens[2],
-                        $"Could not apply member offset: {tokens[2].Text}");
+                        tokens[3],
+                        $"Could not apply member offset: {tokens[3].Text}");
                 }
             }
             else
             {
                 Debug.Assert(this.structureType!.Attributes.HasFlag(TypeAttributes.ExplicitLayout));
 
-                if (tokens.Length == 2)
+                if (tokens.Length == 3)
                 {
                     this.OutputError(
                         memberNameToken,
                         $"Missing member offset operand: {memberName}");
                 }
-                else if (!int.TryParse(tokens[2].Text, out var offset) ||
+                else if (!Utilities.TryParseInt32(tokens[3].Text, out var offset) ||
                     offset < 0)
                 {
                     this.OutputError(
-                        tokens[2],
-                        $"Invalid member offset: {tokens[2].Text}");
+                        tokens[3],
+                        $"Invalid member offset: {tokens[3].Text}");
                 }
                 else
                 {
@@ -87,7 +102,7 @@ partial class Parser
                         memberNameToken,
                         $"Structure member name difference exists before declared type: {field.Name}");
                 }
-                else if (field.Attributes != FieldAttributes.Public)
+                else if ((field.Attributes & fieldAttribute) != fieldAttribute)
                 {
                     this.OutputError(
                         memberTypeNameToken,
@@ -134,7 +149,9 @@ partial class Parser
                 }
 
                 field = new FieldDefinition(
-                    memberName, FieldAttributes.Public, memberType);
+                    memberName,
+                    fieldAttribute,
+                    memberType);
 
                 if (memberOffset is { } mo)
                 {

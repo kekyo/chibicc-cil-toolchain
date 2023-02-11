@@ -14,8 +14,17 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace chibias.Internal;
+
+internal enum ScopeDescriptors
+{
+    Public,
+    Internal,
+    File,
+}
 
 internal static class Utilities
 {
@@ -26,6 +35,13 @@ internal static class Utilities
             field.FieldType.FullName == "Mono.Cecil.Cil.OpCode").
         Select(field => (OpCode)field.GetValue(null)!).
         ToDictionary(opCode => opCode.Name.Replace('_', '.').ToLowerInvariant());
+
+    private static readonly Dictionary<string, ScopeDescriptors> scopeDescriptors = new()
+    {
+        { "public", ScopeDescriptors.Public },
+        { "internal", ScopeDescriptors.Internal },
+        { "file", ScopeDescriptors.File },
+    };
 
     private static readonly Dictionary<string, string> aliasTypeNames =
         new Dictionary<string, string>()
@@ -68,6 +84,17 @@ internal static class Utilities
     {
         "System.Byte", "System.SByte", "System.Int16", "System.UInt16",
         "System.Int32", "System.UInt32", "System.Int64", "System.UInt64",
+    };
+
+    private static readonly HashSet<char> invalidMemberNameChars = new()
+    {
+        '-', '+', '=', '#', '@', '$', '%', '~', '.', ',', ':', ';',
+        '*', '&', '^', '?', '!', '\'', '"', '`', '|', '/', '\\',
+        '[', ']', '(', ')', '<', '>', '{', '}',
+        '\a', '\b', '\t', '\n', '\v', '\f', '\r',
+        '\u0001', '\u0002', '\u0003', '\u0004', '\u0005', '\u0006', '\u000e', '\u000f',
+        '\u0010', '\u0011', '\u0012', '\u0013', '\u0014', '\u0015', '\u0016', '\u0017',
+        '\u0018', '\u0019', '\u001a', '\u001b', '\u001c', '\u001d', '\u001e', '\u001f',
     };
 
     public static int GetOpCodeStackSize(StackBehaviour sb) =>
@@ -115,10 +142,31 @@ internal static class Utilities
             _ => throw new InvalidOperationException(),
         };
 
-    public static bool TryLookupOriginTypeName(string typeName, out string originTypeName) =>
+    public static string SanitizeFileNameToMemberName(string fileName)
+    {
+        var sb = new StringBuilder(fileName);
+        for (var index = 0; index < sb.Length; index++)
+        {
+            if (invalidMemberNameChars.Contains(sb[index]))
+            {
+                sb[index] = '_';
+            }
+        }
+        return sb.ToString();
+    }
+
+    public static bool TryLookupScopeDescriptorName(
+        string scopeDescriptorName,
+        out ScopeDescriptors scopeDescriptor) =>
+        scopeDescriptors.TryGetValue(scopeDescriptorName, out scopeDescriptor);
+
+    public static bool TryLookupOriginTypeName(
+        string typeName,
+        out string originTypeName) =>
         aliasTypeNames.TryGetValue(typeName, out originTypeName!);
 
-    public static bool IsEnumerationUnderlyingType(string typeName) =>
+    public static bool IsEnumerationUnderlyingType(
+        string typeName) =>
         enumerationUnderlyingTypes.Contains(typeName);
 
 #if NET40 || NET45
