@@ -25,11 +25,11 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed source_s
+.class private abstract auto ansi sealed source
        extends [mscorlib]System.Object
 {
   .field static assembly int32 baz
-} // end of class source_s
+} // end of class source
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object

@@ -344,6 +344,27 @@ NAME:
 重要: chibiasで定義された関数を呼び出す場合は、`call` オペランドに引数型リストを指定する必要はありません。
 .NETのオーバーロードされたメソッドを呼び出す場合は、引数型リストが必要です。
 
+関数の引数で、可変引数を受け取るように定義することが出来ます:
+
+```
+.function public int32 add_n count:int32 ...
+    .local System.ArgIterator
+    ldloca.s 0
+    arglist
+    call System.ArgIterator..ctor System.RuntimeArgumentHandle
+    ; (ArgIteratorを使って列挙する)
+    ret
+```
+
+パラメータリストの終端にのみ、`...` を指定する事が可能です。
+この指定により、この関数は可変引数を受け取る事ができます。
+
+但し、この可変引数は、C#における可変引数とは扱いが異なることに注意してください。
+C#では、可変引数を.NET配列で受け取りますが、chibiasではCILの`arglist`と呼ばれる機能を使います。
+
+この可変引数は、上記例のように、`System.ArgIterator`型を用いて列挙を行います。
+詳しくは、C#の`__arglist`キーワードや`ArgIterator`で調べて下さい。
+
 ### 外部アセンブリの関数の呼び出し
 
 事前に `test.dll` を作っておきます。内容は以下の通りです:

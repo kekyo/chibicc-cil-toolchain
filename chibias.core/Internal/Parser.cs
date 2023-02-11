@@ -13,7 +13,6 @@ using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -124,15 +123,18 @@ internal sealed partial class Parser
             this.module.TypeSystem.Object);
 
         this.currentFile = unknown;
-        this.fileScopedType = new(
-            "",
-            "unknown_s",
-            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class,
-            this.module.TypeSystem.Object);
+        this.fileScopedType = this.CreateFileScopedType(
+             CecilUtilities.SanitizeFileNameToMemberName("unknown.s"));
     }
 
     /////////////////////////////////////////////////////////////////////
+
+    private TypeDefinition CreateFileScopedType(string typeName) => new(
+        "",
+        typeName,
+        TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
+        TypeAttributes.Class,
+        this.module.TypeSystem.Object);
 
     public void BeginNewCilSourceCode(
         string? basePath,
@@ -148,20 +150,14 @@ internal sealed partial class Parser
         }
 
         // Lookup exist type or create new type.
-        var typeName = Utilities.SanitizeFileNameToMemberName(
-            Path.GetFileName(sourcePathDebuggerHint));
+        var typeName = CecilUtilities.SanitizeFileNameToMemberName(sourcePathDebuggerHint);
         if (this.module.Types.FirstOrDefault(type => type.Name == typeName) is { } type)
         {
             this.fileScopedType = type;
         }
         else
         {
-            this.fileScopedType = new(
-                "",
-                typeName,
-                TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
-                TypeAttributes.Class,
-                this.module.TypeSystem.Object);
+            this.fileScopedType = this.CreateFileScopedType(typeName);
         }
 
         this.currentFile = new(
@@ -223,7 +219,7 @@ internal sealed partial class Parser
     private TypeReference UnsafeGetType(
         string typeName)
     {
-        if (!this.TryGetType(typeName, out var type))
+        if (!this.TryGetType(typeName, out var type, null))
         {
             this.caughtError = true;
             this.logger.Error($"Could not find for important type: {typeName}");
@@ -236,7 +232,7 @@ internal sealed partial class Parser
     private MethodReference UnsafeGetMethod(
         string methodName, string[] parameterTypeNames)
     {
-        if (!this.TryGetMethod(methodName, parameterTypeNames, out var method))
+        if (!this.TryGetMethod(methodName, parameterTypeNames, out var method, null))
         {
             this.caughtError = true;
             this.logger.Error($"Could not find for important method: {methodName}");
@@ -248,14 +244,23 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    public bool TryGetType(
+    private bool TryGetType(
         string name,
-        out TypeReference type)
+        out TypeReference type) =>
+        this.TryGetType(name, out type, this.fileScopedType);
+
+    private bool TryGetType(
+        string name,
+        out TypeReference type,
+        TypeDefinition? fileScopedType)
     {
         switch (name[name.Length - 1])
         {
             case '*':
-                if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType1))
+                if (this.TryGetType(
+                    name.Substring(0, name.Length - 1),
+                    out var preType1,
+                    fileScopedType))
                 {
                     type = new PointerType(this.Import(preType1));
                     return true;
@@ -266,7 +271,10 @@ internal sealed partial class Parser
                     return false;
                 }
             case '&':
-                if (this.TryGetType(name.Substring(0, name.Length - 1), out var preType2))
+                if (this.TryGetType(
+                    name.Substring(0, name.Length - 1),
+                    out var preType2,
+                    fileScopedType))
                 {
                     type = new ByReferenceType(this.Import(preType2));
                     return true;
@@ -280,7 +288,10 @@ internal sealed partial class Parser
                 var startBracketIndex = name.LastIndexOf('[', name.Length - 2);
                 // "aaa"
                 if (startBracketIndex >= 1 &&
-                    this.TryGetType(name.Substring(0, startBracketIndex), out var elementType))
+                    this.TryGetType(
+                        name.Substring(0, startBracketIndex),
+                        out var elementType,
+                        fileScopedType))
                 {
                     // "aaa[]"
                     if ((name.Length - startBracketIndex - 2) == 0)
@@ -313,21 +324,23 @@ internal sealed partial class Parser
                     return false;
                 }
             default:
+                // Use current scoped type when not given.
+                fileScopedType ??= this.fileScopedType;
+
                 // IMPORTANT ORDER:
                 //   Will lookup before this module, because the types redefinition by C headers
                 //   each assembly (by generating chibias).
                 //   Always we use first finding type, silently ignored when multiple declarations.
-                if (this.fileScopedType.NestedTypes.FirstOrDefault(type =>
+                if (fileScopedType?.NestedTypes.FirstOrDefault(type =>
                     type.Name == name) is { } td2)
                 {
                     type = td2;
                     return true;
                 }
                 else if (this.module.Types.FirstOrDefault(type =>
-                    (type.Namespace == "C.type" ?
-                        type.Name :
-                        // FullName is needed because the value array type name is not CABI.
-                        type.FullName) == name) is { } td3)
+                    (type.Namespace == "C.type" && type.Name == name) ||
+                    // FullName is needed because the value array type name is not CABI.
+                    (type.FullName == name)) is { } td3)
                 {
                     type = td3;
                     return true;
@@ -341,9 +354,12 @@ internal sealed partial class Parser
                 {
                     return true;
                 }
-                else if (Utilities.TryLookupOriginTypeName(name, out var originTypeName))
+                else if (CecilUtilities.TryLookupOriginTypeName(name, out var originTypeName))
                 {
-                    return this.TryGetType(originTypeName, out type);
+                    return this.TryGetType(
+                        originTypeName,
+                        out type,
+                        fileScopedType);
                 }
                 else if (this.referenceTypes.TryGetMember(name, out var td4))
                 {
@@ -358,8 +374,18 @@ internal sealed partial class Parser
         }
     }
 
-    public bool TryGetMethod(
-        string name, string[] parameterTypeNames, out MethodReference method)
+    private bool TryGetMethod(
+        string name,
+        string[] parameterTypeNames,
+        out MethodReference method) =>
+        this.TryGetMethod(
+            name, parameterTypeNames, out method, this.fileScopedType);
+
+    private bool TryGetMethod(
+        string name,
+        string[] parameterTypeNames,
+        out MethodReference method,
+        TypeDefinition? fileScopedType)
     {
         var methodNameIndex = name.LastIndexOf('.');
         var methodName = name.Substring(methodNameIndex + 1);
@@ -374,7 +400,7 @@ internal sealed partial class Parser
         if (methodNameIndex <= 0 &&
             parameterTypeNames.Length == 0)
         {
-            if (this.fileScopedType.Methods.
+            if (fileScopedType?.Methods.
                 FirstOrDefault(method => method.Name == methodName) is { } m2)
             {
                 method = m2;
@@ -407,7 +433,11 @@ internal sealed partial class Parser
         }
 
         var strictParameterTypeNames = parameterTypeNames.
-            Select(parameterTypeName => this.TryGetType(parameterTypeName, out var type) ? type.FullName : string.Empty).
+            Select(parameterTypeName => this.TryGetType(
+                parameterTypeName,
+                out var type,
+                fileScopedType) ?
+                    type.FullName : string.Empty).
             ToArray();
 
         if (strictParameterTypeNames.Contains(string.Empty))
@@ -432,14 +462,21 @@ internal sealed partial class Parser
         }
     }
 
-    public bool TryGetField(
-        string name, out FieldReference field)
+    private bool TryGetField(
+        string name,
+        out FieldReference field) =>
+        this.TryGetField(name, out field, this.fileScopedType);
+
+    private bool TryGetField(
+        string name,
+        out FieldReference field,
+        TypeDefinition? fileScopedType)
     {
         var fieldNameIndex = name.LastIndexOf('.');
         var fieldName = name.Substring(fieldNameIndex + 1);
         if (fieldNameIndex <= 0)
         {
-            if (this.fileScopedType.Fields.
+            if (fileScopedType?.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
@@ -490,10 +527,15 @@ internal sealed partial class Parser
     private void DelayLookingUpType(
         string typeName,
         Token typeNameToken,
-        Action<TypeReference> action) =>
+        Action<TypeReference> action)
+    {
+        var capturedFileScopedType = this.fileScopedType;
         this.delayedLookupLocalMemberActions.Add(() =>
         {
-            if (this.TryGetType(typeName, out var type))
+            if (this.TryGetType(
+                typeName,
+                out var type,
+                capturedFileScopedType))
             {
                 action(type);
             }
@@ -504,6 +546,7 @@ internal sealed partial class Parser
                     $"Could not find type: {typeName}");
             }
         });
+    }
 
     private void DelayLookingUpType(
         Token typeNameToken,
@@ -516,10 +559,15 @@ internal sealed partial class Parser
     private void DelayLookingUpType(
         string typeName,
         Location location,
-        Action<TypeReference> action) =>
+        Action<TypeReference> action)
+    {
+        var capturedFileScopedType = this.fileScopedType;
         this.delayedLookupLocalMemberActions.Add(() =>
         {
-            if (this.TryGetType(typeName, out var type))
+            if (this.TryGetType(
+                typeName,
+                out var type,
+                capturedFileScopedType))
             {
                 action(type);
             }
@@ -530,13 +578,19 @@ internal sealed partial class Parser
                     $"Could not find type: {typeName}");
             }
         });
+    }
 
     private void DelayLookingUpField(
         Token fieldNameToken,
-        Action<FieldReference> action) =>
+        Action<FieldReference> action)
+    {
+        var capturedFileScopedType = this.fileScopedType;
         this.delayedLookupLocalMemberActions.Add(() =>
         {
-            if (this.TryGetField(fieldNameToken.Text, out var field))
+            if (this.TryGetField(
+                fieldNameToken.Text,
+                out var field,
+                capturedFileScopedType))
             {
                 action(field);
             }
@@ -547,14 +601,20 @@ internal sealed partial class Parser
                     $"Could not find field: {fieldNameToken.Text}");
             }
         });
+    }
 
     private void DelayLookingUpField(
         string fieldName,
         Location location,
-        Action<FieldReference> action) =>
-        this.delayedLookupLocalMemberActions.Add(() =>
+        Action<FieldReference> action)
+    {
+        var capturedFileScopedType = this.fileScopedType;
+        delayedLookupLocalMemberActions.Add(() =>
         {
-            if (this.TryGetField(fieldName, out var field))
+            if (this.TryGetField(
+                fieldName,
+                out var field,
+                capturedFileScopedType))
             {
                 action(field);
             }
@@ -565,15 +625,21 @@ internal sealed partial class Parser
                     $"Could not find field: {fieldName}");
             }
         });
+    }
 
     private void DelayLookingUpMethod(
         Token methodNameToken,
         string[] parameterTypeNames,
-        Action<MethodReference> action) =>
+        Action<MethodReference> action)
+    {
+        var capturedFileScopedType = this.fileScopedType;
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetMethod(
-                methodNameToken.Text, parameterTypeNames, out var method))
+                methodNameToken.Text,
+                parameterTypeNames,
+                out var method,
+                capturedFileScopedType))
             {
                 action(method);
             }
@@ -584,16 +650,22 @@ internal sealed partial class Parser
                     $"Could not find method: {methodNameToken.Text}");
             }
         });
+    }
 
     private void DelayLookingUpMethod(
         string methodName,
         string[] parameterTypeNames,
         Location location,
-        Action<MethodReference> action) =>
+        Action<MethodReference> action)
+    {
+        var capturedFileScopedType = this.fileScopedType;
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetMethod(
-                methodName, parameterTypeNames, out var method))
+                methodName,
+                parameterTypeNames,
+                out var method,
+                capturedFileScopedType))
             {
                 action(method);
             }
@@ -604,6 +676,7 @@ internal sealed partial class Parser
                     $"Could not find method: {methodName}");
             }
         });
+    }
 
     /////////////////////////////////////////////////////////////////////
 
@@ -638,7 +711,7 @@ internal sealed partial class Parser
                 // Is it an OpCode?
                 case TokenTypes.Identity
                     when this.instructions != null &&
-                         Utilities.TryParseOpCode(token0.Text, out var opCode):
+                         CecilUtilities.TryParseOpCode(token0.Text, out var opCode):
                     this.ParseInstruction(opCode, tokens);
                     break;
                 // Is it an enumeration member?
@@ -746,11 +819,16 @@ internal sealed partial class Parser
                 this.module.Types.Add(this.fileScopedType);
             }
 
+            this.fileScopedType = this.CreateFileScopedType(
+                 CecilUtilities.SanitizeFileNameToMemberName("unknown.s"));
+
+            // Add text type when exist methods.
             if (this.cabiTextType.Methods.Count >= 1)
             {
                 this.module.Types.Add(this.cabiTextType);
             }
 
+            // Add data type when exist methods.
             if (this.cabiDataType.Fields.Count >= 1)
             {
                 this.module.Types.Add(this.cabiDataType);
@@ -784,8 +862,11 @@ internal sealed partial class Parser
             // main entry point lookup.
             if (this.produceExecutable)
             {
-                if (this.TryGetMethod("main", new string[0], out var mm) &&
-                    mm is MethodDefinition mainMethod)
+                if (this.module.Types.
+                    Where(type => type.IsAbstract && type.IsSealed).
+                    SelectMany(type => type.Methods).
+                    FirstOrDefault(m => m.IsStatic && m.Parameters.Count == 0 &&
+                    m.Name == "main") is { } mainMethod)                        
                 {
                     this.module.EntryPoint = mainMethod;
                 }

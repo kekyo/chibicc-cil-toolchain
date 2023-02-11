@@ -25,19 +25,21 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed source
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .field static assembly int32 foo
-  .method assembly static int32  main() cil managed
+  .method assembly static vararg void  foo() cil managed
   {
-    // Code size       6 (0x6)
-    .maxstack  8
-    IL_0000:  ldsfld     int32 source::foo
-    IL_0005:  ret
-  } // end of method source::main
+    // Code size       10 (0xa)
+    .maxstack  2
+    .locals (valuetype [mscorlib]System.ArgIterator V_0)
+    IL_0000:  ldloca.s   V_0
+    IL_0002:  arglist
+    IL_0004:  call       instance void [mscorlib]System.ArgIterator::.ctor(valuetype [mscorlib]System.RuntimeArgumentHandle)
+    IL_0009:  ret
+  } // end of method text::foo
 
-} // end of class source
+} // end of class C.text
 
 
 // =============================================================

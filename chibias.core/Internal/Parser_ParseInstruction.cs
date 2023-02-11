@@ -456,7 +456,7 @@ partial class Parser
                 });
             }
 
-            instruction = Utilities.CreateInstruction(opCode, member);
+            instruction = CecilUtilities.CreateInstruction(opCode, member);
             return instruction;
         }
 
@@ -494,16 +494,18 @@ partial class Parser
 
             callSite = new(returnType);
 
-            foreach (var parameterTypeToken in tokens.Skip(2))
+            foreach (var parameterTypeNameToken in tokens.Skip(2))
             {
+                var parameterTypeName = parameterTypeNameToken.Text;
+
                 ParameterDefinition parameter = null!;
-                if (!this.TryGetType(parameterTypeToken.Text, out var parameterType))
+                if (!this.TryGetType(parameterTypeName, out var parameterType))
                 {
                     parameterType = this.CreateDummyType();
 
                     this.DelayLookingUpType(
-                        parameterTypeToken.Text,
-                        this.GetCurrentLocation(parameterTypeToken, parameterTypeToken),
+                        parameterTypeName,
+                        this.GetCurrentLocation(parameterTypeNameToken, parameterTypeNameToken),
                         type => parameter.ParameterType = type);
                 }
 

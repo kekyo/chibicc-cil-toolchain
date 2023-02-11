@@ -25,7 +25,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed source_s
+.class private abstract auto ansi sealed source
        extends [mscorlib]System.Object
 {
   .method assembly static int32  baz() cil managed
@@ -34,9 +34,9 @@
     .maxstack  8
     IL_0000:  ldc.i4.1
     IL_0001:  ret
-  } // end of method source_s::baz
+  } // end of method source::baz
 
-} // end of class source_s
+} // end of class source
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object

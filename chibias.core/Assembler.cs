@@ -73,12 +73,13 @@ public sealed class Assembler
                         $"Unable read reference assembly: {path}, {ex.GetType().FullName}: {ex.Message}");
                     return null;
                 }
-            }).
-            ToArray();
+            })
+#if DEBUG
+            .ToArray()
+#endif
+            ;
 
-        return new(
-            this.logger,
-            assemblies.
+        var types = assemblies.
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
             Distinct(TypeDefinitionComparer.Instance).
@@ -86,7 +87,13 @@ public sealed class Assembler
             Where(type =>
                 type.IsPublic &&
                 (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
-                type.GenericParameters.Count == 0));
+                type.GenericParameters.Count == 0)
+#if DEBUG
+            .ToArray()
+#endif
+            ;
+
+        return new(this.logger, types);
     }
 
     private MemberDictionary<MemberReference> AggregateCAbiSpecificSymbols(
@@ -340,9 +347,8 @@ public sealed class Assembler
 
         var baseSourcePath = sourceFullPaths.Length == 1 ?
             Utilities.GetDirectoryPath(sourceFullPaths[0]) :
-            Path.Combine(sourceFullPaths.
-                Select(path => path.Split(Path.DirectorySeparatorChar)).
-                Aggregate((path0, path1) => path0.Intersect(path1).ToArray()));  // Intersect is stable?
+            Utilities.IntersectStrings(sourceFullPaths).
+                TrimEnd(Path.DirectorySeparatorChar);
 
         this.logger.Information(
             $"Source code base path: {baseSourcePath}");
