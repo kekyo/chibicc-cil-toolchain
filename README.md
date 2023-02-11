@@ -364,7 +364,7 @@ However, that this variable argument is handled differently from variable argume
 chibias uses `arglist` semantics in defined CIL.
 
 `arglist` is enumerated using the `System.ArgIterator` type, as in the example above.
-For more information, look up the `__arglist` keyword or `ArgIterator` in C#.
+For more information, you need to Google the `__arglist` keyword or `ArgIterator` in C#.
 
 ### Call external function
 
@@ -752,6 +752,7 @@ Might be implemented:
 Might not be implemented:
 
 * `OperandType`
+  * InlineSwitch
   * InlinePhi
 * Handling multi-dimensional array types.
 * Exception handling.
