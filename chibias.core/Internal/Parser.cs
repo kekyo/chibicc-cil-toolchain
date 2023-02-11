@@ -13,7 +13,6 @@ using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -124,15 +123,17 @@ internal sealed partial class Parser
             this.module.TypeSystem.Object);
 
         this.currentFile = unknown;
-        this.fileScopedType = new(
-            "",
-            "unknown_s",
-            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class,
-            this.module.TypeSystem.Object);
+        this.fileScopedType = this.CreateFileScopedType("unknown_s");
     }
 
     /////////////////////////////////////////////////////////////////////
+
+    private TypeDefinition CreateFileScopedType(string typeName) => new(
+        "",
+        typeName,
+        TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
+        TypeAttributes.Class,
+        this.module.TypeSystem.Object);
 
     public void BeginNewCilSourceCode(
         string? basePath,
@@ -156,12 +157,7 @@ internal sealed partial class Parser
         }
         else
         {
-            this.fileScopedType = new(
-                "",
-                typeName,
-                TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
-                TypeAttributes.Class,
-                this.module.TypeSystem.Object);
+            this.fileScopedType = this.CreateFileScopedType(typeName);
         }
 
         this.currentFile = new(
@@ -324,10 +320,9 @@ internal sealed partial class Parser
                     return true;
                 }
                 else if (this.module.Types.FirstOrDefault(type =>
-                    (type.Namespace == "C.type" ?
-                        type.Name :
-                        // FullName is needed because the value array type name is not CABI.
-                        type.FullName) == name) is { } td3)
+                    (type.Namespace == "C.type" && type.Name == name) ||
+                    // FullName is needed because the value array type name is not CABI.
+                    (type.FullName == name)) is { } td3)
                 {
                     type = td3;
                     return true;
@@ -745,6 +740,8 @@ internal sealed partial class Parser
             {
                 this.module.Types.Add(this.fileScopedType);
             }
+
+            this.fileScopedType = this.CreateFileScopedType("unknown_s");
 
             if (this.cabiTextType.Methods.Count >= 1)
             {
