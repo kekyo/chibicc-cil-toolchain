@@ -727,6 +727,29 @@ public struct foo
 
 これらのディレクティブを適用しなかった場合は、CILソースファイル自身を示すようなデバッグ情報を生成します。
 
+
+----
+
+## ソースコードのビルド
+
+ビルドは.NET 7 SDK環境で可能です。ビルドに必要な前提条件はありません。
+例えば:
+
+```bash
+$ dotnet build chibias.sln
+```
+
+テストは現在のところ、WindowsバイナリのILDAsmに依存しているため、Windows環境でのみ実行できます。
+手元の環境で、30秒ほどかかりました。
+
+```cmd
+C:\> dotnet test chibias.sln
+```
+
+`build-nupkg.bat`又は`build-nupkg.sh`を使用すると、NuGetパッケージを`artifacts`ディレクトリに生成します。
+`chibias.net4`プロジェクトは、`Release`ビルドで`net48`向けの単一ファイルバイナリを生成します。
+
+
 ----
 
 ## TODO

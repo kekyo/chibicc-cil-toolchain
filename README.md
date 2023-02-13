@@ -740,6 +740,29 @@ Will produce debugging information with CIL source file itself when does not app
 
 ----
 
+## Building from source code
+
+Builds can be done in .NET 7 SDK environment.
+There are no prerequisites required for the build.
+For example:
+
+```bash
+$ dotnet build chibias.sln
+```
+
+The test currently relies on the Windows version ILDAsm, so it can only be run in a Windows environment.
+In my environment, it takes about 30 seconds.
+
+```cmd
+C:\> dotnet test chibias.sln
+```
+
+The `build-nupkg.bat` or `build-nupkg.sh` will generate NuGet packages in the `artifacts` directory.
+The `chibias.net4` project generates single file binaries for `net48` in `Release` build.
+
+
+----
+
 ## TODO
 
 Might be implemented:
