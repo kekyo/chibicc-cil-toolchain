@@ -256,9 +256,15 @@ NAME:
 Label name ends with (':').
 Label name requires unique in the function scope.
 
-### Builtin type names
+### The type names
 
-|Type name|Exact type|Alias type names|
+Type names can be both built-in types and .NET.
+.NET type names are always specified as fully qualified names with namespaces.
+For example, in the form `System.String`.
+
+The built-in type is as follows:
+
+|Build-in type|Exact type|Alias type names|
 |:----|:----|:----|
 |`void`|`System.Void`| |
 |`uint8`|`System.Byte`|`byte`|
@@ -279,18 +285,45 @@ Label name requires unique in the function scope.
 |`string`|`System.String`| |
 |`typeref`|`System.TypedReference`| |
 
-You can combine array/pointer/refernces.
+The function pointer type is specified as follows:
 (Separated with white space is not allowed.)
 
-* `int[]`
-* `int[][]`
-* `int[4]`
-* `int[4][3]`
+```
+string(int8,int32)*
+```
+
+Pseudo code in C#:
+
+```csharp
+// Static method example.
+static string foo(sbyte a, int b)
+
+// Function delegate example.
+unsafe delegate*<sbyte, int, string>
+```
+
+It can also represent function pointer types with variable arguments marked `...`:
+
+```
+string(int8,int32,...)*
+```
+
+You can combine array/pointer/refernces.
+
+* `int32[]`
+* `int32[][]`
+* `int32[4]`
+* `int32[4][3]`
 * `int32*`
 * `int32**`
 * `int32&`
+* `string(int32&,int8)*[42]`
 
-A type that specifies the number of elements in an array is called a "Value array type" and is treated differently from an array in .NET CLR.
+A type that specifies the number of elements in an array is called a "Value array type."
+
+"Function pointer types", "Variable arguments", and "Value array types" are treated differently from
+"Delegate types", "Variable arguments marked `params`" and "Arrays derived from `System.Array`" in C#.
+
 See separate section for details.
 
 ### Local variables
@@ -452,19 +485,22 @@ A list of parameter types is used to identify overloads.
 You have to give it containing assembly on command line option `-r`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
 
-### Call site syntax
+### Function signature syntax
 
-The call site is the signature descriptor of the target method that must be indicated by the `calli` opcode:
+The function signature is the target method signature that must be indicated by the `calli` opcode.
+Sometimes referred to as "Call sites."
+In chibias, it is specified with the same syntax as the function pointer type:
 
 ```
 .function public int32 main
     ldstr "123"
     ldftn System.Int32.Parse string
-    calli int32 string
+    calli int32(string)
     ret
 ```
 
-The call site specifies the return type and a list of parameter types.
+It differs from the function pointer type,
+function signature is not a pointer so does not terminate with `*`.
 
 ### Global variables
 
@@ -781,6 +817,7 @@ The `chibias.net4` project generates single file binaries for `net48` in `Releas
 
 Might be implemented:
 
+* Handling function pointer type.
 * Automatic implements `IList<T>` on value array type.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.

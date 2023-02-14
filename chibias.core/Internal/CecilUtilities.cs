@@ -12,6 +12,7 @@ using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace chibias.Internal;
@@ -174,4 +175,30 @@ internal static class CecilUtilities
         string word,
         out OpCode opCode) =>
         opCodes.TryGetValue(word, out opCode);
+
+    public static bool TryMakeFunctionPointerType(
+        this MethodReference method,
+        out FunctionPointerType type)
+    {
+        if (method.HasThis)
+        {
+            type = null!;
+            return false;
+        }
+
+        type = new FunctionPointerType
+        {
+            ReturnType = method.ReturnType,
+            CallingConvention = method.CallingConvention,
+            HasThis = method.HasThis,
+            ExplicitThis = method.ExplicitThis,
+        };
+        foreach (var parameter in method.Parameters)
+        {
+            type.Parameters.Add(new(
+                parameter.Name, parameter.Attributes, parameter.ParameterType));
+        }
+
+        return true;
+    }
 }
