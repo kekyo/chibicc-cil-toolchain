@@ -516,6 +516,20 @@ public static class text
 データはバイト単位で埋める必要があります。
 また、配置されたデータは書き込み可能であるため、取り扱いには注意が必要です。
 
+特殊なデータとして、他のグローバル変数や関数へのポインタを含めることが出来ます:
+
+```
+.function public int32 bar
+    ldsfld foo
+    ldind.i4
+    ret
+.global internal int32* foo &baz
+.global internal int32 baz 0x10 0x32 0x54 0x76
+```
+
+グローバル変数や関数へのポインタを含める場合は、`&`から始まる変数名・関数名を記述します。
+また、その型は、ポインタ型、`void*`, `intptr`、`uintptr`型のいずれかを指定します。
+
 ### 値型の配列
 
 .NETには、値型のように振る舞う配列型がありません。

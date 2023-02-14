@@ -520,6 +520,20 @@ The data must be fill in bytes.
 In addition, since the placed data will be writable,
 care must be taken in handling it.
 
+Special data can include pointers to other global variables and function pointers:
+
+```
+.function public int32 bar
+    ldsfld foo
+    ldind.i4
+    ret
+.global internal int32* foo &baz
+.global internal int32 baz 0x10 0x32 0x54 0x76
+```
+
+To include a pointer, write the name of the variable/function beginning with `&`.
+The type can be a pointer, `void*`, `intptr`, and `uintptr` type.
+
 ### Value array type
 
 .NET does not have an array type that behaves like a value type.

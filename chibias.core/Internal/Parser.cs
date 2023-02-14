@@ -28,6 +28,7 @@ internal sealed partial class Parser
     private readonly TargetFramework targetFramework;
     private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiDataType;
+    private readonly MethodDefinition cabiDataTypeInitializer;
     private readonly MemberDictionary<MemberReference> cabiSpecificSymbols;
     private readonly MemberDictionary<TypeDefinition> referenceTypes;
     private readonly Dictionary<string, TypeReference> importantTypes = new();
@@ -51,6 +52,7 @@ internal sealed partial class Parser
     private Location? lastLocation;
     private bool isProducedOriginalSourceCodeLocation = true;
     private TypeDefinition fileScopedType;
+    private MethodDefinition fileScopedTypeInitializer;
     private MethodDefinition? method;
     private MethodBody? body;
     private ICollection<Instruction>? instructions;
@@ -121,10 +123,12 @@ internal sealed partial class Parser
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
+        this.cabiDataTypeInitializer = CreateTypeInitializer();
 
         this.currentFile = unknown;
         this.fileScopedType = this.CreateFileScopedType(
              CecilUtilities.SanitizeFileNameToMemberName("unknown.s"));
+        this.fileScopedTypeInitializer = this.CreateTypeInitializer();
     }
 
     /////////////////////////////////////////////////////////////////////
@@ -133,12 +137,16 @@ internal sealed partial class Parser
         "",
         typeName,
         TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
-        TypeAttributes.Class,
+        TypeAttributes.BeforeFieldInit | TypeAttributes.Class,
         this.module.TypeSystem.Object);
 
-    public void BeginNewCilSourceCode(
-        string? basePath,
-        string sourcePathDebuggerHint)
+    private MethodDefinition CreateTypeInitializer() => new(
+        "..cctor",
+        MethodAttributes.Private | MethodAttributes.Static |
+        MethodAttributes.SpecialName | MethodAttributes.RTSpecialName | MethodAttributes.HideBySig,
+        this.module.TypeSystem.Void);
+
+    private void BeginNewFileScope(string sourcePathDebuggerHint)
     {
         // Add latest file scoped type.
         if ((this.fileScopedType.Methods.Count >= 1 ||
@@ -146,6 +154,22 @@ internal sealed partial class Parser
             this.fileScopedType.NestedTypes.Count >= 1) &&
             !this.module.Types.Contains(this.fileScopedType))
         {
+            // Schedule checking for type initializer when all initializer was applied.
+            var capturedFileScopedType = this.fileScopedType;
+            var capturedFileScopedTypeInitializer = this.fileScopedTypeInitializer;
+            this.delayedCheckAfterLookingupActions.Add(() =>
+            {
+                // Add type initializer when body was appended.
+                if (capturedFileScopedTypeInitializer.Body is { } body &&
+                    body.Instructions is { } instructions &&
+                    instructions.Count >= 1)
+                {
+                    instructions.Add(Instruction.Create(OpCodes.Ret));
+                    body.InitLocals = false;
+                    capturedFileScopedType.Methods.Add(capturedFileScopedTypeInitializer);
+                }
+            });
+
             this.module.Types.Add(this.fileScopedType);
         }
 
@@ -154,11 +178,24 @@ internal sealed partial class Parser
         if (this.module.Types.FirstOrDefault(type => type.Name == typeName) is { } type)
         {
             this.fileScopedType = type;
+            if (this.fileScopedType.Methods.
+                FirstOrDefault(m => m.IsConstructor && m.IsStatic) is { } cctor)
+            {
+                this.fileScopedTypeInitializer = cctor;
+            }
         }
         else
         {
             this.fileScopedType = this.CreateFileScopedType(typeName);
+            this.fileScopedTypeInitializer = this.CreateTypeInitializer();
         }
+    }
+
+    public void BeginNewCilSourceCode(
+        string? basePath,
+        string sourcePathDebuggerHint)
+    {
+        this.BeginNewFileScope(sourcePathDebuggerHint);
 
         this.currentFile = new(
             basePath,
@@ -581,6 +618,30 @@ internal sealed partial class Parser
     }
 
     private void DelayLookingUpField(
+        string fieldName,
+        Token fieldNameToken,
+        Action<FieldReference> action)
+    {
+        var capturedFileScopedType = this.fileScopedType;
+        this.delayedLookupLocalMemberActions.Add(() =>
+        {
+            if (this.TryGetField(
+                fieldName,
+                out var field,
+                capturedFileScopedType))
+            {
+                action(field);
+            }
+            else
+            {
+                this.OutputError(
+                    fieldNameToken,
+                    $"Could not find field: {fieldName}");
+            }
+        });
+    }
+
+    private void DelayLookingUpField(
         Token fieldNameToken,
         Action<FieldReference> action)
     {
@@ -810,17 +871,8 @@ internal sealed partial class Parser
 
         if (!this.caughtError)
         {
-            // Add latest file scoped type.
-            if ((this.fileScopedType.Methods.Count >= 1 ||
-                this.fileScopedType.Fields.Count >= 1 ||
-                this.fileScopedType.NestedTypes.Count >= 1) &&
-                !this.module.Types.Contains(this.fileScopedType))
-            {
-                this.module.Types.Add(this.fileScopedType);
-            }
-
-            this.fileScopedType = this.CreateFileScopedType(
-                 CecilUtilities.SanitizeFileNameToMemberName("unknown.s"));
+            // Clean up for file scope type.
+            this.BeginNewFileScope("unknown.s");
 
             // Add text type when exist methods.
             if (this.cabiTextType.Methods.Count >= 1)
@@ -844,6 +896,16 @@ internal sealed partial class Parser
             foreach (var action in this.delayedCheckAfterLookingupActions)
             {
                 action();
+            }
+
+            // Add type initializer when body was appended.
+            if (this.cabiDataTypeInitializer.Body is { } cabiDataTypeInitializerBody &&
+                cabiDataTypeInitializerBody.Instructions is { } cabiDataTypeInitializerInstructions &&
+                cabiDataTypeInitializerInstructions.Count >= 1)
+            {
+                cabiDataTypeInitializerInstructions.Add(Instruction.Create(OpCodes.Ret));
+                cabiDataTypeInitializerBody.InitLocals = false;
+                this.cabiDataType.Methods.Add(this.cabiDataTypeInitializer);
             }
 
             // Apply TFA if could be imported.

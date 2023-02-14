@@ -1100,6 +1100,162 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task GlobalVariableWithInitializingData3()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public int32* foo &baz
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData4()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global internal int32* foo &baz
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData5()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global internal int32* foo &baz
+            .global internal int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData6()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public int32* foo &baz
+            .global internal int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData7()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public int32* foo &baz
+            .global file int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData8()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global file int32* foo &baz
+            .global file int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData9()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global file int32* foo &baz
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData10()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global internal int32* foo &baz
+            .global file int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData11()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global file int32* foo &baz
+            .global internal int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData12()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public intptr foo &baz
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData13()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public uintptr foo &baz
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData14()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public void* foo &baz
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
