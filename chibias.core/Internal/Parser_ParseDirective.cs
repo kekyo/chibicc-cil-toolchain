@@ -14,7 +14,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace chibias.Internal;
 
@@ -65,102 +64,105 @@ partial class Parser
         if (tokens.Length < 4)
         {
             this.OutputError(tokens.Last(), $"Missing directive operands.");
+            return;
         }
-        else if (!CecilUtilities.TryLookupScopeDescriptorName(
+
+        if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {
             this.OutputError(
                 tokens[1],
                 $"Invalid scope descriptor: {tokens[1].Text}");
+            return;
         }
-        else
+
+        var returnTypeNameToken = tokens[2];
+        var returnTypeName = returnTypeNameToken.Text;
+        var functionName = tokens[3].Text;
+
+        MethodDefinition method = null!;
+        if (!this.TryGetType(returnTypeName, out var returnType))
         {
-            var returnTypeNameToken = tokens[2];
-            var returnTypeName = returnTypeNameToken.Text;
-            var functionName = tokens[3].Text;
+            returnType = this.CreateDummyType();
 
-            MethodDefinition method = null!;
-            if (!this.TryGetType(returnTypeName, out var returnType))
+            this.DelayLookingUpType(
+                returnTypeNameToken,
+                type => method.ReturnType = type);   // (captured)
+        }
+
+        var parameters = new List<ParameterDefinition>();
+        var varargs = false;
+        for (var index = 4; index < tokens.Length; index++)
+        {
+            var parameterToken = tokens[index];
+            var parameterTokenText = parameterToken.Text;
+
+            var splitted = parameterTokenText.Split(':');
+            if (splitted.Length >= 3)
             {
-                returnType = this.CreateDummyType();
-
-                this.DelayLookingUpType(
-                    returnTypeNameToken,
-                    type => method.ReturnType = type);   // (captured)
+                this.OutputError(
+                    parameterToken,
+                    $"Invalid parameter: {parameterTokenText}");
+                continue;
             }
 
-            var parameters = new List<ParameterDefinition>();
-            var varargs = false;
-            for (var index = 4; index < tokens.Length; index++)
+            if (index == (tokens.Length - 1) &&
+                splitted.Last() == "...")
             {
-                var parameterToken = tokens[index];
-                var parameterTokenText = parameterToken.Text;
-
-                var splitted = parameterTokenText.Split(':');
-                if (splitted.Length >= 3)
+                if (splitted.Length == 2)
                 {
                     this.OutputError(
                         parameterToken,
-                        $"Invalid parameter: {parameterTokenText}");
-                }
-                else if (index == (tokens.Length - 1) &&
-                    splitted.Last() == "...")
-                {
-                    if (splitted.Length == 2)
-                    {
-                        this.OutputError(
-                            parameterToken,
-                            $"Could not apply any types at the variable argument descriptor: {parameterTokenText}");
-                    }
-                    else
-                    {
-                        varargs = true;
-                    }
+                        $"Could not apply any types at the variable argument descriptor: {parameterTokenText}");
                 }
                 else
                 {
-                    var parameterTypeName = splitted.Last();
-
-                    ParameterDefinition parameter = null!;
-                    if (!this.TryGetType(parameterTypeName, out var parameterType))
-                    {
-                        parameterType = CreateDummyType();
-
-                        this.DelayLookingUpType(
-                            parameterTypeName,
-                            parameterToken,
-                            type => parameter.ParameterType = type);
-                    }
-
-                    parameter = new(parameterType);
-
-                    if (splitted.Length == 2)
-                    {
-                        parameter.Name = splitted[0];
-                    }
-
-                    parameters.Add(parameter);
+                    varargs = true;
                 }
+
+                continue;
             }
 
-            method = this.SetupMethodDefinition(
-                functionName,
-                returnType,
-                parameters.ToArray(),
-                scopeDescriptor,
-                varargs);
+            var parameterTypeName = splitted.Last();
 
-            switch (scopeDescriptor)
+            ParameterDefinition parameter = null!;
+            if (!this.TryGetType(parameterTypeName, out var parameterType))
             {
-                case ScopeDescriptors.Public:
-                case ScopeDescriptors.Internal:
-                    this.cabiTextType.Methods.Add(method);
-                    break;
-                default:
-                    this.fileScopedType.Methods.Add(method);
-                    break;
+                parameterType = CreateDummyType();
+
+                this.DelayLookingUpType(
+                    parameterTypeName,
+                    parameterToken,
+                    type => parameter.ParameterType = type);
             }
+
+            parameter = new(parameterType);
+
+            if (splitted.Length == 2)
+            {
+                parameter.Name = splitted[0];
+            }
+
+            parameters.Add(parameter);
+        }
+
+        method = this.SetupMethodDefinition(
+            functionName,
+            returnType,
+            parameters.ToArray(),
+            scopeDescriptor,
+            varargs);
+
+        switch (scopeDescriptor)
+        {
+            case ScopeDescriptors.Public:
+            case ScopeDescriptors.Internal:
+                this.cabiTextType.Methods.Add(method);
+                break;
+            default:
+                this.fileScopedType.Methods.Add(method);
+                break;
         }
     }
 
@@ -174,219 +176,222 @@ partial class Parser
         if (tokens.Length < 4)
         {
             this.OutputError(directive, $"Missing global variable operand.");
+            return;
         }
-        else if (!CecilUtilities.TryLookupScopeDescriptorName(
+
+        if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {
             this.OutputError(
                 tokens[1],
                 $"Invalid scope descriptor: {tokens[1].Text}");
+            return;
+        }
+
+        byte[]? data;
+        Token? pointToMemberNameToken;
+
+        // Pointing to variable.
+        if (tokens.Length == 5 &&
+            tokens.ElementAtOrDefault(4) is { } firstDataToken &&
+            firstDataToken.Text.StartsWith("&") &&
+            firstDataToken.Text.Length >= 2)
+        {
+            data = null;
+            pointToMemberNameToken = firstDataToken;
         }
         else
         {
-            byte[]? data;
-            Token? pointToMemberNameToken;
-
-            // Pointing to variable.
-            if (tokens.Length == 5 &&
-                tokens.ElementAtOrDefault(4) is { } firstDataToken &&
-                firstDataToken.Text.StartsWith("&") &&
-                firstDataToken.Text.Length >= 2)
-            {
-                data = null;
-                pointToMemberNameToken = firstDataToken;
-            }
-            else
-            {
-                data = tokens.Skip(4).
-                    Select(token =>
+            data = tokens.Skip(4).
+                Select(token =>
+                {
+                    if (Utilities.TryParseUInt8(token.Text, out var value))
                     {
-                        if (Utilities.TryParseUInt8(token.Text, out var value))
-                        {
-                            return value;
-                        }
-                        else
-                        {
-                            this.OutputError(token, $"Invalid data operand.");
-                            return (byte)0;
-                        }
-                    }).
-                    ToArray();
-                pointToMemberNameToken = null;
-            }
-
-            var globalTypeNameToken = tokens[2];
-            var globalTypeName = globalTypeNameToken.Text;
-            var globalName = tokens[3].Text;
-
-            FieldDefinition field = null!;
-            if (!this.TryGetType(globalTypeName, out var globalType))
-            {
-                globalType = this.CreateDummyType();
-
-                this.DelayLookingUpType(
-                    globalTypeNameToken,
-                    type => field.FieldType = type);   // (captured)
-            }
-
-            field = new FieldDefinition(
-                globalName,
-                scopeDescriptor switch
-                {
-                    ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
-                    _ => FieldAttributes.Assembly | FieldAttributes.Static,
-                },
-                globalType);
-            if (data is { })
-            {
-                Debug.Assert(pointToMemberNameToken == null);
-
-                field.InitialValue = data;
-            }
-
-            switch (scopeDescriptor)
-            {
-                case ScopeDescriptors.Public:
-                case ScopeDescriptors.Internal:
-                    this.cabiDataType.Fields.Add(field);
-                    break;
-                default:
-                    this.fileScopedType.Fields.Add(field);
-                    break;
-            }
-
-            if (pointToMemberNameToken is { })
-            {
-                Debug.Assert(data == null);
-
-                var pointToMemberName = pointToMemberNameToken.Text.Substring(1);
-                var capturedInstructions = scopeDescriptor switch
-                {
-                    ScopeDescriptors.Public => this.cabiDataTypeInitializer.Body.Instructions,
-                    ScopeDescriptors.Internal => this.cabiDataTypeInitializer.Body.Instructions,
-                    _ => this.fileScopedTypeInitializer.Body.Instructions,
-                };
-
-                static bool TryAddInitializer(
-                    Mono.Collections.Generic.Collection<Instruction> instruction,
-                    FieldDefinition storeToField,
-                    MemberReference pointToMember)
-                {
-                    if (pointToMember is MethodReference pointToMethod)
-                    {
-                        switch (storeToField.FieldType.FullName)
-                        {
-                            case "System.IntPtr":
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Ldftn, pointToMethod));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Conv_I));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Stsfld, storeToField));
-                                return true;
-                            case "System.UIntPtr":
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Ldftn, pointToMethod));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Conv_U));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Stsfld, storeToField));
-                                return true;
-                            case "System.Void*":
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Ldftn, pointToMethod));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Stsfld, storeToField));
-                                return true;
-                            default:
-                                // Check whatever equality for function pointer type.
-                                if (pointToMethod.TryMakeFunctionPointerType(
-                                    out var pointToFieldPointerType) &&
-                                    storeToField.FieldType.FullName == pointToFieldPointerType.FullName)
-                                {
-                                    instruction.Add(
-                                        Instruction.Create(OpCodes.Ldftn, pointToMethod));
-                                    instruction.Add(
-                                        Instruction.Create(OpCodes.Stsfld, storeToField));
-                                    return true;
-                                }
-                                break;
-                        }
+                        return value;
                     }
-                    else if (pointToMember is FieldReference pointToField)
+                    else
                     {
-                        switch (storeToField.FieldType.FullName)
-                        {
-                            case "System.IntPtr":
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Ldsflda, pointToField));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Conv_I));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Stsfld, storeToField));
-                                return true;
-                            case "System.UIntPtr":
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Ldsflda, pointToField));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Conv_U));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Stsfld, storeToField));
-                                return true;
-                            case "System.Void*":
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Ldsflda, pointToField));
-                                instruction.Add(
-                                    Instruction.Create(OpCodes.Stsfld, storeToField));
-                                return true;
-                            default:
-                                // Check whatever equality for pointer type.
-                                var pointToFieldPointerType = new PointerType(pointToField.FieldType);
-                                if (storeToField.FieldType.FullName == pointToFieldPointerType.FullName)
-                                {
-                                    instruction.Add(
-                                        Instruction.Create(OpCodes.Ldsflda, pointToField));
-                                    instruction.Add(
-                                        Instruction.Create(OpCodes.Stsfld, storeToField));
-                                    return true;
-                                }
-                                break;
-                        }
+                        this.OutputError(token, $"Invalid data operand.");
+                        return (byte)0;
                     }
+                }).
+                ToArray();
+            pointToMemberNameToken = null;
+        }
 
-                    return false;
-                }
+        var globalTypeNameToken = tokens[2];
+        var globalTypeName = globalTypeNameToken.Text;
+        var globalName = tokens[3].Text;
 
-                if (!this.TryGetMember(
-                    pointToMemberName,
-                    Utilities.Empty<string>(),
-                    out var ptm))
+        FieldDefinition field = null!;
+        if (!this.TryGetType(globalTypeName, out var globalType))
+        {
+            globalType = this.CreateDummyType();
+
+            this.DelayLookingUpType(
+                globalTypeNameToken,
+                type => field.FieldType = type);   // (captured)
+        }
+
+        field = new FieldDefinition(
+            globalName,
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
+                _ => FieldAttributes.Assembly | FieldAttributes.Static,
+            },
+            globalType);
+        if (data is { })
+        {
+            Debug.Assert(pointToMemberNameToken == null);
+
+            field.InitialValue = data;
+        }
+
+        switch (scopeDescriptor)
+        {
+            case ScopeDescriptors.Public:
+            case ScopeDescriptors.Internal:
+                this.cabiDataType.Fields.Add(field);
+                break;
+            default:
+                this.fileScopedType.Fields.Add(field);
+                break;
+        }
+
+        if (pointToMemberNameToken == null)
+        {
+            return;
+        }
+
+        Debug.Assert(data == null);
+
+        var pointToMemberName = pointToMemberNameToken.Text.Substring(1);
+        var capturedInstructions = scopeDescriptor switch
+        {
+            ScopeDescriptors.Public => this.cabiDataTypeInitializer.Body.Instructions,
+            ScopeDescriptors.Internal => this.cabiDataTypeInitializer.Body.Instructions,
+            _ => this.fileScopedTypeInitializer.Body.Instructions,
+        };
+
+        static bool TryAddInitializer(
+            Mono.Collections.Generic.Collection<Instruction> instruction,
+            FieldDefinition storeToField,
+            MemberReference pointToMember)
+        {
+            if (pointToMember is MethodReference pointToMethod)
+            {
+                switch (storeToField.FieldType.FullName)
                 {
-                    var capturedField = field;
-                    var capturedPointToVariableNameToken = pointToMemberNameToken;
-                    this.DelayLookingUpMember(
-                        pointToMemberName,
-                        pointToMemberNameToken,
-                        Utilities.Empty<string>(),
-                        pointToMember =>
+                    case "System.IntPtr":
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Conv_I));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Stsfld, storeToField));
+                        return true;
+                    case "System.UIntPtr":
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Conv_U));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Stsfld, storeToField));
+                        return true;
+                    case "System.Void*":
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Stsfld, storeToField));
+                        return true;
+                    default:
+                        // Check whatever equality for function pointer type.
+                        if (pointToMethod.TryMakeFunctionPointerType(
+                            out var pointToFieldPointerType) &&
+                            storeToField.FieldType.FullName == pointToFieldPointerType.FullName)
                         {
-                            if (!TryAddInitializer(
-                                capturedInstructions, capturedField, pointToMember))
-                            {
-                                this.OutputError(
-                                    capturedPointToVariableNameToken,
-                                    $"Member type is not compatible pointer type: {pointToMember.FullName}");
-                            }
-                        });
-                }
-                else if (!TryAddInitializer(capturedInstructions, field, ptm))
-                {
-                    this.OutputError(
-                        pointToMemberNameToken,
-                        $"Member type is not compatible pointer type: {ptm.FullName}");
+                            instruction.Add(
+                                Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                            instruction.Add(
+                                Instruction.Create(OpCodes.Stsfld, storeToField));
+                            return true;
+                        }
+                        break;
                 }
             }
+            else if (pointToMember is FieldReference pointToField)
+            {
+                switch (storeToField.FieldType.FullName)
+                {
+                    case "System.IntPtr":
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Ldsflda, pointToField));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Conv_I));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Stsfld, storeToField));
+                        return true;
+                    case "System.UIntPtr":
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Ldsflda, pointToField));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Conv_U));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Stsfld, storeToField));
+                        return true;
+                    case "System.Void*":
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Ldsflda, pointToField));
+                        instruction.Add(
+                            Instruction.Create(OpCodes.Stsfld, storeToField));
+                        return true;
+                    default:
+                        // Check whatever equality for pointer type.
+                        var pointToFieldPointerType = new PointerType(pointToField.FieldType);
+                        if (storeToField.FieldType.FullName == pointToFieldPointerType.FullName)
+                        {
+                            instruction.Add(
+                                Instruction.Create(OpCodes.Ldsflda, pointToField));
+                            instruction.Add(
+                                Instruction.Create(OpCodes.Stsfld, storeToField));
+                            return true;
+                        }
+                        break;
+                }
+            }
+
+            return false;
+        }
+
+        if (!this.TryGetMember(
+            pointToMemberName,
+            Utilities.Empty<string>(),
+            out var ptm))
+        {
+            var capturedField = field;
+            var capturedPointToVariableNameToken = pointToMemberNameToken;
+            this.DelayLookingUpMember(
+                pointToMemberName,
+                pointToMemberNameToken,
+                Utilities.Empty<string>(),
+                pointToMember =>
+                {
+                    if (!TryAddInitializer(
+                        capturedInstructions, capturedField, pointToMember))
+                    {
+                        this.OutputError(
+                            capturedPointToVariableNameToken,
+                            $"Member type is not compatible pointer type: {pointToMember.FullName}");
+                    }
+                });
+        }
+        else if (!TryAddInitializer(capturedInstructions, field, ptm))
+        {
+            this.OutputError(
+                pointToMemberNameToken,
+                $"Member type is not compatible pointer type: {ptm.FullName}");
         }
     }
 
@@ -400,54 +405,57 @@ partial class Parser
             this.OutputError(
                 directive,
                 $"Function directive is not defined.");
+            return;
         }
-        else if (tokens.Length < 2)
+
+        if (tokens.Length < 2)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Missing local variable operand.");
+            return;
         }
-        else if (tokens.Length > 3)
+
+        if (tokens.Length > 3)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
+            return;
         }
-        else
+
+        var localTypeName = tokens[1].Text;
+
+        VariableDefinition variable = null!;
+        if (!this.TryGetType(localTypeName, out var localType))
         {
-            var localTypeName = tokens[1].Text;
+            localType = this.CreateDummyType();
 
-            VariableDefinition variable = null!;
-            if (!this.TryGetType(localTypeName, out var localType))
+            this.DelayLookingUpType(
+                tokens[1],
+                type => variable.VariableType = type);   // (captured)
+        }
+
+        variable = new VariableDefinition(localType);
+        this.body!.Variables.Add(variable);
+
+        if (tokens.Length == 3)
+        {
+            var localName = tokens[2].Text;
+            var variableDebugInformation = new VariableDebugInformation(
+                variable, localName);
+
+            if (!this.variableDebugInformationLists.TryGetValue(
+                this.method!.Name,
+                out var list))
             {
-                localType = this.CreateDummyType();
-
-                this.DelayLookingUpType(
-                    tokens[1],
-                    type => variable.VariableType = type);   // (captured)
-            }
-
-            variable = new VariableDefinition(localType);
-            this.body!.Variables.Add(variable);
-
-            if (tokens.Length == 3)
-            {
-                var localName = tokens[2].Text;
-                var variableDebugInformation = new VariableDebugInformation(
-                    variable, localName);
-
-                if (!this.variableDebugInformationLists.TryGetValue(
+                list = new();
+                this.variableDebugInformationLists.Add(
                     this.method!.Name,
-                    out var list))
-                {
-                    list = new();
-                    this.variableDebugInformationLists.Add(
-                        this.method!.Name,
-                        list);
-                }
-
-                list.Add(variableDebugInformation);
+                    list);
             }
+
+            list.Add(variableDebugInformation);
         }
     }
 
@@ -463,140 +471,155 @@ partial class Parser
             this.OutputError(
                 tokens.Last(),
                 $"Missing enumeration operand.");
+            return;
         }
-        else if (tokens.Length > 4)
+        
+        if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
+            return;
         }
-        else if (!CecilUtilities.TryLookupScopeDescriptorName(
+
+        if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {
             this.OutputError(
                 tokens[1],
                 $"Invalid scope descriptor: {tokens[1].Text}");
+            return;
         }
-        else
+
+        var typeAttributes = scopeDescriptor switch
         {
-            var typeAttributes = scopeDescriptor switch
-            {
-                ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
-                ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
-                _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
-            };
-            var valueFieldAttributes =
-                FieldAttributes.Public | FieldAttributes.SpecialName | FieldAttributes.RTSpecialName;
+            ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
+            ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
+            _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+        };
+        var valueFieldAttributes =
+            FieldAttributes.Public | FieldAttributes.SpecialName | FieldAttributes.RTSpecialName;
 
-            var underlyingType = this.UnsafeGetType("System.Int32");
+        var underlyingTypeNameToken = tokens[2];
+        var underlyingTypeName = underlyingTypeNameToken.Text;
 
-            var underlyingTypeNameToken = tokens[2];
-            var underlyingTypeName = underlyingTypeNameToken.Text;
+        if (CecilUtilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
+        {
+            underlyingTypeName = originName;
+        }
 
-            if (CecilUtilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
-            {
-                underlyingTypeName = originName;
-            }
+        if (!CecilUtilities.IsEnumerationUnderlyingType(underlyingTypeName))
+        {
+            this.OutputError(
+                underlyingTypeNameToken,
+                $"Invalid enumeration underlying type: {underlyingTypeName}");
+            return;
+        }
 
-            if (!CecilUtilities.IsEnumerationUnderlyingType(underlyingTypeName))
+        var underlyingType = this.UnsafeGetType(underlyingTypeName);
+
+        var enumerationTypeNameToken = tokens[3];
+        var enumerationTypeName = enumerationTypeNameToken.Text;
+
+        if (this.TryGetType(enumerationTypeName, out var etref))
+        {
+            // Checks equality
+            var et = etref.Resolve();
+            if ((et.Attributes & typeAttributes) != typeAttributes)
             {
                 this.OutputError(
-                    underlyingTypeNameToken,
-                    $"Invalid enumeration underlying type: {underlyingTypeName}");
+                    enumerationTypeNameToken,
+                    $"Type attribute difference exists before declared type: {et.Attributes}");
+                return;
             }
-            else
+
+            if (et.BaseType.FullName != "System.Enum")
             {
-                underlyingType = this.UnsafeGetType(underlyingTypeName);
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Base type difference exists before declared type: {et.BaseType.FullName}");
+                return;
             }
 
-            var enumerationTypeNameToken = tokens[3];
-            var enumerationTypeName = enumerationTypeNameToken.Text;
-
-            if (this.TryGetType(enumerationTypeName, out var etref))
+            if (et.GetEnumUnderlyingType() is { } ut &&
+                ut.FullName != underlyingType.FullName)
             {
-                // Checks equality
-                var enumerationType = etref.Resolve();
-                if ((enumerationType.Attributes & typeAttributes) != typeAttributes)
-                {
-                    this.OutputError(
-                        enumerationTypeNameToken,
-                        $"Type attribute difference exists before declared type: {enumerationType.Attributes}");
-                }
-                else if (enumerationType.BaseType.FullName != "System.Enum")
-                {
-                    this.OutputError(
-                        enumerationTypeNameToken,
-                        $"Base type difference exists before declared type: {enumerationType.BaseType.FullName}");
-                }
-                else if (enumerationType.GetEnumUnderlyingType() is { } ut &&
-                    ut.FullName != underlyingType.FullName)
-                {
-                    this.OutputError(
-                        enumerationTypeNameToken,
-                        $"Enumeration underlying type difference exists before declared type: {ut.FullName}");
-                }
-                else if (!(enumerationType.Fields.FirstOrDefault(f => f.Name == "value__") is { } enumerationValueField))
-                {
-                    this.OutputError(
-                        enumerationTypeNameToken,
-                        "Enumeration value field type is not declared.");
-                }
-                else if (enumerationValueField.FieldType.FullName != underlyingType.FullName)
-                {
-                    this.OutputError(
-                        enumerationTypeNameToken,
-                        $"Enumeration value field type difference exists before declared type: {enumerationValueField.FieldType.FullName}");
-                }
-                else if ((enumerationValueField.Attributes & valueFieldAttributes) != valueFieldAttributes)
-                {
-                    this.OutputError(
-                        enumerationTypeNameToken,
-                        $"Enumeration value field type attribute difference exists before declared type: {enumerationType.Attributes}");
-                }
-
-                this.enumerationType = enumerationType;
-                this.checkingMemberIndex = 0;
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Enumeration underlying type difference exists before declared type: {ut.FullName}");
+                return;
             }
-            else
+
+            if (!(et.Fields.FirstOrDefault(f => f.Name == "value__") is { } evf))
             {
-                var enumerationType = new TypeDefinition(
-                    scopeDescriptor switch
-                    {
-                        ScopeDescriptors.Public => "C.type",
-                        ScopeDescriptors.Internal => "C.type",
-                        _ => "",
-                    },
-                    enumerationTypeName,
-                    typeAttributes,
-                    this.systemEnumType.Value);
-
-                var enumerationValueField = new FieldDefinition(
-                    "value__",
-                    valueFieldAttributes,
-                    underlyingType);
-                enumerationType.Fields.Add(enumerationValueField);
-
-                switch (scopeDescriptor)
-                {
-                    case ScopeDescriptors.Public:
-                    case ScopeDescriptors.Internal:
-                        this.module.Types.Add(enumerationType);
-                        break;
-                    case ScopeDescriptors.File:
-                        this.fileScopedType.NestedTypes.Add(enumerationType);
-                        break;
-                }
-                this.enumerationType = enumerationType;
-
-                Debug.Assert(this.checkingMemberIndex == -1);
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    "Enumeration value field type is not declared.");
+                return;
             }
 
-            this.enumerationUnderlyingType =
-                underlyingType;
+            if (evf.FieldType.FullName != underlyingType.FullName)
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Enumeration value field type difference exists before declared type: {evf.FieldType.FullName}");
+                return;
+            }
+
+            if ((evf.Attributes & valueFieldAttributes) != valueFieldAttributes)
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Enumeration value field type attribute difference exists before declared type: {et.Attributes}");
+                return;
+            }
+
+            this.enumerationType = et;
+            this.checkingMemberIndex = 0;
+
+            this.enumerationUnderlyingType = underlyingType;
             this.enumerationManipulator =
                 EnumerationMemberValueManipulator.GetInstance(underlyingType);
+
+            return;
         }
+
+        var enumerationType = new TypeDefinition(
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => "C.type",
+                ScopeDescriptors.Internal => "C.type",
+                _ => "",
+            },
+            enumerationTypeName,
+            typeAttributes,
+            this.systemEnumType.Value);
+
+        var enumerationValueField = new FieldDefinition(
+            "value__",
+            valueFieldAttributes,
+            underlyingType);
+        enumerationType.Fields.Add(enumerationValueField);
+
+        switch (scopeDescriptor)
+        {
+            case ScopeDescriptors.Public:
+            case ScopeDescriptors.Internal:
+                this.module.Types.Add(enumerationType);
+                break;
+            case ScopeDescriptors.File:
+                this.fileScopedType.NestedTypes.Add(enumerationType);
+                break;
+        }
+
+        this.enumerationType = enumerationType;
+        Debug.Assert(this.checkingMemberIndex == -1);
+
+        this.enumerationUnderlyingType =
+            underlyingType;
+        this.enumerationManipulator =
+            EnumerationMemberValueManipulator.GetInstance(underlyingType);
     }
 
     /////////////////////////////////////////////////////////////////////
@@ -611,128 +634,138 @@ partial class Parser
             this.OutputError(
                 tokens.Last(),
                 $"Missing structure operand.");
+            return;
         }
-        else if (tokens.Length > 4)
+
+        if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Too many operands.");
+            return;
         }
-        else if (!CecilUtilities.TryLookupScopeDescriptorName(
+
+        if (!CecilUtilities.TryLookupScopeDescriptorName(
             tokens[1].Text,
             out var scopeDescriptor))
         {
             this.OutputError(
                 tokens[1],
                 $"Invalid scope descriptor: {tokens[1].Text}");
+            return;
         }
-        else
+
+        var typeAttributes = scopeDescriptor switch
         {
-            var typeAttributes = scopeDescriptor switch
-            {
-                ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
-                ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
-                _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
-            };
+            ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
+            ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
+            _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+        };
 
-            short? packSize = null;
-            var aligningToken = tokens.ElementAtOrDefault(3);
+        short? packSize = null;
+        var aligningToken = tokens.ElementAtOrDefault(3);
 
-            if (aligningToken is { })
+        if (aligningToken is { })
+        {
+            var aligning = aligningToken.Text;
+            if (aligning == "explicit")
             {
-                var aligning = aligningToken.Text;
-                if (aligning == "explicit")
+                typeAttributes |= TypeAttributes.ExplicitLayout;
+            }
+            else if (Utilities.TryParseInt16(aligning, out var ps))
+            {
+                typeAttributes |= TypeAttributes.SequentialLayout;
+                if (ps >= 1)
                 {
-                    typeAttributes |= TypeAttributes.ExplicitLayout;
-                }
-                else if (Utilities.TryParseInt16(aligning, out var ps))
-                {
-                    typeAttributes |= TypeAttributes.SequentialLayout;
-                    if (ps >= 1)
-                    {
-                        packSize = ps;
-                    }
-                    else
-                    {
-                        this.OutputError(
-                            aligningToken,
-                            $"Invalid pack size: {aligning}");
-                    }
+                    packSize = ps;
                 }
                 else
                 {
-                    typeAttributes |= TypeAttributes.SequentialLayout;
+                    this.OutputError(
+                        aligningToken,
+                        $"Invalid pack size: {aligning}");
+                    return;
                 }
             }
             else
             {
                 typeAttributes |= TypeAttributes.SequentialLayout;
             }
-
-            var structureTypeNameToken = tokens[2];
-            var structureTypeName = structureTypeNameToken.Text;
-
-            if (this.TryGetType(structureTypeName, out var stref))
-            {
-                // Checks equality
-                var structureType = stref.Resolve();
-                if ((structureType.Attributes & typeAttributes) != typeAttributes)
-                {
-                    this.OutputError(
-                        structureTypeNameToken,
-                        $"Type attribute difference exists before declared type: {structureType.Attributes}");
-                }
-                else if (packSize is { } ps &&
-                    structureType.PackingSize != ps)
-                {
-                    this.OutputError(
-                        aligningToken!,
-                        $"Packing size difference exists before declared type: {structureType.PackingSize}");
-                }
-                else if (packSize == null &&
-                    structureType.PackingSize >= 1)
-                {
-                    this.OutputError(
-                        aligningToken!,
-                        $"Packing size difference exists before declared type: {structureType.PackingSize}");
-                }
-
-                this.structureType = structureType;
-                this.checkingMemberIndex = 0;
-            }
-            else
-            {
-                var structureType = new TypeDefinition(
-                    scopeDescriptor switch
-                    {
-                        ScopeDescriptors.Public => "C.type",
-                        ScopeDescriptors.Internal => "C.type",
-                        _ => "",
-                    },
-                    structureTypeName,
-                    typeAttributes,
-                    this.systemValueTypeType.Value);
-                if (packSize is { } ps)
-                {
-                    structureType.PackingSize = ps;
-                    structureType.ClassSize = 0;
-                }
-
-                switch (scopeDescriptor)
-                {
-                    case ScopeDescriptors.Public:
-                    case ScopeDescriptors.Internal:
-                        this.module.Types.Add(structureType);
-                        break;
-                    case ScopeDescriptors.File:
-                        this.fileScopedType.NestedTypes.Add(structureType);
-                        break;
-                }
-                this.structureType = structureType;
-
-                Debug.Assert(this.checkingMemberIndex == -1);
-            }
         }
+        else
+        {
+            typeAttributes |= TypeAttributes.SequentialLayout;
+        }
+
+        var structureTypeNameToken = tokens[2];
+        var structureTypeName = structureTypeNameToken.Text;
+
+        if (this.TryGetType(structureTypeName, out var stref))
+        {
+            // Checks equality
+            var st = stref.Resolve();
+            if ((st.Attributes & typeAttributes) != typeAttributes)
+            {
+                this.OutputError(
+                    structureTypeNameToken,
+                    $"Type attribute difference exists before declared type: {st.Attributes}");
+                return;
+            }
+
+            if (packSize is { } ps2 &&
+                st.PackingSize != ps2)
+            {
+                this.OutputError(
+                    aligningToken!,
+                    $"Packing size difference exists before declared type: {st.PackingSize}");
+                return;
+            }
+
+            if (packSize == null &&
+                st.PackingSize >= 1)
+            {
+                this.OutputError(
+                    aligningToken!,
+                    $"Packing size difference exists before declared type: {st.PackingSize}");
+                return;
+            }
+
+            this.structureType = st;
+            this.checkingMemberIndex = 0;
+
+            return;
+        }
+
+        var structureType = new TypeDefinition(
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => "C.type",
+                ScopeDescriptors.Internal => "C.type",
+                _ => "",
+            },
+            structureTypeName,
+            typeAttributes,
+            this.systemValueTypeType.Value);
+
+        if (packSize is { } ps3)
+        {
+            structureType.PackingSize = ps3;
+            structureType.ClassSize = 0;
+        }
+
+        switch (scopeDescriptor)
+        {
+            case ScopeDescriptors.Public:
+            case ScopeDescriptors.Internal:
+                this.module.Types.Add(structureType);
+                break;
+            case ScopeDescriptors.File:
+                this.fileScopedType.NestedTypes.Add(structureType);
+                break;
+        }
+
+        this.structureType = structureType;
+        Debug.Assert(this.checkingMemberIndex == -1);
     }
 
     /////////////////////////////////////////////////////////////////////
@@ -745,14 +778,18 @@ partial class Parser
             this.OutputError(
                 tokens.Last(),
                 $"Missing file operands.");
+            return;
         }
-        else if (tokens.Length > 4)
+
+        if (tokens.Length > 4)
         {
             this.OutputError(
                 tokens[4],
                 $"Too many operands.");
+            return;
         }
-        else if (Utilities.TryParseEnum<DocumentLanguage>(tokens[3].Text, out var language))
+        
+        if (Utilities.TryParseEnum<DocumentLanguage>(tokens[3].Text, out var language))
         {
             if (this.produceDebuggingInformation)
             {
@@ -785,48 +822,55 @@ partial class Parser
             this.OutputError(
                 directive,
                 $"Function directive is not defined.");
+            return;
         }
-        else if (tokens.Length < 6)
+        
+        if (tokens.Length < 6)
         {
             this.OutputError(
                 tokens.Last(),
                 $"Missing location operand.");
+            return;
         }
-        else if (tokens.Length > 6)
+        
+        if (tokens.Length > 6)
         {
             this.OutputError(
                 tokens[6],
                 $"Too many operands.");
+            return;
         }
-        else if (!this.files.TryGetValue(tokens[1].Text, out var file))
+        
+        if (!this.files.TryGetValue(tokens[1].Text, out var file))
         {
             this.OutputError(
                 tokens[1],
                 $"Unknown file ID.");
+            return;
         }
-        else
+
+        var vs = tokens.
+            Skip(2).
+            Collect(token =>
+                (Utilities.TryParseUInt32(token.Text, out var vi) && vi >= 0) ?
+                    vi : default(uint?)).
+            ToArray();
+        if ((vs.Length != (tokens.Length - 2)) ||
+            (vs[0] > vs[2]) ||
+            (vs[1] >= vs[3]))
         {
-            var vs = tokens.
-                Skip(2).
-                Collect(token =>
-                    (Utilities.TryParseUInt32(token.Text, out var vi) && vi >= 0) ?
-                        vi : default(uint?)).
-                ToArray();
-            if ((vs.Length != (tokens.Length - 2)) ||
-                (vs[0] > vs[2]) ||
-                (vs[1] >= vs[3]))
-            {
-                this.OutputError(
-                    directive,
-                    $"Invalid operand: {tokens[1].Text}");
-            }
-            else if (this.produceDebuggingInformation)
-            {
-                var location = new Location(
-                    file, vs[0], vs[1], vs[2], vs[3]);
-                this.queuedLocation = location;
-                this.isProducedOriginalSourceCodeLocation = false;
-            }
+            this.OutputError(
+                directive,
+                $"Invalid operand: {tokens[1].Text}");
+            return;
+        }
+
+        if (this.produceDebuggingInformation)
+        {
+            var location = new Location(
+                file, vs[0], vs[1], vs[2], vs[3]);
+            this.queuedLocation = location;
+            this.isProducedOriginalSourceCodeLocation = false;
         }
     }
 

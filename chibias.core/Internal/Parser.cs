@@ -318,8 +318,11 @@ internal sealed partial class Parser
             this.instructions = null;
             this.body = null;
             this.method = null;
+
+            return;
         }
-        else if (this.enumerationType != null)
+
+        if (this.enumerationType != null)
         {
             Debug.Assert(this.method == null);
             Debug.Assert(this.instructions == null);
@@ -340,8 +343,11 @@ internal sealed partial class Parser
 
             this.enumerationUnderlyingType = null;
             this.enumerationManipulator = null;
+
+            return;
         }
-        else if (this.structureType != null)
+        
+        if (this.structureType != null)
         {
             Debug.Assert(this.method == null);
             Debug.Assert(this.instructions == null);
@@ -362,6 +368,8 @@ internal sealed partial class Parser
 
             this.structureType = null;
             this.checkingMemberIndex = -1;
+
+            return;
         }
     }
 

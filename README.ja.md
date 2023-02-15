@@ -556,12 +556,15 @@ public static class text
     ldsfld foo
     ldind.i4
     ret
-.global internal int32* foo &baz
+.global internal int32* foo &baz+2
 .global internal int32 baz 0x10 0x32 0x54 0x76
 ```
 
 グローバル変数や関数へのポインタを含める場合は、`&`から始まる変数名・関数名を記述します。
 また、その型は、ポインタ型、`void*`, `intptr`、`uintptr`型のいずれかを指定します。
+
+上記の例のように、`+`や`-`演算子でオフセットを与えることも出来ます。
+但し、柔軟な計算は出来ません。
 
 ### 値型の配列
 

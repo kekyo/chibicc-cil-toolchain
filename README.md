@@ -563,12 +563,15 @@ Special data can include pointers to other global variables and function pointer
     ldsfld foo
     ldind.i4
     ret
-.global internal int32* foo &baz
+.global internal int32* foo &baz+2
 .global internal int32 baz 0x10 0x32 0x54 0x76
 ```
 
 To include a pointer, write the name of the variable/function beginning with `&`.
 The type can be a pointer, `void*`, `intptr`, and `uintptr` type.
+
+You can also give an offset with the `+` or `-` operator, as in the example above.
+However, this does not allow for flexible calculations.
 
 ### Value array type
 
