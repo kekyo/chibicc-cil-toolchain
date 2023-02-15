@@ -28,33 +28,42 @@
 .class private abstract auto ansi sealed beforefieldinit source
        extends [mscorlib]System.Object
 {
-  .class auto ansi sealed nested assembly foo
-         extends [mscorlib]System.Enum
+  .field static assembly int32* foo
+  .method private hidebysig specialname rtspecialname static 
+          void  '..cctor'() cil managed
   {
-    .field public specialname rtspecialname uint64 value__
-    .field public static literal uint64 beef
-    .field public static literal uint64 poke
-    .field public static literal uint64 chicken
-  } // end of class foo
+    // Code size       11 (0xb)
+    .maxstack  8
+    IL_0000:  ldsflda    int32 C.data::baz
+    IL_0005:  stsfld     int32* source::foo
+    IL_000a:  ret
+  } // end of method source::'..cctor'
 
 } // end of class source
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static void  main() cil managed
+  .method public static int32  bar() cil managed
   {
-    // Code size       11 (0xb)
-    .maxstack  1
-    .locals (valuetype source/foo V_0)
-    IL_0000:  ldloca     V_0
-    IL_0004:  initobj    source/foo
-    IL_000a:  ret
-  } // end of method text::main
+    // Code size       7 (0x7)
+    .maxstack  8
+    IL_0000:  ldsfld     int32* source::foo
+    IL_0005:  ldind.i4
+    IL_0006:  ret
+  } // end of method text::bar
 
 } // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field static assembly int32 baz at I_00002064
+} // end of class C.data
 
 
 // =============================================================
 
+.data cil I_00002064 = bytearray (
+                 10 32 54 76)                                     // .2Tv
 // *********** DISASSEMBLY COMPLETE ***********************

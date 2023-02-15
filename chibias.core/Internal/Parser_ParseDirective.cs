@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace chibias.Internal;
 
@@ -184,20 +185,36 @@ partial class Parser
         }
         else
         {
-            var data = tokens.Skip(4).
-                Select(token =>
-                {
-                    if (Utilities.TryParseUInt8(token.Text, out var value))
+            byte[]? data;
+            Token? pointToMemberNameToken;
+
+            // Pointing to variable.
+            if (tokens.Length == 5 &&
+                tokens.ElementAtOrDefault(4) is { } firstDataToken &&
+                firstDataToken.Text.StartsWith("&") &&
+                firstDataToken.Text.Length >= 2)
+            {
+                data = null;
+                pointToMemberNameToken = firstDataToken;
+            }
+            else
+            {
+                data = tokens.Skip(4).
+                    Select(token =>
                     {
-                        return value;
-                    }
-                    else
-                    {
-                        this.OutputError(token, $"Invalid data operand.");
-                        return (byte)0;
-                    }
-                }).
-                ToArray();
+                        if (Utilities.TryParseUInt8(token.Text, out var value))
+                        {
+                            return value;
+                        }
+                        else
+                        {
+                            this.OutputError(token, $"Invalid data operand.");
+                            return (byte)0;
+                        }
+                    }).
+                    ToArray();
+                pointToMemberNameToken = null;
+            }
 
             var globalTypeNameToken = tokens[2];
             var globalTypeName = globalTypeNameToken.Text;
@@ -221,8 +238,10 @@ partial class Parser
                     _ => FieldAttributes.Assembly | FieldAttributes.Static,
                 },
                 globalType);
-            if (data.Length >= 1)
+            if (data is { })
             {
+                Debug.Assert(pointToMemberNameToken == null);
+
                 field.InitialValue = data;
             }
 
@@ -235,6 +254,138 @@ partial class Parser
                 default:
                     this.fileScopedType.Fields.Add(field);
                     break;
+            }
+
+            if (pointToMemberNameToken is { })
+            {
+                Debug.Assert(data == null);
+
+                var pointToMemberName = pointToMemberNameToken.Text.Substring(1);
+                var capturedInstructions = scopeDescriptor switch
+                {
+                    ScopeDescriptors.Public => this.cabiDataTypeInitializer.Body.Instructions,
+                    ScopeDescriptors.Internal => this.cabiDataTypeInitializer.Body.Instructions,
+                    _ => this.fileScopedTypeInitializer.Body.Instructions,
+                };
+
+                static bool TryAddInitializer(
+                    Mono.Collections.Generic.Collection<Instruction> instruction,
+                    FieldDefinition storeToField,
+                    MemberReference pointToMember)
+                {
+                    if (pointToMember is MethodReference pointToMethod)
+                    {
+                        switch (storeToField.FieldType.FullName)
+                        {
+                            case "System.IntPtr":
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Conv_I));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Stsfld, storeToField));
+                                return true;
+                            case "System.UIntPtr":
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Conv_U));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Stsfld, storeToField));
+                                return true;
+                            case "System.Void*":
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Stsfld, storeToField));
+                                return true;
+                            default:
+                                // Check whatever equality for function pointer type.
+                                if (pointToMethod.TryMakeFunctionPointerType(
+                                    out var pointToFieldPointerType) &&
+                                    storeToField.FieldType.FullName == pointToFieldPointerType.FullName)
+                                {
+                                    instruction.Add(
+                                        Instruction.Create(OpCodes.Ldftn, pointToMethod));
+                                    instruction.Add(
+                                        Instruction.Create(OpCodes.Stsfld, storeToField));
+                                    return true;
+                                }
+                                break;
+                        }
+                    }
+                    else if (pointToMember is FieldReference pointToField)
+                    {
+                        switch (storeToField.FieldType.FullName)
+                        {
+                            case "System.IntPtr":
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Ldsflda, pointToField));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Conv_I));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Stsfld, storeToField));
+                                return true;
+                            case "System.UIntPtr":
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Ldsflda, pointToField));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Conv_U));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Stsfld, storeToField));
+                                return true;
+                            case "System.Void*":
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Ldsflda, pointToField));
+                                instruction.Add(
+                                    Instruction.Create(OpCodes.Stsfld, storeToField));
+                                return true;
+                            default:
+                                // Check whatever equality for pointer type.
+                                var pointToFieldPointerType = new PointerType(pointToField.FieldType);
+                                if (storeToField.FieldType.FullName == pointToFieldPointerType.FullName)
+                                {
+                                    instruction.Add(
+                                        Instruction.Create(OpCodes.Ldsflda, pointToField));
+                                    instruction.Add(
+                                        Instruction.Create(OpCodes.Stsfld, storeToField));
+                                    return true;
+                                }
+                                break;
+                        }
+                    }
+
+                    return false;
+                }
+
+                if (!this.TryGetMember(
+                    pointToMemberName,
+                    Utilities.Empty<string>(),
+                    out var ptm))
+                {
+                    var capturedField = field;
+                    var capturedPointToVariableNameToken = pointToMemberNameToken;
+                    this.DelayLookingUpMember(
+                        pointToMemberName,
+                        pointToMemberNameToken,
+                        Utilities.Empty<string>(),
+                        pointToMember =>
+                        {
+                            if (!TryAddInitializer(
+                                capturedInstructions, capturedField, pointToMember))
+                            {
+                                this.OutputError(
+                                    capturedPointToVariableNameToken,
+                                    $"Member type is not compatible pointer type: {pointToMember.FullName}");
+                            }
+                        });
+                }
+                else if (!TryAddInitializer(capturedInstructions, field, ptm))
+                {
+                    this.OutputError(
+                        pointToMemberNameToken,
+                        $"Member type is not compatible pointer type: {ptm.FullName}");
+                }
             }
         }
     }

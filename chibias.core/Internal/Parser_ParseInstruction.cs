@@ -401,32 +401,6 @@ partial class Parser
         }
         else
         {
-            bool TryGetMember(
-                string memberName, string[] functionParameterTypeNames,
-                out MemberReference member)
-            {
-                if (this.TryGetMethod(memberName, functionParameterTypeNames, out var method))
-                {
-                    member = method;
-                    return true;
-                }
-                else if (this.TryGetField(memberName, out var field))
-                {
-                    member = field;
-                    return true;
-                }
-                else if (this.TryGetType(memberName, out var type))
-                {
-                    member = type;
-                    return true;
-                }
-                else
-                {
-                    member = null!;
-                    return false;
-                }
-            }
-
             var memberNameToken = tokens[1];
             var memberName = memberNameToken.Text;
             var functionParameterTypeNames =
@@ -468,52 +442,64 @@ partial class Parser
     private Instruction? ParseInlineSig(
         OpCode opCode, Token[] tokens)
     {
-        if (tokens.Length <= 1)
+        if (this.FetchOperand0(tokens) is { } functionSignatureToken)
         {
-            this.OutputError(
-                this.GetCurrentLocation(tokens.Last()),
-                $"Missing operand.");
-        }
-        else
-        {
-            var returnTypeToken = tokens[1];
-            var returnTypeName = returnTypeToken.Text;
-            var parameterTypeNames =
-                tokens.Skip(2).Select(token => token.Text).ToArray();
+            var functionSignature = functionSignatureToken.Text;
 
-            CallSite callSite = null!;
-            if (!this.TryGetType(returnTypeName, out var returnType))
+            if (!TypeParser.TryParse(functionSignature, out var rootTypeNode))
             {
-                returnType = this.CreateDummyType();
-
-                this.DelayLookingUpType(
-                    returnTypeName,
-                    this.GetCurrentLocation(returnTypeToken, returnTypeToken),
-                    type => callSite.ReturnType = type);
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature {functionSignature}");
             }
-
-            callSite = new(returnType);
-
-            foreach (var parameterTypeNameToken in tokens.Skip(2))
+            else if (!(rootTypeNode is FunctionSignatureNode fsn))
             {
-                var parameterTypeName = parameterTypeNameToken.Text;
-
-                ParameterDefinition parameter = null!;
-                if (!this.TryGetType(parameterTypeName, out var parameterType))
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature: {functionSignature}");
+            }
+            else
+            {
+                var callSite = new CallSite(this.CreateDummyType())
                 {
-                    parameterType = this.CreateDummyType();
+                    CallingConvention = fsn.CallingConvention,
+                    HasThis = false,
+                    ExplicitThis = false,
+                };
 
-                    this.DelayLookingUpType(
-                        parameterTypeName,
-                        this.GetCurrentLocation(parameterTypeNameToken, parameterTypeNameToken),
-                        type => parameter.ParameterType = type);
-                }
+                var capturedFileScopedType = this.fileScopedType;
+                this.delayedLookupLocalMemberActions.Add(() =>
+                {
+                    if (!this.TryConstructTypeFromNode(
+                        fsn.ReturnType, out var returnType, capturedFileScopedType))
+                    {
+                        this.OutputError(
+                            this.GetCurrentLocation(functionSignatureToken),
+                            $"Could not find return type: {functionSignature}");
+                    }
+                    else
+                    {
+                        callSite.ReturnType = returnType;
 
-                parameter = new(parameterType);
-                callSite.Parameters.Add(parameter);
+                        foreach (var parameterNode in fsn.ParameterTypes)
+                        {
+                            if (this.TryConstructTypeFromNode(
+                                parameterNode, out var parameterType, capturedFileScopedType))
+                            {
+                                callSite.Parameters.Add(new(parameterType));
+                            }
+                            else
+                            {
+                                this.OutputError(
+                                    this.GetCurrentLocation(functionSignatureToken),
+                                    $"Could not find parameter type: {functionSignature}");
+                            }
+                        }
+                    }
+                });
+
+                return Instruction.Create(opCode, callSite);
             }
-
-            return Instruction.Create(opCode, callSite);
         }
         return null;
     }

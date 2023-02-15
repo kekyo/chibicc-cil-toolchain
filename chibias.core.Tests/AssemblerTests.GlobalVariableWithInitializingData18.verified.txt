@@ -25,19 +25,47 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit source
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .field static assembly int32 foo
-  .method assembly static int32  main() cil managed
+  .method public static int64  'add'(int16 a,
+                                     int32 b) cil managed
+  {
+    // Code size       4 (0x4)
+    .maxstack  8
+    IL_0000:  ldarg.0
+    IL_0001:  ldarg.1
+    IL_0002:  add
+    IL_0003:  ret
+  } // end of method text::'add'
+
+  .method public static native uint  bar() cil managed
   {
     // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  ldsfld     int32 source::foo
+    IL_0000:  ldsfld     native uint C.data::foo
     IL_0005:  ret
-  } // end of method source::main
+  } // end of method text::bar
 
-} // end of class source
+} // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static native uint foo
+  .method private hidebysig specialname rtspecialname static 
+          void  '..cctor'() cil managed
+  {
+    // Code size       13 (0xd)
+    .maxstack  8
+    IL_0000:  ldftn      int64 C.text::'add'(int16,
+                                             int32)
+    IL_0006:  conv.u
+    IL_0007:  stsfld     native uint C.data::foo
+    IL_000c:  ret
+  } // end of method data::'..cctor'
+
+} // end of class C.data
 
 
 // =============================================================
