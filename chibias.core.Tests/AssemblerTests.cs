@@ -1346,6 +1346,32 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task GlobalVariableWithInitializingData21()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public int32* foo &baz+2
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData22()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public int32* foo &baz-2
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
