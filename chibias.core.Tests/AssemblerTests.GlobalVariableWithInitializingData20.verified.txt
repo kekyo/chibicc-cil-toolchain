@@ -53,14 +53,14 @@
 {
   .field public static method vararg int64 *(int16) foo
   .method private hidebysig specialname rtspecialname static 
-          void  '..cctor'() cil managed
+          void  .cctor() cil managed
   {
     // Code size       12 (0xc)
     .maxstack  8
     IL_0000:  ldftn      vararg int64 C.text::'add'(int16)
     IL_0006:  stsfld     method vararg int64 *(int16) C.data::foo
     IL_000b:  ret
-  } // end of method data::'..cctor'
+  } // end of method data::.cctor
 
 } // end of class C.data
 

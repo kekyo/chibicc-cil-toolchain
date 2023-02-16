@@ -40,7 +40,7 @@
   } // end of method source::initializer_$0
 
   .method private hidebysig specialname rtspecialname static 
-          void  '..cctor'() cil managed
+          void  .cctor() cil managed
   {
     // Code size       16 (0x10)
     .maxstack  8
@@ -48,7 +48,7 @@
     IL_0005:  ldsflda    int32 source::foo
     IL_000a:  stsfld     int32* source::bar
     IL_000f:  ret
-  } // end of method source::'..cctor'
+  } // end of method source::.cctor
 
 } // end of class source
 

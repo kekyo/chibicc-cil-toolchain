@@ -45,14 +45,14 @@
   .field public static int32* foo
   .field static assembly int32 baz at I_00002064
   .method private hidebysig specialname rtspecialname static 
-          void  '..cctor'() cil managed
+          void  .cctor() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  8
     IL_0000:  ldsflda    int32 C.data::baz
     IL_0005:  stsfld     int32* C.data::foo
     IL_000a:  ret
-  } // end of method data::'..cctor'
+  } // end of method data::.cctor
 
 } // end of class C.data
 
