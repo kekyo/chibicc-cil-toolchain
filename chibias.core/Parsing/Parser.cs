@@ -143,7 +143,7 @@ internal sealed partial class Parser
         this.module.TypeSystem.Object);
 
     private MethodDefinition CreateTypeInitializer() => new(
-        "..cctor",
+        ".cctor",
         MethodAttributes.Private | MethodAttributes.Static |
         MethodAttributes.SpecialName | MethodAttributes.RTSpecialName | MethodAttributes.HideBySig,
         this.module.TypeSystem.Void);

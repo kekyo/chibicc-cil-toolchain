@@ -54,7 +54,7 @@
 {
   .field public static native uint foo
   .method private hidebysig specialname rtspecialname static 
-          void  '..cctor'() cil managed
+          void  .cctor() cil managed
   {
     // Code size       13 (0xd)
     .maxstack  8
@@ -63,7 +63,7 @@
     IL_0006:  conv.u
     IL_0007:  stsfld     native uint C.data::foo
     IL_000c:  ret
-  } // end of method data::'..cctor'
+  } // end of method data::.cctor
 
 } // end of class C.data
 

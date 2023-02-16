@@ -31,14 +31,14 @@
   .field static assembly int32* foo
   .field static assembly int32 baz at I_00002064
   .method private hidebysig specialname rtspecialname static 
-          void  '..cctor'() cil managed
+          void  .cctor() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  8
     IL_0000:  ldsflda    int32 source::baz
     IL_0005:  stsfld     int32* source::foo
     IL_000a:  ret
-  } // end of method source::'..cctor'
+  } // end of method source::.cctor
 
 } // end of class source
 

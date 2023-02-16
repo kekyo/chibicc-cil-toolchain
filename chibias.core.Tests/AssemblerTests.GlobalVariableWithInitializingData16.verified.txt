@@ -55,7 +55,7 @@
 {
   .field public static method int64 *(int16,int32) foo
   .method private hidebysig specialname rtspecialname static 
-          void  '..cctor'() cil managed
+          void  .cctor() cil managed
   {
     // Code size       12 (0xc)
     .maxstack  8
@@ -63,7 +63,7 @@
                                              int32)
     IL_0006:  stsfld     method int64 *(int16,int32) C.data::foo
     IL_000b:  ret
-  } // end of method data::'..cctor'
+  } // end of method data::.cctor
 
 } // end of class C.data
 
