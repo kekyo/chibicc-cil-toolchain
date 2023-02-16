@@ -556,12 +556,36 @@ public static class text
     ldsfld foo
     ldind.i4
     ret
-.global internal int32* foo &baz
+.global internal int32* foo &baz+2
 .global internal int32 baz 0x10 0x32 0x54 0x76
 ```
 
 グローバル変数や関数へのポインタを含める場合は、`&`から始まる変数名・関数名を記述します。
 また、その型は、ポインタ型、`void*`, `intptr`、`uintptr`型のいずれかを指定します。
+
+上記の例のように、`+`や`-`演算子でオフセットを与えることも出来ます。
+オフセットはバイト単位です。
+但し、柔軟な計算は出来ません。
+
+### イニシャライザ
+
+イニシャライザは、アセンブリのデータを操作する直前に実行される、関数の一種です。
+内部的には、.NETのタイプイニシャライザから呼び出されます。
+主に、グローバル変数の複雑な初期化処理に用いることが出来ます:
+
+```
+.initializer internal
+    ldc.i4 123
+    stsfld foo
+    ret
+.global public int32 foo
+```
+
+イニシャライザのスコープ記述子は、`public`と指定しても、`internal`と同じとみなされます。
+また、スコープを定めるだけではなく、初期化が実行される契機も決定します:
+
+* `public`又は`internal`: `public`又は`internal`のスコープが指定されたグローバル変数を操作する直前に呼び出される。
+* `file`: `file`スコープが指定されたグローバル変数を操作する直前に呼び出される。
 
 ### 値型の配列
 

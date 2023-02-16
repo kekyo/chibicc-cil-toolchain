@@ -795,6 +795,86 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task InitializerOnPublic()
+    {
+        var actual = Run(@"
+            .initializer public
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer public
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global public int32 foo
+            .global public int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerOnInternal()
+    {
+        var actual = Run(@"
+            .initializer internal
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer internal
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global public int32 foo
+            .global public int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerOnFile()
+    {
+        var actual = Run(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer file
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global file int32 foo
+            .global file int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CommbinedBothInitializingDataAndInitializer1()
+    {
+        var actual = Run(@"
+            .initializer internal
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global public int32 foo
+            .global public int32* bar &foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CommbinedBothInitializingDataAndInitializer2()
+    {
+        var actual = Run(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global file int32 foo
+            .global file int32* bar &foo");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
@@ -1343,6 +1423,32 @@ public sealed partial class AssemblerTests
                 ldsfld foo
                 ret
             .global public int64(int16,...)* foo &add");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData21()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public int32* foo &baz+2
+            .global public int32 baz 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task GlobalVariableWithInitializingData22()
+    {
+        var actual = Run(@"
+            .function public int32 bar
+                ldsfld foo
+                ldind.i4
+                ret
+            .global public int32* foo &baz-2
+            .global public int32 baz 0x10 0x32 0x54 0x76");
         return Verify(actual);
     }
 

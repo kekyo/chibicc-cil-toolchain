@@ -7,13 +7,14 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using Mono.Cecil;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-namespace chibias.Internal;
+namespace chibias.Parsing;
 
 internal abstract class TypeNode
 {

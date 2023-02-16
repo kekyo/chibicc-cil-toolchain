@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -16,7 +17,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace chibias.Internal;
+namespace chibias.Parsing;
 
 internal sealed partial class Parser
 {
@@ -61,6 +62,7 @@ internal sealed partial class Parser
     private TypeReference? enumerationUnderlyingType;
     private EnumerationMemberValueManipulator? enumerationManipulator;
     private int checkingMemberIndex = -1;
+    private int initializerIndex = 0;
     private bool caughtError;
 
     /////////////////////////////////////////////////////////////////////
@@ -318,8 +320,11 @@ internal sealed partial class Parser
             this.instructions = null;
             this.body = null;
             this.method = null;
+
+            return;
         }
-        else if (this.enumerationType != null)
+
+        if (this.enumerationType != null)
         {
             Debug.Assert(this.method == null);
             Debug.Assert(this.instructions == null);
@@ -340,8 +345,11 @@ internal sealed partial class Parser
 
             this.enumerationUnderlyingType = null;
             this.enumerationManipulator = null;
+
+            return;
         }
-        else if (this.structureType != null)
+        
+        if (this.structureType != null)
         {
             Debug.Assert(this.method == null);
             Debug.Assert(this.instructions == null);
@@ -362,6 +370,8 @@ internal sealed partial class Parser
 
             this.structureType = null;
             this.checkingMemberIndex = -1;
+
+            return;
         }
     }
 
@@ -521,6 +531,7 @@ internal sealed partial class Parser
         this.currentFile = unknown;
         this.queuedLocation = null;
         this.lastLocation = null;
+        this.initializerIndex = 0;
 
         this.referenceTypes.Finish();
 

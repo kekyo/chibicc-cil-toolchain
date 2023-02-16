@@ -7,12 +7,12 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using Mono.Cecil;
 using System;
 using System.Linq;
-using System.Text;
 
-namespace chibias.Internal;
+namespace chibias.Parsing;
 
 partial class Parser
 {
@@ -84,6 +84,7 @@ partial class Parser
                                     HasThis = false,
                                     ExplicitThis = false,
                                 };
+
                                 foreach (var parameterNode in fsn.ParameterTypes)
                                 {
                                     if (this.TryConstructTypeFromNode(
@@ -107,17 +108,17 @@ partial class Parser
                                 return false;
                             }
                         }
-                        else if (this.TryConstructTypeFromNode(
+
+                        if (this.TryConstructTypeFromNode(
                             dtn.ElementType, out var elementType, fileScopedType))
                         {
                             type = new PointerType(elementType);
                             return true;
                         }
-                        else
-                        {
-                            type = null!;
-                            return false;
-                        }
+
+                        type = null!;
+                        return false;
+
                     // "System.Int32&"
                     case DerivedTypes.Reference:
                         if (this.TryConstructTypeFromNode(
@@ -126,11 +127,10 @@ partial class Parser
                             type = new ByReferenceType(elementType2);
                             return true;
                         }
-                        else
-                        {
-                            type = null!;
-                            return false;
-                        }
+
+                        type = null!;
+                        return false;
+
                     default:
                         throw new InvalidOperationException();
                 }
@@ -147,18 +147,14 @@ partial class Parser
                         type = this.GetValueArrayType(elementType3, length);
                         return true;
                     }
-                    else
-                    {
-                        // "System.Int32[]"
-                        type = new ArrayType(elementType3);
-                        return true;
-                    }
+
+                    // "System.Int32[]"
+                    type = new ArrayType(elementType3);
+                    return true;
                 }
-                else
-                {
-                    type = null!;
-                    return false;
-                }
+
+                type = null!;
+                return false;
 
             // Other types
             case TypeIdentityNode tin:
@@ -172,7 +168,8 @@ partial class Parser
                     type = td2;
                     return true;
                 }
-                else if (this.module.Types.FirstOrDefault(type =>
+
+                if (this.module.Types.FirstOrDefault(type =>
                     (type.Namespace == "C.type" && type.Name == tin.Identity) ||
                     // FullName is needed because the value array type name is not CABI.
                     (type.FullName == tin.Identity)) is { } td3)
@@ -180,32 +177,34 @@ partial class Parser
                     type = td3;
                     return true;
                 }
-                else if (this.cabiSpecificSymbols.TryGetMember<TypeReference>(tin.Identity, out var tr1))
+
+                if (this.cabiSpecificSymbols.TryGetMember<TypeReference>(tin.Identity, out var tr1))
                 {
                     type = this.Import(tr1);
                     return true;
                 }
-                else if (this.importantTypes.TryGetValue(tin.Identity, out type!))
+
+                if (this.importantTypes.TryGetValue(tin.Identity, out type!))
                 {
                     return true;
                 }
-                else if (CecilUtilities.TryLookupOriginTypeName(tin.Identity, out var originTypeName))
+
+                if (CecilUtilities.TryLookupOriginTypeName(tin.Identity, out var originTypeName))
                 {
                     return this.TryGetType(
                         originTypeName,
                         out type,
                         fileScopedType);
                 }
-                else if (this.referenceTypes.TryGetMember(tin.Identity, out var td4))
+
+                if (this.referenceTypes.TryGetMember(tin.Identity, out var td4))
                 {
                     type = this.Import(td4);
                     return true;
                 }
-                else
-                {
-                    type = null!;
-                    return false;
-                }
+
+                type = null!;
+                return false;
 
             // Function signature
             case FunctionSignatureNode _:
@@ -273,22 +272,22 @@ partial class Parser
                 method = m2;
                 return true;
             }
-            else if (this.cabiTextType.Methods.
+
+            if (this.cabiTextType.Methods.
                 FirstOrDefault(method => method.Name == methodName) is { } m3)
             {
                 method = m3;
                 return true;
             }
-            else if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m))
+
+            if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m))
             {
                 method = this.Import(m);
                 return true;
             }
-            else
-            {
-                method = null!;
-                return false;
-            }
+
+            method = null!;
+            return false;
         }
 
         var typeName = name.Substring(0, methodNameIndex);
@@ -322,11 +321,9 @@ partial class Parser
             method = this.Import(m4);
             return true;
         }
-        else
-        {
-            method = null!;
-            return false;
-        }
+
+        method = null!;
+        return false;
     }
 
     /////////////////////////////////////////////////////////////////////
@@ -351,22 +348,22 @@ partial class Parser
                 field = f2;
                 return true;
             }
-            else if (this.cabiDataType.Fields.
+            
+            if (this.cabiDataType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f3)
             {
                 field = f3;
                 return true;
             }
-            else if (this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
+
+            if (this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
             {
                 field = this.Import(f);
                 return true;
             }
-            else
-            {
-                field = null!;
-                return false;
-            }
+
+            field = null!;
+            return false;
         }
 
         var typeName = name.Substring(0, fieldNameIndex);
@@ -384,11 +381,9 @@ partial class Parser
             field = this.Import(f4);
             return true;
         }
-        else
-        {
-            field = null!;
-            return false;
-        }
+
+        field = null!;
+        return false;
     }
 
     /////////////////////////////////////////////////////////////////////
@@ -405,23 +400,23 @@ partial class Parser
             member = method;
             return true;
         }
-        else if (this.TryGetField(
+        
+        if (this.TryGetField(
             memberName, out var field, fileScopedType))
         {
             member = field;
             return true;
         }
-        else if (this.TryGetType(
+        
+        if (this.TryGetType(
             memberName, out var type, fileScopedType))
         {
             member = type;
             return true;
         }
-        else
-        {
-            member = null!;
-            return false;
-        }
+
+        member = null!;
+        return false;
     }
 
     private bool TryGetMember(

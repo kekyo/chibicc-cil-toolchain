@@ -11,7 +11,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Globalization;
 
-namespace chibias.Internal;
+namespace chibias.Parsing;
 
 partial class Parser
 {
