@@ -23,16 +23,12 @@ partial class Parser
         string functionName,
         TypeReference returnType,
         ParameterDefinition[] parameters,
-        ScopeDescriptors scopeDescriptor,
+        MethodAttributes attribute,
         bool varargs)
     {
         this.method = new MethodDefinition(
             functionName,
-            scopeDescriptor switch
-            {
-                ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
-                _ => MethodAttributes.Assembly | MethodAttributes.Static,
-            },
+            attribute | MethodAttributes.Static,
             this.Import(returnType));
         this.method.HasThis = false;
 
@@ -151,7 +147,11 @@ partial class Parser
             functionName,
             returnType,
             parameters.ToArray(),
-            scopeDescriptor,
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
+                _ => MethodAttributes.Assembly | MethodAttributes.Static,
+            },
             varargs);
 
         switch (scopeDescriptor)
@@ -162,6 +162,52 @@ partial class Parser
                 break;
             default:
                 this.fileScopedType.Methods.Add(method);
+                break;
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////
+
+    private void ParseInitializerDirective(
+        Token directive, Token[] tokens)
+    {
+        this.FinishCurrentState();
+
+        if (tokens.Length < 2)
+        {
+            this.OutputError(tokens.Last(), $"Missing directive operands.");
+            return;
+        }
+
+        if (!CecilUtilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+            return;
+        }
+
+        var method = this.SetupMethodDefinition(
+            $"initializer_${this.initializerIndex++}",
+            this.UnsafeGetType("System.Void"),
+            Utilities.Empty<ParameterDefinition>(),
+            MethodAttributes.Private,
+            false);
+
+        switch (scopeDescriptor)
+        {
+            case ScopeDescriptors.Public:
+            case ScopeDescriptors.Internal:
+                this.cabiDataType.Methods.Add(method);
+                this.cabiDataTypeInitializer.Body.Instructions.Add(
+                    Instruction.Create(OpCodes.Call, method));
+                break;
+            default:
+                this.fileScopedType.Methods.Add(method);
+                this.fileScopedTypeInitializer.Body.Instructions.Add(
+                    Instruction.Create(OpCodes.Call, method));
                 break;
         }
     }
@@ -987,6 +1033,10 @@ partial class Parser
             // Function directive:
             case "function":
                 this.ParseFunctionDirective(directive, tokens);
+                break;
+            // Initializer directive:
+            case "initializer":
+                this.ParseInitializerDirective(directive, tokens);
                 break;
             // Global variable directive:
             case "global":

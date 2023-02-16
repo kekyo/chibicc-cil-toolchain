@@ -571,7 +571,28 @@ To include a pointer, write the name of the variable/function beginning with `&`
 The type can be a pointer, `void*`, `intptr`, and `uintptr` type.
 
 You can also give an offset with the `+` or `-` operator, as in the example above.
+Offset is in bytes.
 However, this does not allow for flexible calculations.
+
+### Initializer
+
+An initializer is a function that is executed just before manipulating global variables in an assembly.
+Internally, it is called from .NET initializer.
+It can be used mainly for complex initialization of global variables:
+
+```
+.initializer internal
+    ldc.i4 123
+    stsfld foo
+    ret
+.global public int32 foo
+```
+
+The scope descriptor is considered the same as `internal` even if it is specified as `public`.
+It is not only definition the scope, but also determines when the initialization is performed:
+
+* `public` or `internal`: Called just before manipulating global variables whose scope is specified as `public` or `internal`.
+* `file`: Called just before manipulating global variables whose scope is specified as `file`.
 
 ### Value array type
 
@@ -820,7 +841,6 @@ The `chibias.net4` project generates single file binaries for `net48` in `Releas
 
 Might be implemented:
 
-* Handling function pointer type.
 * Automatic implements `IList<T>` on value array type.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
 * Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.

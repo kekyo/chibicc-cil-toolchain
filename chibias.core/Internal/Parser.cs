@@ -61,6 +61,7 @@ internal sealed partial class Parser
     private TypeReference? enumerationUnderlyingType;
     private EnumerationMemberValueManipulator? enumerationManipulator;
     private int checkingMemberIndex = -1;
+    private int initializerIndex = 0;
     private bool caughtError;
 
     /////////////////////////////////////////////////////////////////////
@@ -529,6 +530,7 @@ internal sealed partial class Parser
         this.currentFile = unknown;
         this.queuedLocation = null;
         this.lastLocation = null;
+        this.initializerIndex = 0;
 
         this.referenceTypes.Finish();
 

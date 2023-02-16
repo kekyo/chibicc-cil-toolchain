@@ -795,6 +795,86 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task InitializerOnPublic()
+    {
+        var actual = Run(@"
+            .initializer public
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer public
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global public int32 foo
+            .global public int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerOnInternal()
+    {
+        var actual = Run(@"
+            .initializer internal
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer internal
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global public int32 foo
+            .global public int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerOnFile()
+    {
+        var actual = Run(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer file
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global file int32 foo
+            .global file int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CommbinedBothInitializingDataAndInitializer1()
+    {
+        var actual = Run(@"
+            .initializer internal
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global public int32 foo
+            .global public int32* bar &foo");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CommbinedBothInitializingDataAndInitializer2()
+    {
+        var actual = Run(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global file int32 foo
+            .global file int32* bar &foo");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
