@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using chibias.Internal;
+using chibias.Parsing;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Mdb;

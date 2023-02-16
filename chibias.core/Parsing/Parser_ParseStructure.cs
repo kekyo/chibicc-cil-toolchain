@@ -7,11 +7,12 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using Mono.Cecil;
 using System.Diagnostics;
 using System.Linq;
 
-namespace chibias.Internal;
+namespace chibias.Parsing;
 
 partial class Parser
 {

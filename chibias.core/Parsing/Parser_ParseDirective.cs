@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -15,7 +16,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace chibias.Internal;
+namespace chibias.Parsing;
 
 partial class Parser
 {
