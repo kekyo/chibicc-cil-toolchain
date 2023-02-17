@@ -484,7 +484,7 @@ CABI only applies if the function can be referenced from an external assembly.
 If the scope of the function is not `public`,
 it cannot be referenced from external assemblies and is not CABI compliant.
 
-### Call external method
+### Call external .NET method
 
 Simply specify a .NET method with full name and parameter types:
 
@@ -503,11 +503,26 @@ A list of parameter types is used to identify overloads.
 You have to give it containing assembly on command line option `-r`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
 
+Tip: If you need to call properties or indexers,
+you must specify the signatures of the methods that implement them. For example:
+
+```
+    ldstr "ABCDE"
+    call System.String.get_Length   ; "ABCDE".Length
+```
+
+Most properties use a fixed naming convention.
+As above, in the case of `System.String.Length` corresponds to the method names `get_Length()` for getter and `set_Length()` for setter.
+In the case of an indexer, it corresponds to the method name `get_Item()` or `set_Item()`.
+
+However, these naming conventions are not mandatory, so different names may apply.
+If this does not work, please use tools such as ILDAsm or ILSpy to check target signature.
+
 ### Function signature syntax
 
-The function signature is the target method signature that must be indicated by the `calli` opcode.
+The function signature is must be indicated by the `calli` opcode.
 Sometimes referred to as "Call sites."
-In chibias, it is specified with the same syntax as the function pointer type:
+In the case of chibias, they are specified with a syntax similar to function pointer types.
 
 ```
 .function public int32 main
