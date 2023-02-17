@@ -41,7 +41,7 @@
 .class public abstract auto ansi sealed beforefieldinit C.data
        extends [mscorlib]System.Object
 {
-  .field public static int32 bar at I_00002058
+  .field public static initonly int32 bar at I_00002058
 } // end of class C.data
 
 

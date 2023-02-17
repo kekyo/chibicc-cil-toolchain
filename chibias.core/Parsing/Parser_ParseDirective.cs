@@ -1,4 +1,4 @@
-﻿/////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibias-cil - The specialized backend CIL assembler for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -236,20 +236,28 @@ partial class Parser
             return;
         }
 
-        var data = tokens.Skip(4).
-            Select(token =>
-            {
-                if (Utilities.TryParseUInt8(token.Text, out var value))
+        byte[]? data;
+        if (tokens.Length >= 5)
+        {
+            data = tokens.Skip(4).
+                Select(token =>
                 {
-                    return value;
-                }
-                else
-                {
-                    this.OutputError(token, $"Invalid data operand.");
-                    return (byte)0;
-                }
-            }).
-            ToArray();
+                    if (Utilities.TryParseUInt8(token.Text, out var value))
+                    {
+                        return value;
+                    }
+                    else
+                    {
+                        this.OutputError(token, $"Invalid data operand.");
+                        return (byte)0;
+                    }
+                }).
+                ToArray();
+        }
+        else
+        {
+            data = null;
+        }
 
         var globalTypeNameToken = tokens[2];
         var globalTypeName = globalTypeNameToken.Text;
@@ -273,9 +281,11 @@ partial class Parser
                 _ => FieldAttributes.Assembly | FieldAttributes.Static,
             },
             globalType);
-        if (data is { })
+
+        if (data != null)
         {
             field.InitialValue = data;
+            field.IsInitOnly = true;
         }
 
         switch (scopeDescriptor)

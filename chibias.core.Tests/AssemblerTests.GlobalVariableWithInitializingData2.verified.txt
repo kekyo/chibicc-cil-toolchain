@@ -121,7 +121,7 @@
 .class public abstract auto ansi sealed beforefieldinit C.data
        extends [mscorlib]System.Object
 {
-  .field public static valuetype System.Byte_len6 bar at I_0000209C
+  .field public static initonly valuetype System.Byte_len6 bar at I_0000209C
 } // end of class C.data
 
 

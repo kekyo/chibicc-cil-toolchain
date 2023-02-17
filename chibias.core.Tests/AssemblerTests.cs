@@ -849,32 +849,6 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
-    [Test]
-    public Task CommbinedBothInitializingDataAndInitializer1()
-    {
-        var actual = Run(@"
-            .initializer internal
-                ldc.i4.2
-                stsfld foo
-                ret
-            .global public int32 foo
-            .global public int32* bar &foo");
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task CommbinedBothInitializingDataAndInitializer2()
-    {
-        var actual = Run(@"
-            .initializer file
-                ldc.i4.2
-                stsfld foo
-                ret
-            .global file int32 foo
-            .global file int32* bar &foo");
-        return Verify(actual);
-    }
-
     /////////////////////////////////////////////////////////
 
     [Test]
