@@ -19,6 +19,18 @@ public enum AssemblyTypes
     WinExe,
 }
 
+public enum TargetWindowsArchitectures
+{
+    AnyCPU,
+    Preferred32Bit,
+    X86,
+    X64,
+    IA64,
+    ARM,
+    ARMv7,
+    ARM64,
+}
+
 public enum DebugSymbolTypes
 {
     None,
@@ -40,6 +52,7 @@ public sealed class AssemblerOptions
 {
     public string[] ReferenceAssemblyPaths = Utilities.Empty<string>();
     public AssemblyTypes AssemblyType = AssemblyTypes.Exe;
+    public TargetWindowsArchitectures TargetWindowsArchitecture = TargetWindowsArchitectures.AnyCPU;
     public DebugSymbolTypes DebugSymbolType = DebugSymbolTypes.Embedded;
     public AssembleOptions Options = AssembleOptions.Deterministic;
     public Version Version = new Version(1, 0, 0, 0);

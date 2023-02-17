@@ -50,7 +50,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.18.0,net6.0] [...]
+chibias [0.26.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -72,6 +72,7 @@ usage: chibias [options] <source path> [<source path> ...]
   -s                Suppress runtime configuration file
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
+  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
       --log <level> Log level [debug|trace|information|warning|error|silent]
   -h, --help        Show this help
 ```
@@ -82,7 +83,10 @@ usage: chibias [options] <source path> [<source path> ...]
 * The default target framework moniker (`net6.0` in the above example) depends on the operating environment of chibias.
 * Specifying a target framework moniker only assumes a variation of the core library.
   And it does NOT automatically detect the `mscorlib.dll` or `System.Private.CoreLib.dll` assembly files (see below).
-
+* Target windows architecture is `AnyCPU` by default. These values ignore case.
+  This value only sets the mark on the assembly. Specifying a different value will not affect generated your opcodes.
+  It may always operate as `AnyCPU` except in Windows CLR environment.
+* Log level is `warning` by default. These values ignore case.
 
 ----
 
@@ -853,6 +857,7 @@ Might not be implemented:
   * InlinePhi
 * Handling multi-dimensional array types.
 * Exception handling.
+* Strong name signer.
 * And NOT chibicc-cil specific requirements.
 
 

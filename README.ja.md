@@ -49,7 +49,7 @@ $ dotnet tool install -g chibias-cli
 ```bash
 $ chibias
 
-chibias [0.18.0,net6.0] [...]
+chibias [0.26.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -71,6 +71,7 @@ usage: chibias [options] <source path> [<source path> ...]
   -s                Suppress runtime configuration file
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
+  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
       --log <level> Log level [debug|trace|information|warning|error|silent]
   -h, --help        Show this help
 ```
@@ -81,7 +82,10 @@ usage: chibias [options] <source path> [<source path> ...]
 * ターゲットフレームワークのデフォルト(上記の例では`net6.0`)は、chibiasの動作環境に依存します。
 * ターゲットフレームワークの指定は、コアライブラリのバリエーションを仮定するだけで、
   `mscorlib.dll`や`System.Private.CoreLib.dll`アセンブリを自動的に検出するわけではありません（別章参照）。
-
+* ターゲットウインドウズアーキテクチャは、デフォルトで`AnyCPU`です。大文字小文字は無視されます。
+  この値は、アセンブリにマークを設定するだけです。異なる値を指定したとしても、生成されるオプコードには影響ありません。
+  WindowsのCLR環境以外では、常に`AnyCPU`として動作する可能性があります。
+* ログレベルは、デフォルトで`warning`です。大文字小文字は無視されます。
 
 ----
 

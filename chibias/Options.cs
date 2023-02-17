@@ -155,6 +155,15 @@ internal sealed class Options
                                 continue;
                             }
                             break;
+                        case 'w':
+                            if (args.Length >= index &&
+                                Enum.TryParse<TargetWindowsArchitectures>(args[index + 1], true, out var arch))
+                            {
+                                index++;
+                                options.AssemblerOptions.TargetWindowsArchitecture = arch;
+                                continue;
+                            }
+                            break;
                         case 'h':
                             options.ShowHelp = true;
                             continue;
@@ -171,14 +180,8 @@ internal sealed class Options
                                     options.AssemblerOptions.AssemblyType = AssemblyTypes.WinExe;
                                     continue;
                                 case "log":
-                                    if (arg.Length >= 3 &&
-                                        Enum.TryParse<LogLevels>(arg.Substring(2), out var logLevel))
-                                    {
-                                        options.LogLevel = logLevel;
-                                        continue;
-                                    }
-                                    else if (args.Length >= index &&
-                                        Enum.TryParse<LogLevels>(args[index + 1], true, out logLevel))
+                                    if (args.Length >= index &&
+                                        Enum.TryParse<LogLevels>(args[index + 1], true, out var logLevel))
                                     {
                                         index++;
                                         options.LogLevel = logLevel;
@@ -265,6 +268,7 @@ internal sealed class Options
         }
 
         logger.Information($"AssemblyType={this.AssemblerOptions.AssemblyType}");
+        logger.Information($"TargetWindowsArchitecture={this.AssemblerOptions.TargetWindowsArchitecture}");
         logger.Information($"DebugSymbolType={this.AssemblerOptions.DebugSymbolType}");
         logger.Information($"Options={this.AssemblerOptions.Options}");
         logger.Information($"ProduceRuntimeConfigurationIfRequired={this.AssemblerOptions.ProduceRuntimeConfigurationIfRequired}");
@@ -296,6 +300,7 @@ internal sealed class Options
         tw.WriteLine("  -s                Suppress runtime configuration file");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFramework})");
+        tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent]");
         tw.WriteLine("  -h, --help        Show this help");
     }

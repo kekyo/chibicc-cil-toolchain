@@ -206,9 +206,27 @@ public sealed class Assembler
                 },
                 Runtime = targetFramework.Runtime,
                 AssemblyResolver = this.assemblyResolver,
+                Architecture = options.TargetWindowsArchitecture switch
+                {
+                    TargetWindowsArchitectures.X64 => TargetArchitecture.AMD64,
+                    TargetWindowsArchitectures.IA64 => TargetArchitecture.IA64,
+                    TargetWindowsArchitectures.ARM => TargetArchitecture.ARM,
+                    TargetWindowsArchitectures.ARMv7 => TargetArchitecture.ARMv7,
+                    TargetWindowsArchitectures.ARM64 => TargetArchitecture.ARM64,
+                    _ => TargetArchitecture.I386,
+                },
             });
 
         var module = assembly.MainModule;
+
+        module.Attributes = options.TargetWindowsArchitecture switch
+        {
+            TargetWindowsArchitectures.Preferred32Bit => ModuleAttributes.ILOnly | ModuleAttributes.Preferred32Bit,
+            TargetWindowsArchitectures.X86 => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
+            TargetWindowsArchitectures.ARM => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
+            TargetWindowsArchitectures.ARMv7 => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
+            _ => ModuleAttributes.ILOnly,
+        };
 
         // https://github.com/jbevain/cecil/issues/646
         var coreLibraryReference = this.assemblyResolver.Resolve(
