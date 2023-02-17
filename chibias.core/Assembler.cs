@@ -63,6 +63,13 @@ public sealed class Assembler
             {
                 try
                 {
+                    if (!File.Exists(path))
+                    {
+                        this.logger.Warning(
+                            $"Unable to find reference assembly: {path}");
+                        return null;
+                    }
+
                     var assembly = AssemblyDefinition.ReadAssembly(path, this.readerParameters);
                     this.logger.Information(
                         $"Read reference assembly: {path}");
@@ -71,7 +78,7 @@ public sealed class Assembler
                 catch (Exception ex)
                 {
                     this.logger.Warning(
-                        $"Unable read reference assembly: {path}, {ex.GetType().FullName}: {ex.Message}");
+                        $"Unable to read reference assembly: {path}, {ex.GetType().FullName}: {ex.Message}");
                     return null;
                 }
             })
@@ -171,7 +178,7 @@ public sealed class Assembler
     private bool Run(
         string outputAssemblyPath,
         AssemblerOptions options,
-        Action<Parser> runner)
+        Func<Parser, bool> runner)
     {
         if (!TargetFramework.TryParse(
             options.TargetFrameworkMoniker,
@@ -266,10 +273,12 @@ public sealed class Assembler
             produceExecutable,
             options.DebugSymbolType != DebugSymbolTypes.None);
 
-        runner(parser);
-
-        var allFinished = parser.Finish(
-            options.Options.HasFlag(AssembleOptions.ApplyOptimization));
+        var allFinished = runner(parser);
+        if (allFinished)
+        {
+            allFinished = parser.Finish(
+                options.Options.HasFlag(AssembleOptions.ApplyOptimization));
+        }
 
         cabiSpecificSymbols.Finish();
 
@@ -279,6 +288,19 @@ public sealed class Assembler
         {
             this.logger.Information(
                 $"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
+
+            var outputAssemblyBasePath =
+                Utilities.GetDirectoryPath(outputAssemblyFullPath);
+            try
+            {
+                if (!Directory.Exists(outputAssemblyBasePath))
+                {
+                    Directory.CreateDirectory(outputAssemblyBasePath);
+                }
+            }
+            catch
+            {
+            }
 
             module.Write(
                 outputAssemblyFullPath,
@@ -348,6 +370,8 @@ public sealed class Assembler
                     null,
                     sourcePathDebuggerHint,
                     sourceCodeReader);
+
+                return true;
             });
 
     public bool Assemble(
@@ -379,10 +403,20 @@ public sealed class Assembler
             options,
             parser =>
             {
+                var allFinished = true;
+
                 foreach (var sourceFullPath in sourceFullPaths)
                 {
                     if (sourceFullPath != "-")
                     {
+                        if (!File.Exists(sourceFullPath))
+                        {
+                            this.logger.Error(
+                                $"Unable to find source code file: {sourceFullPath}");
+                            allFinished = false;
+                            continue;
+                        }
+
                         using var fs = new FileStream(
                             sourceFullPath,
                             FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -414,6 +448,8 @@ public sealed class Assembler
                             Console.In);
                     }
                 }
+
+                return allFinished;
             });
     }
 }
