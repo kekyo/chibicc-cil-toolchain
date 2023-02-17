@@ -28,37 +28,33 @@
 .class private abstract auto ansi sealed beforefieldinit source
        extends [mscorlib]System.Object
 {
-  .field static assembly int32* foo
-  .field static assembly int32 baz at I_00002064
-  .method private hidebysig specialname rtspecialname static 
-          void  .cctor() cil managed
+  .method assembly static string  bar(int32 a,
+                                      int8& b) cil managed
   {
-    // Code size       11 (0xb)
+    // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  ldsflda    int32 source::baz
-    IL_0005:  stsfld     int32* source::foo
-    IL_000a:  ret
-  } // end of method source::.cctor
+    IL_0000:  ldstr      "ABC"
+    IL_0005:  ret
+  } // end of method source::bar
 
 } // end of class source
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static int32  bar() cil managed
+  .method public static method string *(int32,int8&) 
+          foo() cil managed
   {
     // Code size       7 (0x7)
     .maxstack  8
-    IL_0000:  ldsfld     int32* source::foo
-    IL_0005:  ldind.i4
+    IL_0000:  ldftn      string source::bar(int32,
+                                            int8&)
     IL_0006:  ret
-  } // end of method text::bar
+  } // end of method text::foo
 
 } // end of class C.text
 
 
 // =============================================================
 
-.data cil I_00002064 = bytearray (
-                 10 32 54 76)                                     // .2Tv
 // *********** DISASSEMBLY COMPLETE ***********************

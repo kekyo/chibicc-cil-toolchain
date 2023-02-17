@@ -1,4 +1,4 @@
-﻿/////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibias-cil - The specialized backend CIL assembler for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -1109,6 +1109,19 @@ public sealed partial class AssemblerTests
             .function public int32[][] foo
                 ldc.i4.4
                 newarr int32[]
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionPointerType()
+    {
+        var actual = Run(@"
+            .function public string(int32,int8&)* foo
+                ldftn bar
+                ret
+            .function file string bar a:int32 b:int8&
+                ldstr ""ABC""
                 ret");
         return Verify(actual);
     }
