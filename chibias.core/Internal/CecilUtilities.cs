@@ -167,8 +167,14 @@ internal static class CecilUtilities
         aliasTypeNames.TryGetValue(typeName, out originTypeName!);
 
     public static bool IsEnumerationUnderlyingType(
-        string typeName) =>
-        enumerationUnderlyingTypes.Contains(typeName);
+        string typeName)
+    {
+        if (TryLookupOriginTypeName(typeName, out var originName))
+        {
+            typeName = originName;
+        }
+        return enumerationUnderlyingTypes.Contains(typeName);
+    }
 
     public static bool TryParseOpCode(
         string word,

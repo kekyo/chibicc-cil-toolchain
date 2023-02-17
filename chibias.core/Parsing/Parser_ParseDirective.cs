@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////////////
+﻿/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibias-cil - The specialized backend CIL assembler for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -408,11 +408,6 @@ partial class Parser
 
         var underlyingTypeNameToken = tokens[2];
         var underlyingTypeName = underlyingTypeNameToken.Text;
-
-        if (CecilUtilities.TryLookupOriginTypeName(underlyingTypeName, out var originName))
-        {
-            underlyingTypeName = originName;
-        }
 
         if (!CecilUtilities.IsEnumerationUnderlyingType(underlyingTypeName))
         {
