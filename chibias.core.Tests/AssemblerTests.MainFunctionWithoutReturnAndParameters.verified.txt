@@ -1,0 +1,110 @@
+﻿
+//  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
+
+
+
+// Metadata version: v4.0.30319
+.assembly extern mscorlib
+{
+  .publickey = (00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 ) 
+  .ver 4:0:0:0
+}
+.assembly output
+{
+  .custom instance void [mscorlib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
+                                                                                                        2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
+  .ver 1:0:0:0
+}
+.module output.dll
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+
+
+// ================== GLOBAL METHODS =========================
+
+.method assembly static void  _startup(string[] args) cil managed
+{
+  .entrypoint
+  // Code size       81 (0x51)
+  .maxstack  3
+  .locals (int8** V_0,
+           int32 V_1)
+  IL_0000:  ldarg.0
+  IL_0001:  ldlen
+  IL_0002:  conv.i4
+  IL_0003:  ldc.i4.1
+  IL_0004:  add
+  IL_0005:  conv.u
+  IL_0006:  sizeof     int8*
+  IL_000c:  mul.ovf.un
+  IL_000d:  localloc
+  IL_000f:  stloc.0
+  IL_0010:  ldloc.0
+  IL_0011:  call       class [mscorlib]System.Reflection.Assembly [mscorlib]System.Reflection.Assembly::GetEntryAssembly()
+  IL_0016:  callvirt   instance string [mscorlib]System.Reflection.Assembly::get_Location()
+  IL_001b:  call       native int [mscorlib]System.Runtime.InteropServices.Marshal::StringToHGlobalAnsi(string)
+  IL_0020:  stind.i
+  IL_0021:  ldc.i4.0
+  IL_0022:  stloc.1
+  IL_0023:  br.s       IL_003f
+
+  IL_0025:  ldloc.0
+  IL_0026:  ldloc.1
+  IL_0027:  ldc.i4.1
+  IL_0028:  add
+  IL_0029:  conv.i
+  IL_002a:  sizeof     int8*
+  IL_0030:  mul
+  IL_0031:  add
+  IL_0032:  ldarg.0
+  IL_0033:  ldloc.1
+  IL_0034:  ldelem.ref
+  IL_0035:  call       native int [mscorlib]System.Runtime.InteropServices.Marshal::StringToHGlobalAnsi(string)
+  IL_003a:  stind.i
+  IL_003b:  ldloc.1
+  IL_003c:  ldc.i4.1
+  IL_003d:  add
+  IL_003e:  stloc.1
+  IL_003f:  ldloc.1
+  IL_0040:  ldarg.0
+  IL_0041:  ldlen
+  IL_0042:  conv.i4
+  IL_0043:  blt.s      IL_0025
+
+  IL_0045:  ldarg.0
+  IL_0046:  ldlen
+  IL_0047:  conv.i4
+  IL_0048:  ldc.i4.1
+  IL_0049:  add
+  IL_004a:  ldloc.0
+  IL_004b:  call       void C.text::main(int32,
+                                         int8**)
+  IL_0050:  ret
+} // end of global method _startup
+
+
+// =============================================================
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method assembly static void  main(int32 argc,
+                                     int8** argv) cil managed
+  {
+    // Code size       1 (0x1)
+    .maxstack  8
+    IL_0000:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
+
+// =============================================================
+
+// *********** DISASSEMBLY COMPLETE ***********************

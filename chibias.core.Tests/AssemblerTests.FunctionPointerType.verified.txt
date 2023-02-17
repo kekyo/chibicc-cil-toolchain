@@ -25,46 +25,34 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed C.text
+.class private abstract auto ansi sealed beforefieldinit source
        extends [mscorlib]System.Object
 {
-  .method public static int64  'add'(int16 a,
-                                     int32 b) cil managed
-  {
-    // Code size       4 (0x4)
-    .maxstack  8
-    IL_0000:  ldarg.0
-    IL_0001:  ldarg.1
-    IL_0002:  add
-    IL_0003:  ret
-  } // end of method text::'add'
-
-  .method public static void*  bar() cil managed
+  .method assembly static string  bar(int32 a,
+                                      int8& b) cil managed
   {
     // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  ldsfld     void* C.data::foo
+    IL_0000:  ldstr      "ABC"
     IL_0005:  ret
-  } // end of method text::bar
+  } // end of method source::bar
 
-} // end of class C.text
+} // end of class source
 
-.class public abstract auto ansi sealed beforefieldinit C.data
+.class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .field public static void* foo
-  .method private hidebysig specialname rtspecialname static 
-          void  .cctor() cil managed
+  .method public static method string *(int32,int8&) 
+          foo() cil managed
   {
-    // Code size       12 (0xc)
+    // Code size       7 (0x7)
     .maxstack  8
-    IL_0000:  ldftn      int64 C.text::'add'(int16,
-                                             int32)
-    IL_0006:  stsfld     void* C.data::foo
-    IL_000b:  ret
-  } // end of method data::.cctor
+    IL_0000:  ldftn      string source::bar(int32,
+                                            int8&)
+    IL_0006:  ret
+  } // end of method text::foo
 
-} // end of class C.data
+} // end of class C.text
 
 
 // =============================================================

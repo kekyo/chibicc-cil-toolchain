@@ -15,4 +15,4 @@ rem git clean -xfd
 dotnet restore
 
 dotnet build -p:Configuration=Release -p:Platform="Any CPU"
-dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -o artifacts
+dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:PackageOutputPath="..\artifacts"

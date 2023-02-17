@@ -23,47 +23,36 @@
 .corflags 0x00000001    //  ILONLY
 
 
-// =============== CLASS MEMBERS DECLARATION ===================
+// ================== GLOBAL METHODS =========================
 
-.class private abstract auto ansi sealed beforefieldinit source
-       extends [mscorlib]System.Object
+.method assembly static void  _startup() cil managed
 {
-  .field static assembly int32* foo
-  .method private hidebysig specialname rtspecialname static 
-          void  .cctor() cil managed
-  {
-    // Code size       11 (0xb)
-    .maxstack  8
-    IL_0000:  ldsflda    int32 C.data::baz
-    IL_0005:  stsfld     int32* source::foo
-    IL_000a:  ret
-  } // end of method source::.cctor
-
-} // end of class source
-
-.class public abstract auto ansi sealed C.text
-       extends [mscorlib]System.Object
-{
-  .method public static int32  bar() cil managed
-  {
-    // Code size       7 (0x7)
-    .maxstack  8
-    IL_0000:  ldsfld     int32* source::foo
-    IL_0005:  ldind.i4
-    IL_0006:  ret
-  } // end of method text::bar
-
-} // end of class C.text
-
-.class public abstract auto ansi sealed beforefieldinit C.data
-       extends [mscorlib]System.Object
-{
-  .field static assembly int32 baz at I_00002064
-} // end of class C.data
+  .entrypoint
+  // Code size       6 (0x6)
+  .maxstack  8
+  IL_0000:  call       void C.text::main()
+  IL_0005:  ret
+} // end of global method _startup
 
 
 // =============================================================
 
-.data cil I_00002064 = bytearray (
-                 10 32 54 76)                                     // .2Tv
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method assembly static void  main() cil managed
+  {
+    // Code size       1 (0x1)
+    .maxstack  8
+    IL_0000:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
+
+// =============================================================
+
 // *********** DISASSEMBLY COMPLETE ***********************

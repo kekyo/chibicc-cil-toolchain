@@ -21,6 +21,7 @@ internal enum ScopeDescriptors
     Public,
     Internal,
     File,
+    _Module_,   // For internal use only.
 }
 
 internal static class CecilUtilities
@@ -32,13 +33,6 @@ internal static class CecilUtilities
             field.FieldType.FullName == "Mono.Cecil.Cil.OpCode").
         Select(field => (OpCode)field.GetValue(null)!).
         ToDictionary(opCode => opCode.Name.Replace('_', '.').ToLowerInvariant());
-
-    private static readonly Dictionary<string, ScopeDescriptors> scopeDescriptors = new()
-    {
-        { "public", ScopeDescriptors.Public },
-        { "internal", ScopeDescriptors.Internal },
-        { "file", ScopeDescriptors.File },
-    };
 
     private static readonly Dictionary<string, string> aliasTypeNames =
         new Dictionary<string, string>()
@@ -159,7 +153,7 @@ internal static class CecilUtilities
     public static bool TryLookupScopeDescriptorName(
         string scopeDescriptorName,
         out ScopeDescriptors scopeDescriptor) =>
-        scopeDescriptors.TryGetValue(scopeDescriptorName, out scopeDescriptor);
+        Enum.TryParse(scopeDescriptorName, true, out scopeDescriptor);
 
     public static bool TryLookupOriginTypeName(
         string typeName,
@@ -167,8 +161,14 @@ internal static class CecilUtilities
         aliasTypeNames.TryGetValue(typeName, out originTypeName!);
 
     public static bool IsEnumerationUnderlyingType(
-        string typeName) =>
-        enumerationUnderlyingTypes.Contains(typeName);
+        string typeName)
+    {
+        if (TryLookupOriginTypeName(typeName, out var originName))
+        {
+            typeName = originName;
+        }
+        return enumerationUnderlyingTypes.Contains(typeName);
+    }
 
     public static bool TryParseOpCode(
         string word,

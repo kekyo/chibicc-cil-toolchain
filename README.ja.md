@@ -49,7 +49,7 @@ $ dotnet tool install -g chibias-cli
 ```bash
 $ chibias
 
-chibias [0.18.0,net6.0] [...]
+chibias [0.26.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -71,6 +71,7 @@ usage: chibias [options] <source path> [<source path> ...]
   -s                Suppress runtime configuration file
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
+  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
       --log <level> Log level [debug|trace|information|warning|error|silent]
   -h, --help        Show this help
 ```
@@ -81,7 +82,10 @@ usage: chibias [options] <source path> [<source path> ...]
 * ターゲットフレームワークのデフォルト(上記の例では`net6.0`)は、chibiasの動作環境に依存します。
 * ターゲットフレームワークの指定は、コアライブラリのバリエーションを仮定するだけで、
   `mscorlib.dll`や`System.Private.CoreLib.dll`アセンブリを自動的に検出するわけではありません（別章参照）。
-
+* ターゲットWindowsアーキテクチャは、デフォルトで`AnyCPU`です。大文字小文字は無視されます。
+  この値は、アセンブリにマークを設定するだけです。異なる値を指定したとしても、生成されるオプコードには影響ありません。
+  WindowsのCLR環境以外では、常に`AnyCPU`として動作する可能性があります。
+* ログレベルは、デフォルトで`warning`です。大文字小文字は無視されます。
 
 ----
 
@@ -220,8 +224,23 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 |`internal`|同じアセンブリ内でのみ参照可能。|
 |`file`|現在のソースコードファイルからのみ参照可能。|
 
-* コマンドラインのオプションに `--exe` を指定するなどして、実行可能形式を生成する場合、関数名が `main` であれば、自動的にエントリポイントとみなされます。
-  エントリポイントのスコープ記述子は任意です（無視されます）。
+* コマンドラインのオプションに `--exe` を指定するなどして、実行可能形式を生成する場合、
+  関数名が `main` であれば、自動的にエントリポイントとみなされます。
+* エントリポイントのスコープ記述子は、`public`又は`internal`が必要です。
+
+`main`関数のシグネチャは、以下のバリエーションを受け付けます:
+
+|引数群|戻り値|対応するC言語でのシグネチャ例|
+|:----|:----|:----|
+|`int32, sbyte**`|`int32`|`int main(int argc, char** argv)`|
+|`int32, sbyte**`|`void`|`void main(int argc, char** argv)`|
+|`void`|`int32`|`int main(void)`|
+|`void`|`void`|`void main(void)`|
+
+奇妙に思えるかもしれませんが、引数の`argv`は、現実にポインタへのポインタです。
+そしてその先は、Unicodeではない、終端文字を含む8ビット文字列を示します。
+
+chibiasは`wmain`による、UTF-16LEワイド幅文字列を含むエントリポイントをサポートしていません。
 
 ### リテラル
 
@@ -240,7 +259,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
   * 浮動小数点数リテラル: `System.Double.Parse()` などに `InvariantCulture` を適用した場合と同様です。
 * 文字列リテラルは二重引用符（'"'）で囲みます。
   * エスケープ文字は ('\\') で、トライグラフシーケンス以外はC言語仕様と同じです。
-  * 16進数 ('\\xnn')、UTF-16('\\unnn') が使用可能です。
+  * 16進数 ('\\xnn')、UTF-16('\\unnnn') が使用可能です。
 
 ### ラベル
 
@@ -480,6 +499,20 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 
 .NETメソッドを参照するために、コマンドラインオプション `-r` で、メソッド定義を含むアセンブリを指定する必要があります。これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
 
+補足: プロパティやインデクサを呼び出す必要がある場合は、それらを実装するメソッドのシグネチャを特定しておく必要があります。例えば:
+
+```
+    ldstr "ABCDE"
+    call System.String.get_Length   ; "ABCDE".Length
+```
+
+殆どのプロパティは慣例で、決まった命名規則を使います。上記のように、`System.String.Length`の場合は、
+getterに`get_Length()`、setterに`set_Length()`というメソッド名に対応します。
+また、インデクサの場合は、`get_Item()`や`set_Item()`というメソッド名に対応します。
+
+但し、これらの命名規則は強制ではないため、異なる名前を適用している可能性があります。
+うまくいかない場合は、ILDAsmやILSpy等のツールを使って確認して下さい。
+
 ### 関数シグネチャ構文
 
 関数シグネチャとは、`calli` オペコードで指定する、呼び出し対象メソッドのシグネチャです。
@@ -547,25 +580,8 @@ public static class text
 ```
 
 データはバイト単位で埋める必要があります。
-また、配置されたデータは書き込み可能であるため、取り扱いには注意が必要です。
 
-特殊なデータとして、他のグローバル変数や関数へのポインタを含めることが出来ます:
-
-```
-.function public int32 bar
-    ldsfld foo
-    ldind.i4
-    ret
-.global internal int32* foo &baz+2
-.global internal int32 baz 0x10 0x32 0x54 0x76
-```
-
-グローバル変数や関数へのポインタを含める場合は、`&`から始まる変数名・関数名を記述します。
-また、その型は、ポインタ型、`void*`, `intptr`、`uintptr`型のいずれかを指定します。
-
-上記の例のように、`+`や`-`演算子でオフセットを与えることも出来ます。
-オフセットはバイト単位です。
-但し、柔軟な計算は出来ません。
+初期化データを含んだ場合、そのメモリ領域に値を書こうとすると、`AccessViolationException`が発生する可能性があります。
 
 ### イニシャライザ
 

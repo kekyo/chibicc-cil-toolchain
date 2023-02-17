@@ -50,7 +50,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.18.0,net6.0] [...]
+chibias [0.26.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -72,6 +72,7 @@ usage: chibias [options] <source path> [<source path> ...]
   -s                Suppress runtime configuration file
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
+  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
       --log <level> Log level [debug|trace|information|warning|error|silent]
   -h, --help        Show this help
 ```
@@ -82,7 +83,10 @@ usage: chibias [options] <source path> [<source path> ...]
 * The default target framework moniker (`net6.0` in the above example) depends on the operating environment of chibias.
 * Specifying a target framework moniker only assumes a variation of the core library.
   And it does NOT automatically detect the `mscorlib.dll` or `System.Private.CoreLib.dll` assembly files (see below).
-
+* Target windows architecture is `AnyCPU` by default. These values ignore case.
+  This value only sets the mark on the assembly. Specifying a different value will not affect generated your opcodes.
+  It may always operate as `AnyCPU` except in Windows CLR environment.
+* Log level is `warning` by default. These values ignore case.
 
 ----
 
@@ -221,7 +225,21 @@ Scope descriptors are common in other declarations.
 | `file` | Referenced only from the current source code file. |
 
 * Automatic apply entry point when using `main` function name and assemble executable file with same as `--exe` option.
-  The entry point is acceptable any scope descriptor (ignored).
+* The scope descriptor of the entry point must be `public` or `internal`.
+
+The signature of the `main` function accepts the following variations:
+
+|Arguments|Return value|Example signature in the C language|
+|:----|:----|:----|
+|`int32, sbyte**`|`int32`|`int main(int argc, char** argv)`|
+|`int32, sbyte**`|`void`|`void main(int argc, char** argv)`|
+|`void`|`int32`|`int main(void)`|
+|`void`|`void`|`void main(void)`|
+
+It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
+And the destination is a non-Unicode, 8-bit string containing the terminating character.
+
+chibias does not support entry points containing UTF-16LE wide-length strings by `wmain`.
 
 ### Literals
 
@@ -466,7 +484,7 @@ CABI only applies if the function can be referenced from an external assembly.
 If the scope of the function is not `public`,
 it cannot be referenced from external assemblies and is not CABI compliant.
 
-### Call external method
+### Call external .NET method
 
 Simply specify a .NET method with full name and parameter types:
 
@@ -485,11 +503,26 @@ A list of parameter types is used to identify overloads.
 You have to give it containing assembly on command line option `-r`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
 
+Tip: If you need to call properties or indexers,
+you must specify the signatures of the methods that implement them. For example:
+
+```
+    ldstr "ABCDE"
+    call System.String.get_Length   ; "ABCDE".Length
+```
+
+Most properties use a fixed naming convention.
+As above, in the case of `System.String.Length` corresponds to the method names `get_Length()` for getter and `set_Length()` for setter.
+In the case of an indexer, it corresponds to the method name `get_Item()` or `set_Item()`.
+
+However, these naming conventions are not mandatory, so different names may apply.
+If this does not work, please use tools such as ILDAsm or ILSpy to check target signature.
+
 ### Function signature syntax
 
-The function signature is the target method signature that must be indicated by the `calli` opcode.
+The function signature is must be indicated by the `calli` opcode.
 Sometimes referred to as "Call sites."
-In chibias, it is specified with the same syntax as the function pointer type:
+In the case of chibias, they are specified with a syntax similar to function pointer types.
 
 ```
 .function public int32 main
@@ -553,26 +586,9 @@ The global variable declares with initializing data:
 ```
 
 The data must be fill in bytes.
-In addition, since the placed data will be writable,
-care must be taken in handling it.
 
-Special data can include pointers to other global variables and function pointers:
-
-```
-.function public int32 bar
-    ldsfld foo
-    ldind.i4
-    ret
-.global internal int32* foo &baz+2
-.global internal int32 baz 0x10 0x32 0x54 0x76
-```
-
-To include a pointer, write the name of the variable/function beginning with `&`.
-The type can be a pointer, `void*`, `intptr`, and `uintptr` type.
-
-You can also give an offset with the `+` or `-` operator, as in the example above.
-Offset is in bytes.
-However, this does not allow for flexible calculations.
+If initialization data is included,
+an attempt to write a value to that memory area may result in an `AccessViolationException`.
 
 ### Initializer
 
@@ -843,7 +859,6 @@ Might be implemented:
 
 * Automatic implements `IList<T>` on value array type.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
-* Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
 * And chibicc-cil specific requirements...
 
 Might not be implemented:
@@ -852,7 +867,9 @@ Might not be implemented:
   * InlineSwitch
   * InlinePhi
 * Handling multi-dimensional array types.
+* Handling OOP-based features.
 * Exception handling.
+* Strong name signer.
 * And NOT chibicc-cil specific requirements.
 
 

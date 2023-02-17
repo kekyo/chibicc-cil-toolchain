@@ -16,15 +16,18 @@ internal sealed class FileDescriptor
     public readonly string? BasePath;
     public readonly string RelativePath;
     public readonly DocumentLanguage? Language;
+    public readonly bool IsVisible;
 
     public FileDescriptor(
         string? basePath,
         string relativePath,
-        DocumentLanguage? language)
+        DocumentLanguage? language,
+        bool isVisible)
     {
         this.BasePath = basePath;
         this.RelativePath = relativePath;
         this.Language = language;
+        this.IsVisible = isVisible;
     }
 }
 

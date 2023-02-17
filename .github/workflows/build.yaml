@@ -63,7 +63,7 @@ jobs:
       run: dotnet build -p:Configuration=Release -p:BuildIdentifier=${GITHUB_RUN_NUMBER} chibias.sln
 
     - name: Build NuGet packages
-      run: dotnet pack -p:Configuration=Release -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts chibias.sln
+      run: dotnet pack -p:Configuration=Release -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -p:PackageOutputPath="..\artifacts" chibias.sln
 
     #-----------------------------------------------------------------------
     # Test
