@@ -225,7 +225,21 @@ Scope descriptors are common in other declarations.
 | `file` | Referenced only from the current source code file. |
 
 * Automatic apply entry point when using `main` function name and assemble executable file with same as `--exe` option.
-  The entry point is acceptable any scope descriptor (ignored).
+* The scope descriptor of the entry point must be `public` or `internal`.
+
+The signature of the `main` function accepts the following variations:
+
+|Arguments|Return value|Example signature in the C language|
+|:----|:----|:----|
+|`int32, sbyte**`|`int32`|`int main(int argc, char** argv)`|
+|`int32, sbyte**`|`void`|`void main(int argc, char** argv)`|
+|`void`|`int32`|`int main(void)`|
+|`void`|`void`|`void main(void)`|
+
+It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
+And the destination is a non-Unicode, 8-bit string containing the terminating character.
+
+chibias does not support entry points containing UTF-16LE wide-length strings by `wmain`.
 
 ### Literals
 
@@ -830,7 +844,6 @@ Might be implemented:
 
 * Automatic implements `IList<T>` on value array type.
 * Handling method optional attributes (inline, no-inline and no-optimizing?)
-* Generate CIL `Main(args)` handler and bypass to C specific `main(argc, argv)` function.
 * And chibicc-cil specific requirements...
 
 Might not be implemented:

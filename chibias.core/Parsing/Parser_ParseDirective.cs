@@ -29,7 +29,7 @@ partial class Parser
     {
         this.method = new MethodDefinition(
             functionName,
-            attribute | MethodAttributes.Static,
+            attribute,
             this.Import(returnType));
         this.method.HasThis = false;
 
@@ -161,8 +161,11 @@ partial class Parser
             case ScopeDescriptors.Internal:
                 this.cabiTextType.Methods.Add(method);
                 break;
-            default:
+            case ScopeDescriptors.File:
                 this.fileScopedType.Methods.Add(method);
+                break;
+            case ScopeDescriptors._Module_:
+                this.module.Types.First(t => t.Name == "<Module>").Methods.Add(method);
                 break;
         }
     }
@@ -194,7 +197,7 @@ partial class Parser
             $"initializer_${this.initializerIndex++}",
             this.UnsafeGetType("System.Void"),
             Utilities.Empty<ParameterDefinition>(),
-            MethodAttributes.Private,
+            MethodAttributes.Private | MethodAttributes.Static,
             false);
 
         switch (scopeDescriptor)
@@ -205,7 +208,7 @@ partial class Parser
                 this.cabiDataTypeInitializer.Body.Instructions.Add(
                     Instruction.Create(OpCodes.Call, method));
                 break;
-            default:
+            case ScopeDescriptors.File:
                 this.fileScopedType.Methods.Add(method);
                 this.fileScopedTypeInitializer.Body.Instructions.Add(
                     Instruction.Create(OpCodes.Call, method));
@@ -697,7 +700,8 @@ partial class Parser
                 var file = new FileDescriptor(
                     Path.GetDirectoryName(tokens[2].Text),
                     Path.GetFileName(tokens[2].Text),
-                    language);
+                    language,
+                    true);
                 this.currentFile = file;
                 this.files[tokens[1].Text] = file;
                 this.queuedLocation = null;

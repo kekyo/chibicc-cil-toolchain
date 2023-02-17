@@ -138,7 +138,8 @@ public sealed class Assembler
     {
         parser.BeginNewCilSourceCode(
             baseSourcePath,
-            sourcePathDebuggerHint);
+            sourcePathDebuggerHint,
+            true);
 
         var tokenizer = new Tokenizer();
 

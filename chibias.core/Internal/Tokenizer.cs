@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 
 namespace chibias.Internal;
@@ -248,5 +249,23 @@ internal sealed class Tokenizer
         this.lineIndex++;
 
         return tokens.ToArray();
+    }
+
+    public static Token[][] TokenizeAll(TextReader tr)
+    {
+        var tokenizer = new Tokenizer();
+        var lines = new List<Token[]>();
+
+        while (true)
+        {
+            var line = tr.ReadLine();
+            if (line == null)
+            {
+                break;
+            }
+            lines.Add(tokenizer.TokenizeLine(line));
+        }
+
+        return lines.ToArray();
     }
 }

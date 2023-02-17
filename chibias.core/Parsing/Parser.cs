@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using chibias.Internal;
+using chibias.Parsing.Embedding;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -22,7 +23,7 @@ namespace chibias.Parsing;
 internal sealed partial class Parser
 {
     private static readonly FileDescriptor unknown = 
-        new(null, "unknown.s", DocumentLanguage.Cil);
+        new(null, "unknown.s", DocumentLanguage.Cil, false);
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
@@ -195,14 +196,16 @@ internal sealed partial class Parser
 
     public void BeginNewCilSourceCode(
         string? basePath,
-        string sourcePathDebuggerHint)
+        string sourcePathDebuggerHint,
+        bool isVisible)
     {
         this.BeginNewFileScope(sourcePathDebuggerHint);
 
         this.currentFile = new(
             basePath,
             sourcePathDebuggerHint,
-            DocumentLanguage.Cil);
+            DocumentLanguage.Cil,
+            isVisible);
         this.isProducedOriginalSourceCodeLocation = true;
         this.queuedLocation = null;
         this.lastLocation = null;
@@ -396,6 +399,66 @@ internal sealed partial class Parser
                 this.module.Types.Add(this.cabiDataType);
             }
 
+            if (this.produceExecutable)
+            {
+                // Lookup main entry point.
+                var mainFunction = this.module.Types.
+                    Where(type => type.IsAbstract && type.IsSealed && type.IsClass).
+                    SelectMany(type => type.Methods).
+                    FirstOrDefault(m =>
+                        m.IsStatic && m.Name == "main" &&
+                        (m.ReturnType.FullName == "System.Void" ||
+                            m.ReturnType.FullName == "System.Int32") &&
+                        (m.Parameters.Count == 0 ||
+                            m.Parameters.
+                            Select(p => p.ParameterType.FullName).
+                            SequenceEqual(new[] { "System.Int32", "System.SByte**" }))) is { } mf ?
+                        mf : null;
+
+                // Inject startup code when declared.
+                if (mainFunction != null)
+                {
+                    this.BeginNewCilSourceCode(null, "_startup.s", false);
+
+                    Token[][] startupTokensList;
+                    if (mainFunction.ReturnType.FullName == "System.Void")
+                    {
+                        startupTokensList = mainFunction.Parameters.Count == 0 ?
+                            EmbeddingCodeFragments.Startup_Void_Void :
+                            EmbeddingCodeFragments.Startup_Void;
+                    }
+                    else
+                    {
+                        startupTokensList = mainFunction.Parameters.Count == 0 ?
+                            EmbeddingCodeFragments.Startup_Int32_Void :
+                            EmbeddingCodeFragments.Startup_Int32;
+                    }
+
+                    foreach (var tokens in startupTokensList)
+                    {
+                        this.Parse(tokens);
+                    }
+
+                    Debug.Assert(this.method != null);
+                    this.module.EntryPoint = this.method!;
+
+                    this.FinishCurrentState();
+
+                    this.logger.Information($"Injected startup code.");
+                }
+                else
+                {
+                    this.caughtError = true;
+                    this.logger.Error($"Could not find main entry point.");
+                }
+            }
+        }
+
+        if (!this.caughtError)
+        {
+            // Clean up for file scope type.
+            this.BeginNewFileScope("unknown.s");
+
             // Fire local member lookup.
             foreach (var action in this.delayedLookupLocalMemberActions)
             {
@@ -431,24 +494,6 @@ internal sealed partial class Parser
                 this.module.Assembly.CustomAttributes.Add(tfa);
             }
 
-            // main entry point lookup.
-            if (this.produceExecutable)
-            {
-                if (this.module.Types.
-                    Where(type => type.IsAbstract && type.IsSealed).
-                    SelectMany(type => type.Methods).
-                    FirstOrDefault(m => m.IsStatic && m.Parameters.Count == 0 &&
-                    m.Name == "main") is { } mainMethod)                        
-                {
-                    this.module.EntryPoint = mainMethod;
-                }
-                else
-                {
-                    this.caughtError = true;
-                    this.logger.Error($"{this.currentFile.RelativePath}(1,1): Could not find main entry point.");
-                }
-            }
-
             // (Completed all CIL implementations in this place.)
 
             ///////////////////////////////////////////////
@@ -480,7 +525,8 @@ internal sealed partial class Parser
                     // Will make sequence points:
                     foreach (var instruction in body.Instructions)
                     {
-                        if (this.locationByInstructions.TryGetValue(instruction, out var location))
+                        if (this.locationByInstructions.TryGetValue(instruction, out var location) &&
+                            location.File.IsVisible)
                         {
                             if (!documents.TryGetValue(location.File.RelativePath, out var document))
                             {

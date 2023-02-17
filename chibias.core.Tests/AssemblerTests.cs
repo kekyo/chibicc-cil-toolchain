@@ -227,17 +227,6 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
-    public Task FileScopeMainFunction()
-    {
-        var actual = Run(@"
-            .function file int32 main
-                ldc.i4.1
-                ret",
-                AssemblyTypes.Exe);
-        return Verify(actual);
-    }
-
-    [Test]
     public Task CombinedFunctionScopeVaries()
     {
         var actual = Run(@"
@@ -250,6 +239,37 @@ public sealed partial class AssemblerTests
             .function file int32 baz
                 ldc.i4.1
                 ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MainFunctionWithoutReturn()
+    {
+        var actual = Run(@"
+            .function internal void main
+                ret",
+                AssemblyTypes.Exe);
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MainFunctionWithReturnAndParameters()
+    {
+        var actual = Run(@"
+            .function internal int32 main argc:int32 argv:int8**
+                ldc.i4.1
+                ret",
+                AssemblyTypes.Exe);
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task MainFunctionWithoutReturnAndParameters()
+    {
+        var actual = Run(@"
+            .function internal void main argc:int32 argv:int8**
+                ret",
+                AssemblyTypes.Exe);
         return Verify(actual);
     }
 
