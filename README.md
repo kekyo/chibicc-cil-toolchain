@@ -557,26 +557,9 @@ The global variable declares with initializing data:
 ```
 
 The data must be fill in bytes.
-In addition, since the placed data will be writable,
-care must be taken in handling it.
 
-Special data can include pointers to other global variables and function pointers:
-
-```
-.function public int32 bar
-    ldsfld foo
-    ldind.i4
-    ret
-.global internal int32* foo &baz+2
-.global internal int32 baz 0x10 0x32 0x54 0x76
-```
-
-To include a pointer, write the name of the variable/function beginning with `&`.
-The type can be a pointer, `void*`, `intptr`, and `uintptr` type.
-
-You can also give an offset with the `+` or `-` operator, as in the example above.
-Offset is in bytes.
-However, this does not allow for flexible calculations.
+If initialization data is included,
+an attempt to write a value to that memory area may result in an `AccessViolationException`.
 
 ### Initializer
 
@@ -856,6 +839,7 @@ Might not be implemented:
   * InlineSwitch
   * InlinePhi
 * Handling multi-dimensional array types.
+* Handling OOP-based features.
 * Exception handling.
 * Strong name signer.
 * And NOT chibicc-cil specific requirements.
