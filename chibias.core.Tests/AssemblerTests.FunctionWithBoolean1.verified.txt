@@ -28,12 +28,14 @@
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static void  foo() cil managed
+  .method public static bool 
+          marshal( unsigned int8) 
+          foo() cil managed
   {
-    // Code size       1 (0x1)
-    .maxstack  0
-    .locals (bool V_0)
-    IL_0000:  ret
+    // Code size       2 (0x2)
+    .maxstack  8
+    IL_0000:  ldc.i4.1
+    IL_0001:  ret
   } // end of method text::foo
 
 } // end of class C.text

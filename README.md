@@ -303,6 +303,10 @@ The built-in type is as follows:
 |`string`|`System.String`| |
 |`typeref`|`System.TypedReference`| |
 
+Among the built-in types, the `System.Boolean` type is special in that chibias always apply 1-byte marshalling when using this type.
+By default in .NET, the footprint size of `System.Boolean` varies depending on the situation,
+but assemblies generated using chibias will always have a footprint size of 1 byte.
+
 The function pointer type is specified as follows:
 (Separated with white space is not allowed.)
 

@@ -1014,8 +1014,8 @@ public sealed partial class AssemblerTests
     public Task BoolType()
     {
         var actual = Run(@"
-            .function public bool foo
-                ldc.i4.1
+            .function public void foo
+                .local bool a
                 ret");
         return Verify(actual);
     }
@@ -1330,6 +1330,17 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task ValueArrayWithBoolean()
+    {
+        var actual = Run(@"
+            .function public bool[3]*[6] foo
+                ldsfld bar
+                ret
+            .global public bool[3]*[6] bar");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
@@ -1501,6 +1512,20 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
+    public Task StructureWithBoolean()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public bool a");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task StructureWithArray1()
     {
         var actual = Run(@"
@@ -1650,6 +1675,26 @@ public sealed partial class AssemblerTests
 
     /////////////////////////////////////////////////////////
 
+    [Test]
+    public Task FunctionWithBoolean1()
+    {
+        var actual = Run(@"
+            .function public bool foo
+                ldc.i4.1
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionWithBoolean2()
+    {
+        var actual = Run(@"
+            .function public void foo a:bool
+                ret");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
     [Test]
     public Task Enumeration1()
     {

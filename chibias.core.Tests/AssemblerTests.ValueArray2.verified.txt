@@ -47,7 +47,7 @@
   .method public hidebysig specialname instance uint8 
           get_Item(int32 index) cil managed
   {
-    // Code size       29 (0x1d)
+    // Code size       22 (0x16)
     .maxstack  8
     IL_0000:  ldarg.1
     IL_0001:  ldc.i4     0x6
@@ -58,20 +58,18 @@
     IL_000f:  throw
 
     IL_0010:  ldarg.1
-    IL_0011:  sizeof     [mscorlib]System.Byte
-    IL_0017:  mul
-    IL_0018:  ldarg.0
-    IL_0019:  conv.u
-    IL_001a:  add
-    IL_001b:  ldind.u1
-    IL_001c:  ret
+    IL_0011:  ldarg.0
+    IL_0012:  conv.u
+    IL_0013:  add
+    IL_0014:  ldind.u1
+    IL_0015:  ret
   } // end of method Byte_len6::get_Item
 
   .method public hidebysig specialname instance void 
           set_Item(int32 index,
                    uint8 'value') cil managed
   {
-    // Code size       30 (0x1e)
+    // Code size       23 (0x17)
     .maxstack  8
     IL_0000:  ldarg.1
     IL_0001:  ldc.i4     0x6
@@ -82,14 +80,12 @@
     IL_000f:  throw
 
     IL_0010:  ldarg.1
-    IL_0011:  sizeof     [mscorlib]System.Byte
-    IL_0017:  mul
-    IL_0018:  ldarg.0
-    IL_0019:  conv.u
-    IL_001a:  add
-    IL_001b:  ldarg.2
-    IL_001c:  stind.i1
-    IL_001d:  ret
+    IL_0011:  ldarg.0
+    IL_0012:  conv.u
+    IL_0013:  add
+    IL_0014:  ldarg.2
+    IL_0015:  stind.i1
+    IL_0016:  ret
   } // end of method Byte_len6::set_Item
 
   .property instance callconv(8) int32 Length()

@@ -304,6 +304,10 @@ NAME:
 |`string`|`System.String`| |
 |`typeref`|`System.TypedReference`| |
 
+ビルトイン型のうち、`System.Boolean`型は特殊で、chibiasがこの型を使用する場合、常に1バイトマーシャリングを適用します。
+.NETのデフォルトでは、`System.Boolean`のフットプリントサイズは、状況によって変化しますが、
+chibiasを使って生成されるアセンブリは、常に1バイトのフットプリントサイズとなる事を意味します。
+
 関数ポインタ型は、以下のように指定します:
 (空白で区切られたものは不可）
 

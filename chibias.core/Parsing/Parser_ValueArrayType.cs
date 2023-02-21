@@ -15,6 +15,24 @@ namespace chibias.Parsing;
 
 partial class Parser
 {
+    private static int GetTypeSize(TypeReference type) =>
+        type.FullName switch
+        {
+            "System.Boolean" => 1,
+            "System.Byte" => 1,
+            "System.SByte" => 1,
+            "System.Int16" => 2,
+            "System.UInt16" => 2,
+            "System.Char" => 2,
+            "System.Int32" => 4,
+            "System.UInt32" => 4,
+            "System.Int64" => 8,
+            "System.UInt64" => 8,
+            "System.Single" => 4,
+            "System.Double" => 8,
+            _ => -1,
+        };
+
     private TypeDefinition CreateValueArrayType(
         string valueArrayTypeNamespace,
         string valueArrayTypeName,
@@ -38,6 +56,12 @@ partial class Parser
             var itemField = new FieldDefinition(
                 $"item{index}", FieldAttributes.Private, elementType);
             valueArrayType.Fields.Add(itemField);
+
+            // Special case: Force 1 byte footprint on boolean type.
+            if (elementType.FullName == "System.Boolean")
+            {
+                itemField.MarshalInfo = new(NativeType.U1);
+            }
         }
 
         ///////////////////////////////
@@ -100,11 +124,19 @@ partial class Parser
             this.UnsafeGetType("System.Int32")));
         valueArrayType.Methods.Add(getItemMethod);
 
+        // Special case: Force 1 byte footprint on boolean type.
+        if (elementType.FullName == "System.Boolean")
+        {
+            getItemMethod.MethodReturnType.MarshalInfo = new(NativeType.U1);
+        }
+
         indexerProperty.GetMethod = getItemMethod;
 
         ///////////////////////////////
 
         var getItemInstructions = getItemMethod.Body.Instructions;
+
+        var elementTypeSize = GetTypeSize(elementType);
 
         // Guard
         getItemInstructions.Add(
@@ -124,10 +156,22 @@ partial class Parser
 
         // Body
         getItemInstructions.Add(getItemNext);
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Sizeof, elementType));
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Mul));
+        if (elementTypeSize >= 2)
+        {
+            getItemInstructions.Add(
+                Instruction.Create(
+                    OpCodes.Ldc_I4_S, (sbyte)elementTypeSize));
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Mul));
+        }
+        else if (elementTypeSize == -1)
+        {
+            getItemInstructions.Add(
+                Instruction.Create(
+                    OpCodes.Sizeof, elementType));
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Mul));
+        }
         getItemInstructions.Add(
             Instruction.Create(OpCodes.Ldarg_0));
         getItemInstructions.Add(
@@ -136,6 +180,7 @@ partial class Parser
             Instruction.Create(OpCodes.Add));
         switch (elementType.FullName)
         {
+            case "System.Boolean":
             case "System.Byte":
                 getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_U1));
@@ -148,6 +193,7 @@ partial class Parser
                 getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_I2));
                 break;
+            case "System.Char":
             case "System.UInt16":
                 getItemInstructions.Add(
                     Instruction.Create(OpCodes.Ldind_U2));
@@ -217,10 +263,18 @@ partial class Parser
                 "index",
                 ParameterAttributes.None,
                 this.UnsafeGetType("System.Int32")));
-            setItemMethod.Parameters.Add(new(
+            var valueParameter = new ParameterDefinition(
                 "value",
                 ParameterAttributes.None,
-                elementType));
+                elementType);
+            setItemMethod.Parameters.Add(valueParameter);
+
+            // Special case: Force 1 byte footprint on boolean type.
+            if (elementType.FullName == "System.Boolean")
+            {
+                valueParameter.MarshalInfo = new(NativeType.U1);
+            }
+
             valueArrayType.Methods.Add(setItemMethod);
 
             indexerProperty.SetMethod = setItemMethod;
@@ -247,10 +301,22 @@ partial class Parser
 
             // Body
             setItemInstructions.Add(setItemNext);
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Sizeof, elementType));
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Mul));
+            if (elementTypeSize >= 2)
+            {
+                setItemInstructions.Add(
+                    Instruction.Create(
+                        OpCodes.Ldc_I4_S, (sbyte)elementTypeSize));
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Mul));
+            }
+            else if (elementTypeSize == -1)
+            {
+                setItemInstructions.Add(
+                    Instruction.Create(
+                        OpCodes.Sizeof, elementType));
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Mul));
+            }
             setItemInstructions.Add(
                 Instruction.Create(OpCodes.Ldarg_0));
             setItemInstructions.Add(
@@ -261,6 +327,7 @@ partial class Parser
                 Instruction.Create(OpCodes.Ldarg_2));
             switch (elementType.FullName)
             {
+                case "System.Boolean":
                 case "System.Byte":
                 case "System.SByte":
                     setItemInstructions.Add(
@@ -268,6 +335,7 @@ partial class Parser
                     break;
                 case "System.Int16":
                 case "System.UInt16":
+                case "System.Char":
                     setItemInstructions.Add(
                         Instruction.Create(OpCodes.Stind_I2));
                     break;

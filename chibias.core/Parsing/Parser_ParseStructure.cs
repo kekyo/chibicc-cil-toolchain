@@ -130,6 +130,16 @@ partial class Parser
                 return;
             }
 
+            // Special case: Force 1 byte footprint on boolean type.
+            if (sf.FieldType.FullName == "System.Boolean" &&
+                sf.MarshalInfo?.NativeType != NativeType.U1)
+            {
+                this.OutputError(
+                    memberTypeNameToken,
+                    $"Structure boolean member difference exists before declared type: {sf.MarshalInfo?.NativeType.ToString() ?? "(null)"}");
+                return;
+            }
+
             var capturedField = sf;
             var capturedMemberTypeName = memberTypeName;
             var capturedMemberTypeNameToken = memberTypeNameToken;
@@ -168,6 +178,12 @@ partial class Parser
         if (memberOffset is { } mo2)
         {
             field.Offset = mo2;
+        }
+
+        // Special case: Force 1 byte footprint on boolean type.
+        if (memberType.FullName == "System.Boolean")
+        {
+            field.MarshalInfo = new(NativeType.U1);
         }
 
         this.structureType!.Fields.Add(field);

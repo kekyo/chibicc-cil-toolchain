@@ -141,6 +141,12 @@ partial class Parser
                 parameter.Name = splitted[0];
             }
 
+            // Special case: Force 1 byte footprint on boolean type.
+            if (parameterType.FullName == "System.Boolean")
+            {
+                parameter.MarshalInfo = new(NativeType.U1);
+            }
+
             parameters.Add(parameter);
         }
 
@@ -154,6 +160,12 @@ partial class Parser
                 _ => MethodAttributes.Assembly | MethodAttributes.Static,
             },
             varargs);
+
+        // Special case: Force 1 byte footprint on boolean type.
+        if (returnType.FullName == "System.Boolean")
+        {
+            method.MethodReturnType.MarshalInfo = new(NativeType.U1);
+        }
 
         switch (scopeDescriptor)
         {
