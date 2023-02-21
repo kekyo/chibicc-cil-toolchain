@@ -1330,6 +1330,17 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task ValueArrayWithBoolean()
+    {
+        var actual = Run(@"
+            .function public bool[3]*[6] foo
+                ldsfld bar
+                ret
+            .global public bool[3]*[6] bar");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
