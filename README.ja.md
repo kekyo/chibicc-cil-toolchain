@@ -657,6 +657,20 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 * `int8[5][3]` --> `System.SByte_len5_len3`
 * `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
+ネストした配列型を宣言する場合は、要素の順序に注意が必要です。例えば、C言語で以下のように表現される型は、chibiasでは要素の順序が逆になります:
+
+```c
+// C言語
+char foo[3][4][5];
+
+// chibias
+int8[5][4][3] foo
+```
+
+これは、chibiasが配列型を以下のように構成するためです:
+
+`((int8[5])[4])[3]`
+
 注意: 値型配列を使用するには、`System.ValueType` 型と `System.IndexOutOfRangeException` 型への参照が解決される必要があります。
 `mscorlib.dll` 又は `System.Private.CoreLib.dll` への参照を追加して下さい。
 

@@ -665,6 +665,21 @@ For example:
 * `int8[5][3]` --> `System.SByte_len5_len3`
 * `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
+When declaring nested array types, care must be taken with the order of the elements.
+For example, order in chibias is reversed for a type expressed in C as follows:
+
+```c
+// C language
+char foo[3][4][5];
+
+// chibias
+int8[5][4][3] foo
+```
+
+This is because chibias construct the array type as follows:
+
+`((int8[5])[4])[3]`
+
 Note: To use the value array type, references to the types `System.ValueType` and `System.IndexOutOfRangeException` must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
