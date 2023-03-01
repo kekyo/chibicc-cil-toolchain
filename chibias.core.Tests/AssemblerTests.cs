@@ -1512,6 +1512,22 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
+    public Task StructureWithFlexibleArray()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo* pfoo
+                ldc.i4.0
+                stloc pfoo
+                ret
+            .structure public foo
+                public int32 a
+                public int8 b
+                public int32[*] c");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task StructureWithBoolean()
     {
         var actual = Run(@"
