@@ -139,6 +139,14 @@ partial class Parser
                     $"Structure boolean member difference exists before declared type: {sf.MarshalInfo?.NativeType.ToString() ?? "(null)"}");
                 return;
             }
+            else if (sf.FieldType.FullName == "System.Char" &&
+                sf.MarshalInfo?.NativeType != NativeType.U2)
+            {
+                this.OutputError(
+                    memberTypeNameToken,
+                    $"Structure char member difference exists before declared type: {sf.MarshalInfo?.NativeType.ToString() ?? "(null)"}");
+                return;
+            }
 
             var capturedField = sf;
             var capturedMemberTypeName = memberTypeName;
@@ -184,6 +192,10 @@ partial class Parser
         if (memberType.FullName == "System.Boolean")
         {
             field.MarshalInfo = new(NativeType.U1);
+        }
+        else if (memberType.FullName == "System.Char")
+        {
+            field.MarshalInfo = new(NativeType.U2);
         }
 
         this.structureType!.Fields.Add(field);

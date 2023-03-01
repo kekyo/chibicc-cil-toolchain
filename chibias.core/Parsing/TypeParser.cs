@@ -173,6 +173,12 @@ internal static class TypeParser
                     index++;
                     currentNode = new ArrayTypeNode(currentNode, length);
                 }
+                // `foo[*]`
+                else if (typeName.Substring(start, index - start) == "*")
+                {
+                    index++;
+                    currentNode = new ArrayTypeNode(currentNode, -1);
+                }
                 // `foo[-1]` `foo[abc]`
                 else
                 {

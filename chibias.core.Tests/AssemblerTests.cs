@@ -1341,6 +1341,17 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task ValueArrayWithChar()
+    {
+        var actual = Run(@"
+            .function public char[3]*[6] foo
+                ldsfld bar
+                ret
+            .global public char[3]*[6] bar");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
@@ -1508,6 +1519,22 @@ public sealed partial class AssemblerTests
                 public int32 a
                 internal int8 b
                 public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task StructureWithFlexibleArray()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo* pfoo
+                ldc.i4.0
+                stloc pfoo
+                ret
+            .structure public foo
+                public int32 a
+                public int8 b
+                public int32[*] c");
         return Verify(actual);
     }
 
@@ -1690,6 +1717,25 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .function public void foo a:bool
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionWithChar1()
+    {
+        var actual = Run(@"
+            .function public char foo
+                ldc.i4.2
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionWithChar2()
+    {
+        var actual = Run(@"
+            .function public void foo a:char
                 ret");
         return Verify(actual);
     }

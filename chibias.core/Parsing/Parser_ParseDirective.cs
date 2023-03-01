@@ -146,6 +146,10 @@ partial class Parser
             {
                 parameter.MarshalInfo = new(NativeType.U1);
             }
+            else if (parameterType.FullName == "System.Char")
+            {
+                parameter.MarshalInfo = new(NativeType.U2);
+            }
 
             parameters.Add(parameter);
         }
@@ -165,6 +169,10 @@ partial class Parser
         if (returnType.FullName == "System.Boolean")
         {
             method.MethodReturnType.MarshalInfo = new(NativeType.U1);
+        }
+        else if (returnType.FullName == "System.Char")
+        {
+            method.MethodReturnType.MarshalInfo = new(NativeType.U2);
         }
 
         switch (scopeDescriptor)

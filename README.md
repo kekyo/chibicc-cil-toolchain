@@ -303,9 +303,10 @@ The built-in type is as follows:
 |`string`|`System.String`| |
 |`typeref`|`System.TypedReference`| |
 
-Among the built-in types, the `System.Boolean` type is special in that chibias always apply 1-byte marshalling when using this type.
-By default in .NET, the footprint size of `System.Boolean` varies depending on the situation,
-but assemblies generated using chibias will always have a footprint size of 1 byte.
+Among the built-in types, the `System.Boolean` and `System.Char` types are special,
+and when we use these types, they always apply 1-byte or 2-byte marshalling.
+.NET default, although the footprint size of these types can depending on the situation.
+It means that assemblies generated will always be the above size.
 
 The function pointer type is specified as follows:
 (Separated with white space is not allowed.)
@@ -597,7 +598,7 @@ an attempt to write a value to that memory area may result in an `AccessViolatio
 ### Initializer
 
 An initializer is a function that is executed just before manipulating global variables in an assembly.
-Internally, it is called from .NET initializer.
+Internally, it is called from .NET type initializer.
 It can be used mainly for complex initialization of global variables:
 
 ```
@@ -657,7 +658,7 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 
 This structure can behave likes an array outside of chibias (and chibicc).
 
-The natural interpretation of types is also performed.
+The natural interpretation of composite types is also performed.
 For example:
 
 * `int8[5]*` --> `System.SByte_len5*`
@@ -676,9 +677,10 @@ char foo[3][4][5];
 int8[5][4][3] foo
 ```
 
-This is because chibias construct the array type as follows:
+This is because chibias evaluate array types from the left to right, as follows.
+The composite type definitions described above are same:
 
-`((int8[5])[4])[3]`
+`( ( int8 [5] ) [4] ) [3]`
 
 Note: To use the value array type, references to the types `System.ValueType` and `System.IndexOutOfRangeException` must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
@@ -790,7 +792,21 @@ Or gives an offset to each member:
 
 By arbitrarily adjusting the offset, we can reproduce the union type in the C language.
 
-An structure type can appear multiple times with the same type name,
+The last member of the structure type can be a value array type with unspecified number of elements:
+
+```
+.structure public foo
+    public int32 a
+    public int8 b
+    public int32[*] c
+```
+
+If you specify the number of array elements as `*`,
+that does not specify the number of elements.
+It is a special type for indexer accesses are not checked for element counts out of range.
+Naturally, the result of accessing an out of element will be undefined, so care must be taken.
+
+An structure type definition can appear multiple times with the same type name,
 as long as the definitions are completely identical.
 
 Note: To use an structure type, a reference to the `System.ValueType` type must be resolved.

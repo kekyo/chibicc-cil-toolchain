@@ -62,6 +62,10 @@ partial class Parser
             {
                 itemField.MarshalInfo = new(NativeType.U1);
             }
+            else if (elementType.FullName == "System.Char")
+            {
+                itemField.MarshalInfo = new(NativeType.U2);
+            }
         }
 
         ///////////////////////////////
@@ -81,27 +85,30 @@ partial class Parser
 
         ///////////////////////////////
 
-        var getLengthMethod = new MethodDefinition(
-            "get_Length",
-            MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
-            this.UnsafeGetType("System.Int32"));
-        getLengthMethod.HasThis = true;
-        valueArrayType.Methods.Add(getLengthMethod);
+        if (length >= 0)
+        {
+            var getLengthMethod = new MethodDefinition(
+                "get_Length",
+                MethodAttributes.Public | MethodAttributes.HideBySig | MethodAttributes.SpecialName,
+                this.UnsafeGetType("System.Int32"));
+            getLengthMethod.HasThis = true;
+            valueArrayType.Methods.Add(getLengthMethod);
 
-        getLengthMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Ldc_I4, length));
-        getLengthMethod.Body.Instructions.Add(
-            Instruction.Create(OpCodes.Ret));
+            getLengthMethod.Body.Instructions.Add(
+                Instruction.Create(OpCodes.Ldc_I4, length));
+            getLengthMethod.Body.Instructions.Add(
+                Instruction.Create(OpCodes.Ret));
 
-        ///////////////////////////////
+            ///////////////////////////////
 
-        var lengthProperty = new PropertyDefinition(
-            "Length",
-            PropertyAttributes.None,
-            this.UnsafeGetType("System.Int32"));
-        valueArrayType.Properties.Add(lengthProperty);
+            var lengthProperty = new PropertyDefinition(
+                "Length",
+                PropertyAttributes.None,
+                this.UnsafeGetType("System.Int32"));
+            valueArrayType.Properties.Add(lengthProperty);
 
-        lengthProperty.GetMethod = getLengthMethod;
+            lengthProperty.GetMethod = getLengthMethod;
+        }
 
         ///////////////////////////////
 
@@ -129,6 +136,10 @@ partial class Parser
         {
             getItemMethod.MethodReturnType.MarshalInfo = new(NativeType.U1);
         }
+        else if (elementType.FullName == "System.Char")
+        {
+            getItemMethod.MethodReturnType.MarshalInfo = new(NativeType.U2);
+        }
 
         indexerProperty.GetMethod = getItemMethod;
 
@@ -138,24 +149,32 @@ partial class Parser
 
         var elementTypeSize = GetTypeSize(elementType);
 
-        // Guard
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Ldarg_1));
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Ldc_I4, length));
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Clt));
-        var getItemNext = Instruction.Create(OpCodes.Ldarg_1);
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Brtrue_S, getItemNext));
+        if (length >= 0)
+        {
+            // Guard
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Ldarg_1));
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Ldc_I4, length));
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Clt));
+            var getItemNext = Instruction.Create(OpCodes.Ldarg_1);
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Brtrue_S, getItemNext));
 
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Newobj, this.indexOutOfRangeCtor.Value));
-        getItemInstructions.Add(
-            Instruction.Create(OpCodes.Throw));
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Newobj, this.indexOutOfRangeCtor.Value));
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Throw));
+            getItemInstructions.Add(getItemNext);
+        }
+        else
+        {
+            getItemInstructions.Add(
+                Instruction.Create(OpCodes.Ldarg_1));
+        }
 
         // Body
-        getItemInstructions.Add(getItemNext);
         if (elementTypeSize >= 2)
         {
             getItemInstructions.Add(
@@ -274,6 +293,10 @@ partial class Parser
             {
                 valueParameter.MarshalInfo = new(NativeType.U1);
             }
+            else if (elementType.FullName == "System.Char")
+            {
+                valueParameter.MarshalInfo = new(NativeType.U2);
+            }
 
             valueArrayType.Methods.Add(setItemMethod);
 
@@ -283,24 +306,33 @@ partial class Parser
 
             var setItemInstructions = setItemMethod.Body.Instructions;
 
-            // Guard
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Ldarg_1));
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Ldc_I4, length));
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Clt));
-            var setItemNext = Instruction.Create(OpCodes.Ldarg_1);
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Brtrue_S, setItemNext));
+            if (length >= 0)
+            {
+                // Guard
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Ldarg_1));
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Ldc_I4, length));
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Clt));
+                var setItemNext = Instruction.Create(OpCodes.Ldarg_1);
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Brtrue_S, setItemNext));
 
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Newobj, this.indexOutOfRangeCtor.Value));
-            setItemInstructions.Add(
-                Instruction.Create(OpCodes.Throw));
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Newobj, this.indexOutOfRangeCtor.Value));
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Throw));
+                setItemInstructions.Add(setItemNext);
+            }
+            else
+            {
+                setItemInstructions.Add(
+                    Instruction.Create(OpCodes.Ldarg_1));
+
+            }
 
             // Body
-            setItemInstructions.Add(setItemNext);
             if (elementTypeSize >= 2)
             {
                 setItemInstructions.Add(
@@ -401,16 +433,26 @@ partial class Parser
                     {
                         return $"{this.GetValueArrayTypeName(elementTypeName)}_arr";
                     }
-                    // "aaa[10]"
+                    // "aaa[10]", "aaa[*]"
                     else
                     {
-                        var length = int.Parse(
-                            name.Substring(startBracketIndex + 1, name.Length - startBracketIndex - 2),
-                            NumberStyles.Integer,
-                            CultureInfo.InvariantCulture);
+                        var lengthString =
+                            name.Substring(startBracketIndex + 1, name.Length - startBracketIndex - 2);
+                        if (lengthString == "*")
+                        {
+                            // "aaa_flex"
+                            return $"{this.GetValueArrayTypeName(elementTypeName)}_flex";
+                        }
+                        else
+                        {
+                            var length = int.Parse(
+                                lengthString,
+                                NumberStyles.Integer,
+                                CultureInfo.InvariantCulture);
 
-                        // "aaa_len10"
-                        return $"{this.GetValueArrayTypeName(elementTypeName)}_len{length}";
+                            // "aaa_len10"
+                            return $"{this.GetValueArrayTypeName(elementTypeName)}_len{length}";
+                        }
                     }
                 }
                 break;
@@ -422,7 +464,9 @@ partial class Parser
     private TypeReference GetValueArrayType(
         TypeReference elementType, int length)
     {
-        var valueArrayTypeName = $"{this.GetValueArrayTypeName(elementType.Name)}_len{length}";
+        var valueArrayTypeName = length >= 0 ?
+            $"{this.GetValueArrayTypeName(elementType.Name)}_len{length}" :
+            $"{this.GetValueArrayTypeName(elementType.Name)}_flex";
         var valueArrayTypeFullName = elementType.Namespace == "C.type" ?
             valueArrayTypeName : $"{elementType.Namespace}.{valueArrayTypeName}";
 
