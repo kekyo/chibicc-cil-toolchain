@@ -1341,6 +1341,17 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task ValueArrayWithChar()
+    {
+        var actual = Run(@"
+            .function public char[3]*[6] foo
+                ldsfld bar
+                ret
+            .global public char[3]*[6] bar");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
@@ -1706,6 +1717,25 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .function public void foo a:bool
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionWithChar1()
+    {
+        var actual = Run(@"
+            .function public char foo
+                ldc.i4.2
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionWithChar2()
+    {
+        var actual = Run(@"
+            .function public void foo a:char
                 ret");
         return Verify(actual);
     }

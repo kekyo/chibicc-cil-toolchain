@@ -62,6 +62,10 @@ partial class Parser
             {
                 itemField.MarshalInfo = new(NativeType.U1);
             }
+            else if (elementType.FullName == "System.Char")
+            {
+                itemField.MarshalInfo = new(NativeType.U2);
+            }
         }
 
         ///////////////////////////////
@@ -131,6 +135,10 @@ partial class Parser
         if (elementType.FullName == "System.Boolean")
         {
             getItemMethod.MethodReturnType.MarshalInfo = new(NativeType.U1);
+        }
+        else if (elementType.FullName == "System.Char")
+        {
+            getItemMethod.MethodReturnType.MarshalInfo = new(NativeType.U2);
         }
 
         indexerProperty.GetMethod = getItemMethod;
@@ -284,6 +292,10 @@ partial class Parser
             if (elementType.FullName == "System.Boolean")
             {
                 valueParameter.MarshalInfo = new(NativeType.U1);
+            }
+            else if (elementType.FullName == "System.Char")
+            {
+                valueParameter.MarshalInfo = new(NativeType.U2);
             }
 
             valueArrayType.Methods.Add(setItemMethod);
