@@ -1553,6 +1553,20 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
+    public Task StructureWithChar()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public char a");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task StructureWithArray1()
     {
         var actual = Run(@"
