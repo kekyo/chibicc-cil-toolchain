@@ -28,7 +28,7 @@
 .class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .field static assembly int32 baz
+  .field public static int32 baz
 } // end of class $source
 
 .class public abstract auto ansi sealed C.text

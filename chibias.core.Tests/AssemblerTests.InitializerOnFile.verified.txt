@@ -28,8 +28,8 @@
 .class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .field static assembly int32 foo
-  .field static assembly int32 bar
+  .field public static int32 foo
+  .field public static int32 bar
   .method private static void  initializer_$0() cil managed
   {
     // Code size       7 (0x7)

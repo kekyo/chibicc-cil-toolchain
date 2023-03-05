@@ -28,8 +28,8 @@
 .class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .method assembly static string  bar(int32 a,
-                                      int8& b) cil managed
+  .method public static string  bar(int32 a,
+                                    int8& b) cil managed
   {
     // Code size       6 (0x6)
     .maxstack  8

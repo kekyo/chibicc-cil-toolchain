@@ -37,7 +37,7 @@
 .class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .method assembly static int32  main() cil managed
+  .method public static int32  main() cil managed
   {
     // Code size       5 (0x5)
     .maxstack  1

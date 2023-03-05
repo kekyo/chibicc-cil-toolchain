@@ -161,6 +161,7 @@ partial class Parser
             scopeDescriptor switch
             {
                 ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
+                ScopeDescriptors.File => MethodAttributes.Public | MethodAttributes.Static,
                 _ => MethodAttributes.Assembly | MethodAttributes.Static,
             },
             varargs);
@@ -301,6 +302,7 @@ partial class Parser
             scopeDescriptor switch
             {
                 ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
+                ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static,
                 _ => FieldAttributes.Assembly | FieldAttributes.Static,
             },
             globalType);

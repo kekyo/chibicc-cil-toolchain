@@ -36,7 +36,7 @@
     .field public int32 c
   } // end of class foo
 
-  .method assembly static int32  main() cil managed
+  .method public static int32  main() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  1

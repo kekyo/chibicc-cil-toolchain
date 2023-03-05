@@ -37,7 +37,7 @@
     .field public static literal uint64 chicken
   } // end of class foo
 
-  .method assembly static int32  main() cil managed
+  .method public static int32  main() cil managed
   {
     // Code size       5 (0x5)
     .maxstack  1
