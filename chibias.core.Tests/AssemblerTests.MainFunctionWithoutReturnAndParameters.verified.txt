@@ -45,7 +45,7 @@
   IL_0010:  ldloc.0
   IL_0011:  call       class [mscorlib]System.Reflection.Assembly [mscorlib]System.Reflection.Assembly::GetEntryAssembly()
   IL_0016:  callvirt   instance string [mscorlib]System.Reflection.Assembly::get_Location()
-  IL_001b:  call       native int [mscorlib]System.Runtime.InteropServices.Marshal::StringToHGlobalAnsi(string)
+  IL_001b:  call       native int [mscorlib]System.Runtime.InteropServices.Marshal::StringToCoTaskMemAnsi(string)
   IL_0020:  stind.i
   IL_0021:  ldc.i4.0
   IL_0022:  stloc.1
@@ -62,7 +62,7 @@
   IL_0032:  ldarg.0
   IL_0033:  ldloc.1
   IL_0034:  ldelem.ref
-  IL_0035:  call       native int [mscorlib]System.Runtime.InteropServices.Marshal::StringToHGlobalAnsi(string)
+  IL_0035:  call       native int [mscorlib]System.Runtime.InteropServices.Marshal::StringToCoTaskMemAnsi(string)
   IL_003a:  stind.i
   IL_003b:  ldloc.1
   IL_003c:  ldc.i4.1
