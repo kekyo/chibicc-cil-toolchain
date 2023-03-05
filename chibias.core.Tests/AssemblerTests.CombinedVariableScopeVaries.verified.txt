@@ -1,4 +1,4 @@
-﻿
+
 //  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
 
 
@@ -25,11 +25,11 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit source
+.class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
   .field static assembly int32 baz
-} // end of class source
+} // end of class $source
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
