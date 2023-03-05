@@ -814,7 +814,7 @@ Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
 ### Explicitly location information
 
-The file and location directive will produce sequence points into debugging information.
+The file and location directive will emit sequence points into debugging information.
 Sequence points are used to locate where the code being executed corresponds to in the source code.
 In other words, when this information is given,
 the debugger will be able to indicate the location of the code being executed in the source code.
@@ -861,6 +861,19 @@ The language indicators is shown (not all):
 Language indicator comes from [Mono.Cecil.Cil.DocumentLanguage](https://github.com/jbevain/cecil/blob/7b8ee049a151204997eecf587c69acc2f67c8405/Mono.Cecil.Cil/Document.cs#L27).
 
 Will produce debugging information with CIL source file itself when does not apply any location directive.
+
+Use the `.hidden` directive to prevent subsequent code from generating sequence points:
+
+```
+.hidden
+.function public int32 main
+    ldc.i4 123     ; <-- Sequence points are not emit below.
+    ldc.i4 456
+    add
+    ret
+```
+
+If you specify a `.location` directive that specifies a valid ID, sequence points will be emit.
 
 
 ----

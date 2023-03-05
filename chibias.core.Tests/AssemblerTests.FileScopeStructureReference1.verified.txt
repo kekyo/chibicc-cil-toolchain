@@ -1,4 +1,4 @@
-﻿
+
 //  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
 
 
@@ -33,10 +33,10 @@
   .field public int32 c
 } // end of class C.type.foo
 
-.class private abstract auto ansi sealed beforefieldinit source
+.class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .method assembly static int32  main() cil managed
+  .method public static int32  main() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  1
@@ -44,9 +44,9 @@
     IL_0000:  ldloca     V_0
     IL_0004:  initobj    C.type.foo
     IL_000a:  ret
-  } // end of method source::main
+  } // end of method $source::main
 
-} // end of class source
+} // end of class $source
 
 
 // =============================================================

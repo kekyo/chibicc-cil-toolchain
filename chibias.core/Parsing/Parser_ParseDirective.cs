@@ -161,6 +161,7 @@ partial class Parser
             scopeDescriptor switch
             {
                 ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
+                ScopeDescriptors.File => MethodAttributes.Public | MethodAttributes.Static,
                 _ => MethodAttributes.Assembly | MethodAttributes.Static,
             },
             varargs);
@@ -301,6 +302,7 @@ partial class Parser
             scopeDescriptor switch
             {
                 ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
+                ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static,
                 _ => FieldAttributes.Assembly | FieldAttributes.Static,
             },
             globalType);
@@ -736,6 +738,29 @@ partial class Parser
         }
     }
 
+
+    /////////////////////////////////////////////////////////////////////
+
+    private void ParseHiddenDirective(
+        Token directive, Token[] tokens)
+    {
+        if (tokens.Length > 1)
+        {
+            this.OutputError(
+                tokens[1],
+                $"Too many operands.");
+            return;
+        }
+
+        if (this.produceDebuggingInformation)
+        {
+            this.currentFile = unknown;
+            this.queuedLocation = null;
+            this.lastLocation = null;
+            this.isProducedOriginalSourceCodeLocation = false;
+        }
+    }
+
     /////////////////////////////////////////////////////////////////////
 
     private void ParseLocationDirective(
@@ -831,6 +856,10 @@ partial class Parser
             // File directive:
             case "file":
                 this.ParseFileDirective(directive, tokens);
+                break;
+            // Hidden directive:
+            case "hidden":
+                this.ParseHiddenDirective(directive, tokens);
                 break;
             // Location directive:
             case "location":

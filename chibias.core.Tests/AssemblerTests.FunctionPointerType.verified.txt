@@ -1,4 +1,4 @@
-﻿
+
 //  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
 
 
@@ -25,19 +25,19 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit source
+.class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .method assembly static string  bar(int32 a,
-                                      int8& b) cil managed
+  .method public static string  bar(int32 a,
+                                    int8& b) cil managed
   {
     // Code size       6 (0x6)
     .maxstack  8
     IL_0000:  ldstr      "ABC"
     IL_0005:  ret
-  } // end of method source::bar
+  } // end of method $source::bar
 
-} // end of class source
+} // end of class $source
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
@@ -47,8 +47,8 @@
   {
     // Code size       7 (0x7)
     .maxstack  8
-    IL_0000:  ldftn      string source::bar(int32,
-                                            int8&)
+    IL_0000:  ldftn      string $source::bar(int32,
+                                             int8&)
     IL_0006:  ret
   } // end of method text::foo
 

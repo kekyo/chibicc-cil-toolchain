@@ -1,4 +1,4 @@
-﻿
+
 //  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
 
 
@@ -25,7 +25,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit source
+.class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
   .class sequential ansi sealed nested assembly foo
@@ -36,17 +36,17 @@
     .field public int32 c
   } // end of class foo
 
-  .method assembly static int32  main() cil managed
+  .method public static int32  main() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  1
-    .locals (valuetype source/foo V_0)
+    .locals (valuetype $source/foo V_0)
     IL_0000:  ldloca     V_0
-    IL_0004:  initobj    source/foo
+    IL_0004:  initobj    $source/foo
     IL_000a:  ret
-  } // end of method source::main
+  } // end of method $source::main
 
-} // end of class source
+} // end of class $source
 
 
 // =============================================================

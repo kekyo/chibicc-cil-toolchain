@@ -15,23 +15,26 @@ namespace chibias.Parsing.Embedding;
 
 internal static class EmbeddingCodeFragments
 {
+    private static readonly string startupName =
+        "chibias.Parsing.Embedding._start";
+
     private static readonly Lazy<Token[][]> startup_void = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Assembler).Assembly.GetManifestResourceStream(
-            "chibias.Parsing.Embedding._startup_v.s")!)));
+            startupName + "_v.s")!)));
     private static readonly Lazy<Token[][]> startup_int32 = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Assembler).Assembly.GetManifestResourceStream(
-            "chibias.Parsing.Embedding._startup_i.s")!)));
+            startupName + "_i.s")!)));
 
     private static readonly Lazy<Token[][]> startup_void_void = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Assembler).Assembly.GetManifestResourceStream(
-            "chibias.Parsing.Embedding._startup_v_v.s")!)));
+            startupName + "_v_v.s")!)));
     private static readonly Lazy<Token[][]> startup_int32_void = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Assembler).Assembly.GetManifestResourceStream(
-            "chibias.Parsing.Embedding._startup_i_v.s")!)));
+            startupName + "_i_v.s")!)));
 
     public static Token[][] Startup_Void =>
         startup_void.Value;

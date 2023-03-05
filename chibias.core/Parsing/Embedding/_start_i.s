@@ -1,4 +1,4 @@
-﻿.function _module_ int32 _startup args:string[]
+﻿.function _module_ int32 _start args:string[]
 	.local int8** ; argv
 	.local int32  ; index
 
@@ -15,7 +15,7 @@
 	ldloc.0
 	call System.Reflection.Assembly.GetEntryAssembly
 	callvirt System.Reflection.Assembly.get_Location
-	call System.Runtime.InteropServices.Marshal.StringToHGlobalAnsi string
+	call System.Runtime.InteropServices.Marshal.StringToCoTaskMemAnsi string
 	stind.i
 	ldc.i4.0
 	stloc.1
@@ -33,7 +33,7 @@ LOOP:
 	ldarg.0
 	ldloc.1
 	ldelem.ref
-	call System.Runtime.InteropServices.Marshal.StringToHGlobalAnsi string
+	call System.Runtime.InteropServices.Marshal.StringToCoTaskMemAnsi string
 	stind.i
 	ldloc.1
 	ldc.i4.1

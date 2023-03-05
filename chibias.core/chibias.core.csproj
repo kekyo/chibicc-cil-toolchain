@@ -20,10 +20,10 @@
     <None Remove="Parsing\_startup_v.s" />
     <None Remove="Parsing\_startup_v_v.s" />
     <EmbeddedResource Include="Internal\runtimeconfig.json" />
-    <EmbeddedResource Include="Parsing\Embedding\_startup_i_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_startup_v_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_startup_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_startup_i.s" />
+    <EmbeddedResource Include="Parsing\Embedding\_start_i_v.s" />
+    <EmbeddedResource Include="Parsing\Embedding\_start_v_v.s" />
+    <EmbeddedResource Include="Parsing\Embedding\_start_v.s" />
+    <EmbeddedResource Include="Parsing\Embedding\_start_i.s" />
   </ItemGroup>
 
 </Project>

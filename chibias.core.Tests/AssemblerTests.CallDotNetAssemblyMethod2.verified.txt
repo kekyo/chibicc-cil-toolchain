@@ -25,14 +25,14 @@
 
 // ================== GLOBAL METHODS =========================
 
-.method assembly static void  _startup() cil managed
+.method assembly static void  _start() cil managed
 {
   .entrypoint
   // Code size       6 (0x6)
   .maxstack  8
   IL_0000:  call       void C.text::main()
   IL_0005:  ret
-} // end of global method _startup
+} // end of global method _start
 
 
 // =============================================================
