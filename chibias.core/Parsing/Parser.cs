@@ -23,7 +23,7 @@ namespace chibias.Parsing;
 internal sealed partial class Parser
 {
     private static readonly FileDescriptor unknown = 
-        new(null, "unknown.s", DocumentLanguage.Cil, false);
+        new(null, "unknown", DocumentLanguage.Other, true);
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
@@ -130,7 +130,7 @@ internal sealed partial class Parser
 
         this.currentFile = unknown;
         this.fileScopedType = this.CreateFileScopedType(
-             CecilUtilities.SanitizeFileNameToMemberName("unknown.s"));
+             CecilUtilities.SanitizeFileNameToMemberName(unknown.RelativePath));
         this.fileScopedTypeInitializer = this.CreateTypeInitializer();
     }
 
@@ -199,6 +199,8 @@ internal sealed partial class Parser
         string sourcePathDebuggerHint,
         bool isVisible)
     {
+        this.files.Clear();
+
         this.BeginNewFileScope(sourcePathDebuggerHint);
 
         this.currentFile = new(
@@ -385,7 +387,7 @@ internal sealed partial class Parser
         if (!this.caughtError)
         {
             // Clean up for file scope type.
-            this.BeginNewFileScope("unknown.s");
+            this.BeginNewFileScope(unknown.RelativePath);
 
             // Add text type when exist methods.
             if (this.cabiTextType.Methods.Count >= 1)
@@ -457,7 +459,7 @@ internal sealed partial class Parser
         if (!this.caughtError)
         {
             // Clean up for file scope type.
-            this.BeginNewFileScope("unknown.s");
+            this.BeginNewFileScope(unknown.RelativePath);
 
             // Fire local member lookup.
             foreach (var action in this.delayedLookupLocalMemberActions)

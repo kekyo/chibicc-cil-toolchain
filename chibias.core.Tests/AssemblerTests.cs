@@ -68,6 +68,17 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
+    public Task Hidden()
+    {
+        var actual = Run(@"
+            .hidden
+            .function public int32 main
+                ldc.i4.1
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task MultipleFunctions()
     {
         var actual = Run(@"
