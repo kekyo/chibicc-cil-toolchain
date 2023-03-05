@@ -418,7 +418,7 @@ internal sealed partial class Parser
                 // Inject startup code when declared.
                 if (mainFunction != null)
                 {
-                    this.BeginNewCilSourceCode(null, "_startup.s", false);
+                    this.BeginNewCilSourceCode(null, "_start.s", false);
 
                     Token[][] startupTokensList;
                     if (mainFunction.ReturnType.FullName == "System.Void")

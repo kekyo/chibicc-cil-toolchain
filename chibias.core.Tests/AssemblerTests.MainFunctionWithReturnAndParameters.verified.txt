@@ -25,7 +25,7 @@
 
 // ================== GLOBAL METHODS =========================
 
-.method assembly static int32  _startup(string[] args) cil managed
+.method assembly static int32  _start(string[] args) cil managed
 {
   .entrypoint
   // Code size       81 (0x51)
@@ -83,7 +83,7 @@
   IL_004b:  call       int32 C.text::main(int32,
                                           int8**)
   IL_0050:  ret
-} // end of global method _startup
+} // end of global method _start
 
 
 // =============================================================
