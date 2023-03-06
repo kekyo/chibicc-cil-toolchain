@@ -398,10 +398,10 @@ The parameters are optional. Formats are:
 The function name both forward and backaward references are accepted.
 
 Important: If you are calling a function defined in chibias,
-you do not need to specify any argument type list for the `call` operand.
-In another hand, .NET overloaded methods, an argument type list is required.
+you do not need to specify any parameter type list for the `call` operand.
+In another hand, .NET overloaded methods, an parameter type list is required.
 
-function can be defined to accept variable arguments:
+function can be defined to accept variable parameters:
 
 ```
 .function public int32 addn a1:int32 ...
@@ -414,13 +414,30 @@ function can be defined to accept variable arguments:
 ```
 
 `...` can be specified only at the end of the parameter list.
-This allows the function to receive variable arguments.
+This allows the function to receive variable parameters.
 
-However, that this variable argument is handled differently from variable arguments (.NET array) in C#.
+However, that this variable parameter is handled differently from variable parameters (.NET array) in C#.
 chibias uses `arglist` semantics in defined CIL.
 
 `arglist` is enumerated using the `System.ArgIterator` type, as in the example above.
 For more information, you need to Google the `__arglist` keyword or `ArgIterator` in C#.
+
+Calls to functions with variable parameters require an explicit list of parameter types.
+For example, calls above function `add_n` would use:
+
+```
+.function public int32 main
+    ldc.i4.s 123
+    ldc.r8 123.456    ; <-- Additional parameter
+    ldstr "ABC"       ; <-- Additional parameter
+    call add_n int32 float64 string
+    ret
+```
+
+Specify all types of parameters to be passed in the function call,
+including the types corresponding to the additional parameters.
+Because chibias does not perform flow analysis to detect parameter types automatically.
+If this declaration is incorrect, calls will fail at runtime.
 
 ### Call external function
 

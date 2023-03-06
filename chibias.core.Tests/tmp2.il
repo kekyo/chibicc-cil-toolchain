@@ -53,4 +53,9 @@
     add
     ret
   }
+  .method public hidebysig static vararg int32 va(int32 x, int64 y, float64 z) cil managed
+  {
+    ldarg.0
+    ret
+  }
 }
