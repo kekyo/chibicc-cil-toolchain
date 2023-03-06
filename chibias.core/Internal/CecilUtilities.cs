@@ -200,4 +200,16 @@ internal static class CecilUtilities
 
         return true;
     }
+
+    public static bool IsValidCAbiParameter(
+        MethodReference method, string[] parameterTypeNames) =>
+        method.CallingConvention switch
+        {
+            MethodCallingConvention.VarArg =>
+                method.Parameters.
+                    Zip(parameterTypeNames, (p, ptn) => p.ParameterType.FullName == ptn).
+                    All(eq => eq),
+            _ =>
+                parameterTypeNames.Length == 0,
+        };
 }

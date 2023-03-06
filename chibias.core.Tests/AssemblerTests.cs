@@ -814,6 +814,21 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
+    public Task CallCAbiTargetFunctionWithVariadic()
+    {
+        var actual = Run(@"
+            .function public int32 main
+                ldc.i4.s 123
+                ldc.i8 456
+                ldc.r8 123.456
+                ldstr ""ABC""
+                ldc.i4.1
+                call va int32 int64 float64 string bool
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task CallSameAssemblyFunction()
     {
         var actual = Run(@"
@@ -825,7 +840,6 @@ public sealed partial class AssemblerTests
                 ret");
         return Verify(actual);
     }
-
 
     /////////////////////////////////////////////////////////
 
@@ -1126,6 +1140,32 @@ public sealed partial class AssemblerTests
                 ldftn bar
                 ret
             .function file string bar a:int32 b:int8&
+                ldstr ""ABC""
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionPointerTypeWithVariadic()
+    {
+        var actual = Run(@"
+            .function public string(int32,int8&,...)* foo
+                ldftn bar
+                ret
+            .function file string bar a:int32 b:int8& ...
+                ldstr ""ABC""
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task FunctionPointerTypeWithVariadicTypes()
+    {
+        var actual = Run(@"
+            .function public string(int32,int8&,...)* foo
+                ldftn bar int32 int8&
+                ret
+            .function file string bar a:int32 b:int8& ...
                 ldstr ""ABC""
                 ret");
         return Verify(actual);

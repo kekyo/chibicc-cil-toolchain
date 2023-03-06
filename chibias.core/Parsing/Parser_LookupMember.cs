@@ -9,6 +9,7 @@
 
 using chibias.Internal;
 using Mono.Cecil;
+using Mono.Cecil.Rocks;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -263,42 +264,6 @@ partial class Parser
             methodNameIndex--;
         }
 
-        // CABI specific case: No need to check any parameters.
-        if (methodNameIndex <= 0 &&
-            parameterTypeNames.Length == 0)
-        {
-            if (fileScopedType?.Methods.
-                FirstOrDefault(method => method.Name == methodName) is { } m2)
-            {
-                method = m2;
-                return true;
-            }
-
-            if (this.cabiTextType.Methods.
-                FirstOrDefault(method => method.Name == methodName) is { } m3)
-            {
-                method = m3;
-                return true;
-            }
-
-            if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m))
-            {
-                method = this.Import(m);
-                return true;
-            }
-
-            method = null!;
-            return false;
-        }
-
-        var typeName = name.Substring(0, methodNameIndex);
-
-        if (!this.referenceTypes.TryGetMember(typeName, out var type))
-        {
-            method = null!;
-            return false;
-        }
-
         var strictParameterTypeNames = parameterTypeNames.
             Select(parameterTypeName => this.TryGetType(
                 parameterTypeName,
@@ -308,6 +273,84 @@ partial class Parser
             ToArray();
 
         if (strictParameterTypeNames.Contains(string.Empty))
+        {
+            method = null!;
+            return false;
+        }
+
+        // CABI specific case: No need to check any parameters except variadics.
+        if (methodNameIndex <= 0)
+        {
+            MethodReference? foundMethod = null;
+            if (fileScopedType?.Methods.
+                FirstOrDefault(method => method.Name == methodName) is { } m2 &&
+                CecilUtilities.IsValidCAbiParameter(m2, strictParameterTypeNames))
+            {
+                foundMethod = m2;
+            }
+            else if (this.cabiTextType.Methods.
+                FirstOrDefault(method => method.Name == methodName) is { } m3 &&
+                CecilUtilities.IsValidCAbiParameter(m3, strictParameterTypeNames))
+            {
+                foundMethod = m3;
+            }
+            else if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m) &&
+                CecilUtilities.IsValidCAbiParameter(m, strictParameterTypeNames))
+            {
+                foundMethod = this.Import(m);
+            }
+
+            if (foundMethod == null)
+            {
+                method = null!;
+                return false;
+            }
+
+            if (foundMethod.CallingConvention != MethodCallingConvention.VarArg)
+            {
+                method = foundMethod;
+                return true;
+            }
+
+            // Will make specialized method reference with variadic parameters.
+            var m5 = new MethodReference(
+                foundMethod.Name, foundMethod.ReturnType, foundMethod.DeclaringType);
+            m5.CallingConvention = MethodCallingConvention.VarArg;
+            foreach (var parameter in foundMethod.Parameters)
+            {
+                m5.Parameters.Add(new(
+                    parameter.Name, parameter.Attributes, parameter.ParameterType));
+            }
+
+            // Append sentinel parameters each parameter types.
+            var first = true;
+            foreach (var parameterTypeName in
+                strictParameterTypeNames.Skip(foundMethod.Parameters.Count))
+            {
+                if (!this.TryGetType(parameterTypeName, out var parameterType, fileScopedType))
+                {
+                    method = null!;
+                    return false;
+                }
+
+                if (first)
+                {
+                    m5.Parameters.Add(new(parameterType.MakeSentinelType()));
+                    first = false;
+                }
+                else
+                {
+                    m5.Parameters.Add(new(parameterType));
+                }
+            }
+
+            method = m5;
+            return true;
+        }
+
+        var typeName = name.Substring(0, methodNameIndex);
+
+        if (!this.referenceTypes.TryGetMember(typeName, out var type))
         {
             method = null!;
             return false;
