@@ -24,8 +24,7 @@ partial class Parser
         string functionName,
         TypeReference returnType,
         ParameterDefinition[] parameters,
-        MethodAttributes attribute,
-        bool varargs)
+        MethodAttributes attribute)
     {
         this.method = new MethodDefinition(
             functionName,
@@ -36,11 +35,6 @@ partial class Parser
         foreach (var parameter in parameters)
         {
             this.method.Parameters.Add(parameter);
-        }
-
-        if (varargs)
-        {
-            this.method.CallingConvention = MethodCallingConvention.VarArg;
         }
 
         this.body = this.method.Body;
@@ -89,7 +83,6 @@ partial class Parser
         }
 
         var parameters = new List<ParameterDefinition>();
-        var varargs = false;
         for (var index = 4; index < tokens.Length; index++)
         {
             var parameterToken = tokens[index];
@@ -101,23 +94,6 @@ partial class Parser
                 this.OutputError(
                     parameterToken,
                     $"Invalid parameter: {parameterTokenText}");
-                continue;
-            }
-
-            if (index == (tokens.Length - 1) &&
-                splitted.Last() == "...")
-            {
-                if (splitted.Length == 2)
-                {
-                    this.OutputError(
-                        parameterToken,
-                        $"Could not apply any types at the variable argument descriptor: {parameterTokenText}");
-                }
-                else
-                {
-                    varargs = true;
-                }
-
                 continue;
             }
 
@@ -163,8 +139,7 @@ partial class Parser
                 ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
                 ScopeDescriptors.File => MethodAttributes.Public | MethodAttributes.Static,
                 _ => MethodAttributes.Assembly | MethodAttributes.Static,
-            },
-            varargs);
+            });
 
         // Special case: Force 1 byte footprint on boolean type.
         if (returnType.FullName == "System.Boolean")
@@ -218,8 +193,7 @@ partial class Parser
             $"initializer_${this.initializerIndex++}",
             this.UnsafeGetType("System.Void"),
             Utilities.Empty<ParameterDefinition>(),
-            MethodAttributes.Private | MethodAttributes.Static,
-            false);
+            MethodAttributes.Private | MethodAttributes.Static);
 
         switch (scopeDescriptor)
         {

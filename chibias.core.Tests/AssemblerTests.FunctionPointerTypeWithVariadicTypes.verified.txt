@@ -31,10 +31,14 @@
   .method public static vararg string  bar(int32 a,
                                            int8& b) cil managed
   {
-    // Code size       6 (0x6)
-    .maxstack  8
-    IL_0000:  ldstr      "ABC"
-    IL_0005:  ret
+    // Code size       15 (0xf)
+    .maxstack  2
+    .locals (valuetype [mscorlib]System.ArgIterator V_0)
+    IL_0000:  ldloca.s   V_0
+    IL_0002:  arglist
+    IL_0004:  call       instance void [mscorlib]System.ArgIterator::.ctor(valuetype [mscorlib]System.RuntimeArgumentHandle)
+    IL_0009:  ldstr      "ABC"
+    IL_000e:  ret
   } // end of method $source::bar
 
 } // end of class $source
