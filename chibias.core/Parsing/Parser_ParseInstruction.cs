@@ -79,10 +79,22 @@ partial class Parser
     /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineNone(
-        OpCode opCode, Token[] tokens) =>
-        this.FetchOperands(tokens, 0) is { } ?
-            Instruction.Create(opCode) :
-            null;
+        OpCode opCode, Token[] tokens)
+    {
+        if (this.FetchOperands(tokens, 0) is { })
+        {
+            if (opCode.Code == Code.Arglist)
+            {
+                // Marked variadic function.
+                this.method!.CallingConvention = MethodCallingConvention.VarArg;
+            }
+            return Instruction.Create(opCode);
+        }
+        else
+        {
+            return null;
+        }
+    }
 
     /////////////////////////////////////////////////////////////////////
 

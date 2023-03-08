@@ -119,8 +119,8 @@ public sealed partial class AssemblerTests
     public Task VariableArgumentsFunction()
     {
         var actual = Run(@"
-            .function internal void foo ...
-                .local System.ArgIterator va
+            .function internal void foo
+                .local System.ArgIterator
                 ldloca.s 0
                 arglist
                 call System.ArgIterator..ctor System.RuntimeArgumentHandle
@@ -1152,7 +1152,11 @@ public sealed partial class AssemblerTests
             .function public string(int32,int8&,...)* foo
                 ldftn bar
                 ret
-            .function file string bar a:int32 b:int8& ...
+            .function file string bar a:int32 b:int8&
+                .local System.ArgIterator
+                ldloca.s 0
+                arglist
+                call System.ArgIterator..ctor System.RuntimeArgumentHandle
                 ldstr ""ABC""
                 ret");
         return Verify(actual);
@@ -1165,7 +1169,11 @@ public sealed partial class AssemblerTests
             .function public string(int32,int8&,...)* foo
                 ldftn bar int32 int8&
                 ret
-            .function file string bar a:int32 b:int8& ...
+            .function file string bar a:int32 b:int8&
+                .local System.ArgIterator
+                ldloca.s 0
+                arglist
+                call System.ArgIterator..ctor System.RuntimeArgumentHandle
                 ldstr ""ABC""
                 ret");
         return Verify(actual);

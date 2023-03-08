@@ -401,10 +401,10 @@ Important: If you are calling a function defined in chibias,
 you do not need to specify any parameter type list for the `call` operand.
 In another hand, .NET overloaded methods, an parameter type list is required.
 
-function can be defined to accept variable parameters:
+Function accepts additional variable arguments:
 
 ```
-.function public int32 addn a1:int32 ...
+.function public int32 addn a1:int32
     .local System.ArgIterator
     ldloca.s 0
     arglist
@@ -413,8 +413,7 @@ function can be defined to accept variable parameters:
     ret
 ```
 
-`...` can be specified only at the end of the parameter list.
-This allows the function to receive variable parameters.
+The use of the `arglist` opcode in the function marks to be able to accept variable arguments.
 
 However, that this variable parameter is handled differently from variable parameters (.NET array) in C#.
 chibias uses `arglist` semantics in defined CIL.
