@@ -2,7 +2,7 @@
   "profiles": {
     "chibias": {
         "commandName": "Project",
-        "commandLineArgs": "--log trace -f net45 -w x86 -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\mscorlib.dll -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\common.dll ..\\..\\..\\..\\..\\chibicc-cil\\test\\initializer.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common.s"
+        "commandLineArgs": "--log trace -f net45 -w x86 -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\mscorlib.dll -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\common.dll ..\\..\\..\\..\\..\\chibicc-cil\\test\\alignof.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common.s"
     }
   }
 }
