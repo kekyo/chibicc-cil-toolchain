@@ -252,7 +252,11 @@ internal static class TypeParser
             // Others (identity)
             else
             {
-                Debug.Assert(currentNode == null);
+                if (currentNode != null)
+                {
+                    typeNode = null!;
+                    return false;
+                }
 
                 sb.Append(inch);
                 index++;

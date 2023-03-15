@@ -151,14 +151,20 @@ partial class Parser
             var capturedField = sf;
             var capturedMemberTypeName = memberTypeName;
             var capturedMemberTypeNameToken = memberTypeNameToken;
+            var capturedFileScopedType = this.fileScopedType;
+            var capturedLocation = this.GetCurrentLocation(capturedMemberTypeNameToken);
             this.delayedCheckAfterLookingupActions.Add(() =>
             {
                 // Checkup its structure member type.
-                if (!this.TryGetType(capturedMemberTypeName, out var memberType) ||
+                if (!this.TryGetType(
+                    capturedMemberTypeName,
+                    out var memberType,
+                    capturedFileScopedType,
+                    LookupTargets.All) ||
                     capturedField.FieldType.FullName != memberType.FullName)
                 {
                     this.OutputError(
-                        capturedMemberTypeNameToken,
+                        capturedLocation,
                         $"Structure member type difference exists before declared type: {capturedField.FieldType.FullName}");
                 }
             });

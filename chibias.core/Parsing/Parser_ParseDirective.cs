@@ -716,11 +716,7 @@ partial class Parser
                     Path.GetFileName(tokens[2].Text),
                     language,
                     true);
-                this.currentFile = file;
                 this.files[tokens[1].Text] = file;
-                this.queuedLocation = null;
-                this.lastLocation = null;
-                this.isProducedOriginalSourceCodeLocation = false;
             }
         }
         else
@@ -746,7 +742,7 @@ partial class Parser
 
         if (this.produceDebuggingInformation)
         {
-            this.currentFile = unknown;
+            this.currentFile = this.currentCilFile;
             this.queuedLocation = null;
             this.lastLocation = null;
             this.isProducedOriginalSourceCodeLocation = false;
@@ -808,9 +804,11 @@ partial class Parser
 
         if (this.produceDebuggingInformation)
         {
+            this.currentFile = file;
             var location = new Location(
                 file, vs[0], vs[1], vs[2], vs[3]);
             this.queuedLocation = location;
+            this.lastLocation = null;
             this.isProducedOriginalSourceCodeLocation = false;
         }
     }

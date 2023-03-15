@@ -549,6 +549,7 @@ partial class Parser
         Action<TypeReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(typeNameToken);
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetType(
@@ -562,7 +563,7 @@ partial class Parser
             else
             {
                 this.OutputError(
-                    typeNameToken,
+                    capturedLocation,
                     $"Could not find type: {typeName}");
             }
         });
@@ -613,6 +614,7 @@ partial class Parser
         Action<FieldReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(fieldNameToken);
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetField(
@@ -626,7 +628,7 @@ partial class Parser
             else
             {
                 this.OutputError(
-                    fieldNameToken,
+                    capturedLocation,
                     $"Could not find field: {fieldName}");
             }
         });
@@ -638,6 +640,7 @@ partial class Parser
         Action<FieldReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(fieldNameToken);
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetField(
@@ -651,7 +654,7 @@ partial class Parser
             else
             {
                 this.OutputError(
-                    fieldNameToken,
+                    capturedLocation,
                     $"Could not find field: {fieldNameToken.Text}");
             }
         });
@@ -692,6 +695,7 @@ partial class Parser
         Action<MethodReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(methodNameToken);
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetMethod(
@@ -706,7 +710,7 @@ partial class Parser
             else
             {
                 this.OutputError(
-                    methodNameToken,
+                    capturedLocation,
                     $"Could not find method: {methodNameToken.Text}");
             }
         });
@@ -750,6 +754,7 @@ partial class Parser
         Action<MemberReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(memberNameToken);
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetMember(
@@ -764,7 +769,7 @@ partial class Parser
             else
             {
                 this.OutputError(
-                    memberNameToken,
+                    capturedLocation,
                     $"Could not find member: {memberName}");
             }
         });
@@ -777,6 +782,7 @@ partial class Parser
         Action<MemberReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(memberNameToken);
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (this.TryGetMember(
@@ -791,7 +797,7 @@ partial class Parser
             else
             {
                 this.OutputError(
-                    memberNameToken,
+                    capturedLocation,
                     $"Could not find member: {memberNameToken.Text}");
             }
         });
