@@ -1,0 +1,98 @@
+﻿
+//  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
+
+
+
+// Metadata version: v4.0.30319
+.assembly extern mscorlib
+{
+  .publickey = (00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 ) 
+  .ver 4:0:0:0
+}
+.assembly output
+{
+  .custom instance void [mscorlib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
+                                                                                                        2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
+  .ver 1:0:0:0
+}
+.module output.dll
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class public sequential ansi sealed System.Char_flex
+       extends [mscorlib]System.ValueType
+{
+  .pack 8
+  .size 0
+  .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .method public hidebysig specialname instance char 
+          marshal( unsigned int16) 
+          get_Item(int32 index) cil managed
+  {
+    // Code size       9 (0x9)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  ldc.i4.s   2
+    IL_0003:  mul
+    IL_0004:  ldarg.0
+    IL_0005:  conv.u
+    IL_0006:  add
+    IL_0007:  ldind.u2
+    IL_0008:  ret
+  } // end of method Char_flex::get_Item
+
+  .method public hidebysig specialname instance void 
+          set_Item(int32 index,
+                   char  marshal( unsigned int16) 'value') cil managed
+  {
+    // Code size       10 (0xa)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  ldc.i4.s   2
+    IL_0003:  mul
+    IL_0004:  ldarg.0
+    IL_0005:  conv.u
+    IL_0006:  add
+    IL_0007:  ldarg.2
+    IL_0008:  stind.i2
+    IL_0009:  ret
+  } // end of method Char_flex::set_Item
+
+  .property instance callconv(8) char Item(int32)
+  {
+    .get instance char System.Char_flex::get_Item(int32)
+    .set instance void System.Char_flex::set_Item(int32,
+                                                  char)
+  } // end of property Char_flex::Item
+} // end of class System.Char_flex
+
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static valuetype System.Char_flex 
+          foo() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldsfld     valuetype System.Char_flex C.data::bar
+    IL_0005:  ret
+  } // end of method text::foo
+
+} // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static valuetype System.Char_flex bar
+} // end of class C.data
+
+
+// =============================================================
+
+// *********** DISASSEMBLY COMPLETE ***********************

@@ -1631,6 +1631,18 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task FlexValueArray()
+    {
+        // It is illegal variable/result type, but chibias will generate.
+        var actual = Run(@"
+            .function public char[*] foo
+                ldsfld bar
+                ret
+            .global public char[*] bar");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
