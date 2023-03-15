@@ -80,6 +80,67 @@ partial class Parser
         All = 0x1f,
     }
 
+    private bool TryLookupTypeByTypeName(
+        string typeName,
+        out TypeReference type,
+        TypeDefinition? fileScopedType,
+        LookupTargets lookupTargets)
+    {
+        // IMPORTANT ORDER:
+        //   Will lookup before this module, because the types redefinition by C headers
+        //   each assembly (by generating chibias).
+        //   Always we use first finding type, silently ignored when multiple declarations.
+        if (lookupTargets.HasFlag(LookupTargets.File) &&
+            fileScopedType?.NestedTypes.FirstOrDefault(type =>
+                type.Name == typeName) is { } td2)
+        {
+            type = td2;
+            return true;
+        }
+
+        if (lookupTargets.HasFlag(LookupTargets.Assembly) &&
+            this.module.Types.FirstOrDefault(type =>
+            (type.Namespace == "C.type" && type.Name == typeName) ||
+            // FullName is needed because the value array type name is not CABI.
+            (type.FullName == typeName)) is { } td3)
+        {
+            type = td3;
+            return true;
+        }
+
+        if (lookupTargets.HasFlag(LookupTargets.CAbiSpecific) &&
+            this.cabiSpecificSymbols.TryGetMember<TypeReference>(typeName, out var tr1))
+        {
+            type = this.Import(tr1);
+            return true;
+        }
+
+        if (lookupTargets.HasFlag(LookupTargets.Important) &&
+            this.importantTypes.TryGetValue(typeName, out type!))
+        {
+            return true;
+        }
+
+        if (CecilUtilities.TryLookupOriginTypeName(typeName, out var originTypeName))
+        {
+            return this.TryGetType(
+                originTypeName,
+                out type,
+                fileScopedType,
+                lookupTargets);
+        }
+
+        if (lookupTargets.HasFlag(LookupTargets.References) &&
+            this.referenceTypes.TryGetMember(typeName, out var td4))
+        {
+            type = this.Import(td4);
+            return true;
+        }
+
+        type = null!;
+        return false;
+    }
+
     private bool TryConstructTypeFromNode(
         TypeNode typeNode,
         out TypeReference type,
@@ -167,7 +228,8 @@ partial class Parser
                     if (atn.Length is { } length)
                     {
                         // "System.Int32_len13"
-                        type = this.GetValueArrayType(elementType3, length);
+                        type = this.GetValueArrayType(
+                            elementType3, length, fileScopedType, lookupTargets);
                         return true;
                     }
 
@@ -181,59 +243,11 @@ partial class Parser
 
             // Other types
             case TypeIdentityNode tin:
-                // IMPORTANT ORDER:
-                //   Will lookup before this module, because the types redefinition by C headers
-                //   each assembly (by generating chibias).
-                //   Always we use first finding type, silently ignored when multiple declarations.
-                if (lookupTargets.HasFlag(LookupTargets.File) &&
-                    fileScopedType?.NestedTypes.FirstOrDefault(type =>
-                        type.Name == tin.Identity) is { } td2)
-                {
-                    type = td2;
-                    return true;
-                }
-
-                if (lookupTargets.HasFlag(LookupTargets.Assembly) &&
-                    this.module.Types.FirstOrDefault(type =>
-                    (type.Namespace == "C.type" && type.Name == tin.Identity) ||
-                    // FullName is needed because the value array type name is not CABI.
-                    (type.FullName == tin.Identity)) is { } td3)
-                {
-                    type = td3;
-                    return true;
-                }
-
-                if (lookupTargets.HasFlag(LookupTargets.CAbiSpecific) && 
-                    this.cabiSpecificSymbols.TryGetMember<TypeReference>(tin.Identity, out var tr1))
-                {
-                    type = this.Import(tr1);
-                    return true;
-                }
-
-                if (lookupTargets.HasFlag(LookupTargets.Important) &&
-                    this.importantTypes.TryGetValue(tin.Identity, out type!))
-                {
-                    return true;
-                }
-
-                if (CecilUtilities.TryLookupOriginTypeName(tin.Identity, out var originTypeName))
-                {
-                    return this.TryGetType(
-                        originTypeName,
-                        out type,
-                        fileScopedType,
-                        lookupTargets);
-                }
-
-                if (lookupTargets.HasFlag(LookupTargets.References) &&
-                    this.referenceTypes.TryGetMember(tin.Identity, out var td4))
-                {
-                    type = this.Import(td4);
-                    return true;
-                }
-
-                type = null!;
-                return false;
+                return this.TryLookupTypeByTypeName(
+                    tin.Identity,
+                    out type,
+                    fileScopedType,
+                    lookupTargets);
 
             // Function signature
             case FunctionSignatureNode _:
