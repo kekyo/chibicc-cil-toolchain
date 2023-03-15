@@ -36,6 +36,8 @@
 .class public sequential ansi sealed System.Int32_flex
        extends [mscorlib]System.ValueType
 {
+  .pack 8
+  .size 0
   .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
   .method public hidebysig specialname instance int32 
           get_Item(int32 index) cil managed

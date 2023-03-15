@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////////////
+﻿/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibias-cil - The specialized backend CIL assembler for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -58,8 +58,13 @@ partial class Parser
                 _ => TypeAttributes.NestedPublic,
             } | TypeAttributes.Sealed | TypeAttributes.SequentialLayout,
             this.systemValueTypeType.Value);
-        //valueArrayType.PackingSize = 1;
-        //valueArrayType.ClassSize = 0;
+
+        if (length < 0)
+        {
+            valueArrayType.ClassSize = 0;
+            valueArrayType.PackingSize = 8;
+        }
+
         switch (scopeDescriptor)
         {
             case ScopeDescriptors.Public:
