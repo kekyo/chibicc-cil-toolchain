@@ -25,18 +25,32 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public sequential ansi sealed C.type.foo
-       extends [mscorlib]System.ValueType
+.class public auto ansi sealed C.type.foo
+       extends [mscorlib]System.Enum
 {
-  .field public int16 a
-  .field public int64 b
-  .field public int32 c
+  .field public specialname rtspecialname int32 value__
+  .field public static literal int32 beef
+  .field public static literal int32 pork
 } // end of class C.type.foo
+
+.class private abstract auto ansi sealed beforefieldinit $source1
+       extends [mscorlib]System.Object
+{
+  .class auto ansi sealed nested public foo
+         extends [mscorlib]System.Enum
+  {
+    .field public specialname rtspecialname int32 value__
+    .field public static literal int32 beef
+    .field public static literal int32 pork
+    .field public static literal int32 chicken
+  } // end of class foo
+
+} // end of class $source1
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static void  main() cil managed
+  .method public static int32  main() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  1

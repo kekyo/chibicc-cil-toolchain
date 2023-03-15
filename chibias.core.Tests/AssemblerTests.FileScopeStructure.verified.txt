@@ -28,7 +28,7 @@
 .class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .class sequential ansi sealed nested assembly foo
+  .class sequential ansi sealed nested public foo
          extends [mscorlib]System.ValueType
   {
     .field public int32 a

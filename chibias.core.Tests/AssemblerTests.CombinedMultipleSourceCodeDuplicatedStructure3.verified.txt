@@ -25,33 +25,40 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public sequential ansi sealed C.type.foo
-       extends [mscorlib]System.ValueType
+.class private abstract auto ansi sealed beforefieldinit $source
+       extends [mscorlib]System.Object
 {
-  .field public int32 a
-  .field public valuetype C.type.bar b
-  .field public int32 c
-} // end of class C.type.foo
+  .class sequential ansi sealed nested public foo
+         extends [mscorlib]System.ValueType
+  {
+    .field public int32 v0
+    .field public int32 v1
+  } // end of class foo
 
-.class public sequential ansi sealed C.type.bar
-       extends [mscorlib]System.ValueType
+} // end of class $source
+
+.class private abstract auto ansi sealed beforefieldinit $source1
+       extends [mscorlib]System.Object
 {
-  .field public int16 a
-  .field public int64 b
-  .field public int32 c
-} // end of class C.type.bar
+  .class sequential ansi sealed nested public foo
+         extends [mscorlib]System.ValueType
+  {
+    .field public int32 v0
+    .field public int32 v1
+    .field public int32 v2
+  } // end of class foo
+
+} // end of class $source1
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static void  main() cil managed
+  .method public static int32  main() cil managed
   {
-    // Code size       11 (0xb)
-    .maxstack  1
-    .locals (valuetype C.type.foo V_0)
-    IL_0000:  ldloca     V_0
-    IL_0004:  initobj    C.type.foo
-    IL_000a:  ret
+    // Code size       2 (0x2)
+    .maxstack  8
+    IL_0000:  ldc.i4.0
+    IL_0001:  ret
   } // end of method text::main
 
 } // end of class C.text

@@ -25,74 +25,72 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public sequential ansi sealed C.type.foo
-       extends [mscorlib]System.ValueType
-{
-  .field public int32 a
-  .field public int8 b
-  .field public valuetype System.Int32_flex c
-} // end of class C.type.foo
-
-.class public sequential ansi sealed System.Int32_flex
+.class public sequential ansi sealed System.Char_flex
        extends [mscorlib]System.ValueType
 {
   .pack 8
   .size 0
   .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
-  .method public hidebysig specialname instance int32 
+  .method public hidebysig specialname instance char 
+          marshal( unsigned int16) 
           get_Item(int32 index) cil managed
   {
     // Code size       9 (0x9)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  ldc.i4.s   4
+    IL_0001:  ldc.i4.s   2
     IL_0003:  mul
     IL_0004:  ldarg.0
     IL_0005:  conv.u
     IL_0006:  add
-    IL_0007:  ldind.i4
+    IL_0007:  ldind.u2
     IL_0008:  ret
-  } // end of method Int32_flex::get_Item
+  } // end of method Char_flex::get_Item
 
   .method public hidebysig specialname instance void 
           set_Item(int32 index,
-                   int32 'value') cil managed
+                   char  marshal( unsigned int16) 'value') cil managed
   {
     // Code size       10 (0xa)
     .maxstack  8
     IL_0000:  ldarg.1
-    IL_0001:  ldc.i4.s   4
+    IL_0001:  ldc.i4.s   2
     IL_0003:  mul
     IL_0004:  ldarg.0
     IL_0005:  conv.u
     IL_0006:  add
     IL_0007:  ldarg.2
-    IL_0008:  stind.i4
+    IL_0008:  stind.i2
     IL_0009:  ret
-  } // end of method Int32_flex::set_Item
+  } // end of method Char_flex::set_Item
 
-  .property instance callconv(8) int32 Item(int32)
+  .property instance callconv(8) char Item(int32)
   {
-    .get instance int32 System.Int32_flex::get_Item(int32)
-    .set instance void System.Int32_flex::set_Item(int32,
-                                                   int32)
-  } // end of property Int32_flex::Item
-} // end of class System.Int32_flex
+    .get instance char System.Char_flex::get_Item(int32)
+    .set instance void System.Char_flex::set_Item(int32,
+                                                  char)
+  } // end of property Char_flex::Item
+} // end of class System.Char_flex
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static void  main() cil managed
+  .method public static valuetype System.Char_flex 
+          foo() cil managed
   {
     // Code size       6 (0x6)
-    .maxstack  1
-    .locals (valuetype C.type.foo* V_0)
-    IL_0000:  ldc.i4.0
-    IL_0001:  stloc      V_0
+    .maxstack  8
+    IL_0000:  ldsfld     valuetype System.Char_flex C.data::bar
     IL_0005:  ret
-  } // end of method text::main
+  } // end of method text::foo
 
 } // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static valuetype System.Char_flex bar
+} // end of class C.data
 
 
 // =============================================================

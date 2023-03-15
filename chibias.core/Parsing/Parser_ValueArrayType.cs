@@ -7,9 +7,11 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Globalization;
+using System.Linq;
 
 namespace chibias.Parsing;
 
@@ -40,14 +42,39 @@ partial class Parser
         TypeReference elementType,
         bool isReadOnly)
     {
+        var et = elementType.Resolve();
+        var scopeDescriptor = et.IsPublic ?
+            ScopeDescriptors.Public : et.IsNestedPublic ?
+            ScopeDescriptors.File :
+            ScopeDescriptors.Internal;
+
         var valueArrayType = new TypeDefinition(
             valueArrayTypeNamespace,
             valueArrayTypeName,
-            TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.SequentialLayout,
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => TypeAttributes.Public,
+                ScopeDescriptors.Internal => TypeAttributes.NotPublic,
+                _ => TypeAttributes.NestedPublic,
+            } | TypeAttributes.Sealed | TypeAttributes.SequentialLayout,
             this.systemValueTypeType.Value);
-        //valueArrayType.PackingSize = 1;
-        //valueArrayType.ClassSize = 0;
-        this.module.Types.Add(valueArrayType);
+
+        if (length < 0)
+        {
+            valueArrayType.ClassSize = 0;
+            valueArrayType.PackingSize = 8;
+        }
+
+        switch (scopeDescriptor)
+        {
+            case ScopeDescriptors.Public:
+            case ScopeDescriptors.Internal:
+                this.module.Types.Add(valueArrayType);
+                break;
+            case ScopeDescriptors.File:
+                et.DeclaringType.NestedTypes.Add(valueArrayType);
+                break;
+        }
 
         ///////////////////////////////
 
@@ -462,15 +489,26 @@ partial class Parser
     }
 
     private TypeReference GetValueArrayType(
-        TypeReference elementType, int length)
+        TypeReference elementType,
+        int length,
+        TypeDefinition? fileScopedType,
+        LookupTargets lookupTargets)
     {
         var valueArrayTypeName = length >= 0 ?
             $"{this.GetValueArrayTypeName(elementType.Name)}_len{length}" :
             $"{this.GetValueArrayTypeName(elementType.Name)}_flex";
-        var valueArrayTypeFullName = elementType.Namespace == "C.type" ?
-            valueArrayTypeName : $"{elementType.Namespace}.{valueArrayTypeName}";
+        var valueArrayTypeFullName = elementType.Namespace switch
+        {
+            "C.type" => valueArrayTypeName,
+            "" => valueArrayTypeName,
+            _ => $"{elementType.Namespace}.{valueArrayTypeName}",
+        };
 
-        if (!this.TryGetType(valueArrayTypeFullName, out var valueArrayType))
+        if (!this.TryLookupTypeByTypeName(
+            valueArrayTypeFullName,
+            out var valueArrayType,
+            fileScopedType,
+            lookupTargets))
         {
             valueArrayType = this.CreateValueArrayType(
                 elementType.Namespace,
@@ -479,6 +517,7 @@ partial class Parser
                 elementType,
                 false);
         }
+
         return valueArrayType;
     }
 }

@@ -28,7 +28,7 @@
 .class private abstract auto ansi sealed beforefieldinit $source
        extends [mscorlib]System.Object
 {
-  .class auto ansi sealed nested assembly foo
+  .class auto ansi sealed nested public foo
          extends [mscorlib]System.Enum
   {
     .field public specialname rtspecialname uint64 value__

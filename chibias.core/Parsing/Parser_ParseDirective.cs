@@ -79,6 +79,7 @@ partial class Parser
 
             this.DelayLookingUpType(
                 returnTypeNameToken,
+                LookupTargets.All,
                 type => method.ReturnType = type);   // (captured)
         }
 
@@ -107,6 +108,7 @@ partial class Parser
                 this.DelayLookingUpType(
                     parameterTypeName,
                     parameterToken,
+                    LookupTargets.All,
                     type => parameter.ParameterType = type);
             }
 
@@ -268,6 +270,7 @@ partial class Parser
 
             this.DelayLookingUpType(
                 globalTypeNameToken,
+                LookupTargets.All,
                 type => field.FieldType = type);   // (captured)
         }
 
@@ -337,6 +340,7 @@ partial class Parser
 
             this.DelayLookingUpType(
                 tokens[1],
+                LookupTargets.All,
                 type => variable.VariableType = type);   // (captured)
         }
 
@@ -400,7 +404,7 @@ partial class Parser
         {
             ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
             ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
-            _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+            _ => TypeAttributes.NestedPublic | TypeAttributes.Sealed,
         };
         var valueFieldAttributes =
             FieldAttributes.Public | FieldAttributes.SpecialName | FieldAttributes.RTSpecialName;
@@ -421,66 +425,18 @@ partial class Parser
         var enumerationTypeNameToken = tokens[3];
         var enumerationTypeName = enumerationTypeNameToken.Text;
 
-        if (this.TryGetType(enumerationTypeName, out var etref))
+        if (this.TryGetType(
+            enumerationTypeName,
+            out var _,
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.File => LookupTargets.File,
+                _ => LookupTargets.Assembly,
+            }))
         {
-            // Checks equality
-            var et = etref.Resolve();
-            if ((et.Attributes & typeAttributes) != typeAttributes)
-            {
-                this.OutputError(
-                    enumerationTypeNameToken,
-                    $"Type attribute difference exists before declared type: {et.Attributes}");
-                return;
-            }
-
-            if (et.BaseType.FullName != "System.Enum")
-            {
-                this.OutputError(
-                    enumerationTypeNameToken,
-                    $"Base type difference exists before declared type: {et.BaseType.FullName}");
-                return;
-            }
-
-            if (et.GetEnumUnderlyingType() is { } ut &&
-                ut.FullName != underlyingType.FullName)
-            {
-                this.OutputError(
-                    enumerationTypeNameToken,
-                    $"Enumeration underlying type difference exists before declared type: {ut.FullName}");
-                return;
-            }
-
-            if (!(et.Fields.FirstOrDefault(f => f.Name == "value__") is { } evf))
-            {
-                this.OutputError(
-                    enumerationTypeNameToken,
-                    "Enumeration value field type is not declared.");
-                return;
-            }
-
-            if (evf.FieldType.FullName != underlyingType.FullName)
-            {
-                this.OutputError(
-                    enumerationTypeNameToken,
-                    $"Enumeration value field type difference exists before declared type: {evf.FieldType.FullName}");
-                return;
-            }
-
-            if ((evf.Attributes & valueFieldAttributes) != valueFieldAttributes)
-            {
-                this.OutputError(
-                    enumerationTypeNameToken,
-                    $"Enumeration value field type attribute difference exists before declared type: {et.Attributes}");
-                return;
-            }
-
-            this.enumerationType = et;
-            this.checkingMemberIndex = 0;
-
-            this.enumerationUnderlyingType = underlyingType;
-            this.enumerationManipulator =
-                EnumerationMemberValueManipulator.GetInstance(underlyingType);
-
+            this.OutputError(
+                enumerationTypeNameToken,
+                $"Duplicated type definition: {enumerationTypeName}");
             return;
         }
 
@@ -558,7 +514,7 @@ partial class Parser
         {
             ScopeDescriptors.Public => TypeAttributes.Public | TypeAttributes.Sealed,
             ScopeDescriptors.Internal => TypeAttributes.NotPublic | TypeAttributes.Sealed,
-            _ => TypeAttributes.NestedAssembly | TypeAttributes.Sealed,
+            _ => TypeAttributes.NestedPublic | TypeAttributes.Sealed,
         };
 
         short? packSize = null;
@@ -599,39 +555,18 @@ partial class Parser
         var structureTypeNameToken = tokens[2];
         var structureTypeName = structureTypeNameToken.Text;
 
-        if (this.TryGetType(structureTypeName, out var stref))
+        if (this.TryGetType(
+            structureTypeName,
+            out var _,
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.File => LookupTargets.File,
+                _ => LookupTargets.Assembly,
+            }))
         {
-            // Checks equality
-            var st = stref.Resolve();
-            if ((st.Attributes & typeAttributes) != typeAttributes)
-            {
-                this.OutputError(
-                    structureTypeNameToken,
-                    $"Type attribute difference exists before declared type: {st.Attributes}");
-                return;
-            }
-
-            if (packSize is { } ps2 &&
-                st.PackingSize != ps2)
-            {
-                this.OutputError(
-                    aligningToken!,
-                    $"Packing size difference exists before declared type: {st.PackingSize}");
-                return;
-            }
-
-            if (packSize == null &&
-                st.PackingSize >= 1)
-            {
-                this.OutputError(
-                    aligningToken!,
-                    $"Packing size difference exists before declared type: {st.PackingSize}");
-                return;
-            }
-
-            this.structureType = st;
-            this.checkingMemberIndex = 0;
-
+            this.OutputError(
+                structureTypeNameToken,
+                $"Duplicated type definition: {structureTypeName}");
             return;
         }
 

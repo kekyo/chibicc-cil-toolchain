@@ -175,6 +175,7 @@ partial class Parser
 
             this.DelayLookingUpType(
                 memberTypeNameToken,
+                LookupTargets.All,
                 type => field.FieldType = type);
         }
 
