@@ -1,4 +1,4 @@
-
+﻿
 //  Microsoft (R) .NET IL Disassembler.  Version 6.0.0
 
 
@@ -25,31 +25,38 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit $source
+.class private abstract auto ansi sealed beforefieldinit $source1
        extends [mscorlib]System.Object
 {
-  .class auto ansi sealed nested public foo
-         extends [mscorlib]System.Enum
+  .method public static int32  foo(int32 A_0) cil managed
   {
-    .field public specialname rtspecialname uint64 value__
-    .field public static literal uint64 beef
-    .field public static literal uint64 poke
-    .field public static literal uint64 chicken
-  } // end of class foo
+    // Code size       2 (0x2)
+    .maxstack  8
+    IL_0000:  ldarg.0
+    IL_0001:  ret
+  } // end of method $source1::foo
 
-} // end of class $source
+} // end of class $source1
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method assembly static int32  main() cil managed
+  .method public static int32  main() cil managed
   {
-    // Code size       5 (0x5)
-    .maxstack  1
-    .locals (valuetype $source/foo V_0)
-    IL_0000:  ldloc      V_0
-    IL_0004:  ret
+    // Code size       7 (0x7)
+    .maxstack  8
+    IL_0000:  ldc.i4.1
+    IL_0001:  call       int32 C.text::foo(int32)
+    IL_0006:  ret
   } // end of method text::main
+
+  .method public static int32  foo(int32 A_0) cil managed
+  {
+    // Code size       2 (0x2)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  ret
+  } // end of method text::foo
 
 } // end of class C.text
 

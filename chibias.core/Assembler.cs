@@ -22,6 +22,22 @@ using System.Text;
 
 namespace chibias;
 
+public readonly struct SourceCodeItem
+{
+    public readonly TextReader Reader;
+    public readonly string SourcePathDebuggerHint;
+
+    public SourceCodeItem(
+        TextReader reader, string sourcePathDebuggerHint)
+    {
+        this.Reader = reader;
+        this.SourcePathDebuggerHint = sourcePathDebuggerHint;
+    }
+
+    public override string ToString() =>
+        this.SourcePathDebuggerHint ?? "(null)";
+}
+
 public sealed class Assembler
 {
     private static readonly string runtimeConfigJsonTemplate =
@@ -353,27 +369,60 @@ public sealed class Assembler
         return allFinished;
     }
 
+    private bool Assemble(
+        string outputAssemblyPath,
+        AssemblerOptions options,
+        string? baseSourcePath,
+        SourceCodeItem[] sourceCodeItems)
+    {
+        if (sourceCodeItems.Length == 0)
+        {
+            return false;
+        }
+
+        return this.Run(
+            outputAssemblyPath,
+            options,
+            parser =>
+            {
+                var allFinished = true;
+
+                foreach (var sourceCodeItem in sourceCodeItems)
+                {
+                    this.logger.Information(
+                        $"Assembling: {sourceCodeItem.SourcePathDebuggerHint}");
+
+                    this.AssembleFromSource(
+                        parser,
+                        baseSourcePath,
+                        sourceCodeItem.SourcePathDebuggerHint,
+                        sourceCodeItem.Reader);
+                }
+
+                return allFinished;
+            });
+    }
+
+    public bool Assemble(
+        string outputAssemblyPath,
+        AssemblerOptions options,
+        params SourceCodeItem[] sourceCodeItems) =>
+        this.Assemble(
+            outputAssemblyPath,
+            options,
+            null,
+            sourceCodeItems);
+
     public bool Assemble(
         string outputAssemblyPath,
         AssemblerOptions options,
         string sourcePathDebuggerHint,
         TextReader sourceCodeReader) =>
-        this.Run(
+        this.Assemble(
             outputAssemblyPath,
             options,
-            parser =>
-            {
-                this.logger.Information(
-                    $"Assembling: {sourcePathDebuggerHint}");
-
-                this.AssembleFromSource(
-                    parser,
-                    null,
-                    sourcePathDebuggerHint,
-                    sourceCodeReader);
-
-                return true;
-            });
+            null,
+            new[] { new SourceCodeItem(sourceCodeReader, sourcePathDebuggerHint) });
 
     public bool Assemble(
         string outputAssemblyPath,
@@ -399,58 +448,68 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        return this.Run(
-            outputAssemblyPath,
-            options,
-            parser =>
+        var sourceCodeItems = sourceFullPaths.Select(sourceFullPath =>
+        {
+            if (sourceFullPath == "-")
             {
-                var allFinished = true;
-
-                foreach (var sourceFullPath in sourceFullPaths)
+                return new SourceCodeItem(Console.In, "<stdin>");
+            }
+            else
+            {
+                if (!File.Exists(sourceFullPath))
                 {
-                    if (sourceFullPath != "-")
-                    {
-                        if (!File.Exists(sourceFullPath))
-                        {
-                            this.logger.Error(
-                                $"Unable to find source code file: {sourceFullPath}");
-                            allFinished = false;
-                            continue;
-                        }
-
-                        using var fs = new FileStream(
-                            sourceFullPath,
-                            FileMode.Open, FileAccess.Read, FileShare.Read);
-                        var reader = new StreamReader(
-                            fs,
-                            true);
-
-                        var sourcePathDebuggerHint = sourceFullPath.
-                            Substring(baseSourcePath.Length + 1);
-
-                        this.logger.Information(
-                            $"Assembling: {sourcePathDebuggerHint}");
-
-                        this.AssembleFromSource(
-                            parser,
-                            baseSourcePath,
-                            sourcePathDebuggerHint,
-                            reader);
-                    }
-                    else
-                    {
-                        this.logger.Information(
-                            "Assembling: <stdin>");
-
-                        this.AssembleFromSource(
-                            parser,
-                            null,
-                            "<stdin>",
-                            Console.In);
-                    }
+                    this.logger.Error(
+                        $"Unable to find source code file: {sourceFullPath}");
+                    return new SourceCodeItem();
                 }
 
-                return allFinished;
-            });
+                try
+                {
+                    var fs = new FileStream(
+                        sourceFullPath,
+                        FileMode.Open, FileAccess.Read, FileShare.Read);
+                    var reader = new StreamReader(
+                        fs,
+                        true);
+
+                    var hint = sourceFullPath.
+                        Substring(baseSourcePath.Length + 1);
+
+                    return new SourceCodeItem(reader, hint);
+                }
+                catch (Exception ex)
+                {
+                    this.logger.Error(ex,
+                        $"Unable to open source code file: {sourceFullPath}");
+                    return new SourceCodeItem();
+                }
+            }
+        }).ToArray();
+
+        try
+        {
+            if (sourceCodeItems.Any(sourceCodeItem => sourceCodeItem.Reader == null))
+            {
+                return false;
+            }
+
+            return this.Assemble(
+                outputAssemblyPath,
+                options,
+                baseSourcePath,
+                sourceCodeItems);
+        }
+        finally
+        {
+            foreach (var sourceCode in sourceCodeItems)
+            {
+                if (sourceCode.Reader != null &&
+                    sourceCode.Reader != Console.In)
+                {
+                    sourceCode.Reader.Close();
+                    sourceCode.Reader.Dispose();
+                }
+            }
+        }
     }
 }

@@ -333,6 +333,7 @@ partial class Parser
                 functionName,
                 functionParameterTypeNames,
                 this.GetCurrentLocation(functionNameToken, tokens.Last()),
+                LookupTargets.All,
                 method => instruction.Operand = method);
         }
 
@@ -360,6 +361,7 @@ partial class Parser
             this.DelayLookingUpField(
                 fieldName,
                 this.GetCurrentLocation(fieldNameToken, fieldNameToken),
+                LookupTargets.All,
                 field => instruction.Operand = field);
         }
 
@@ -387,6 +389,7 @@ partial class Parser
             this.DelayLookingUpType(
                 typeName,
                 this.GetCurrentLocation(typeNameToken, typeNameToken),
+                LookupTargets.All,
                 type => instruction.Operand = type);
         }
 
@@ -414,7 +417,10 @@ partial class Parser
 
         Instruction instruction = null!;
         if (!TryGetMember(
-            memberName, functionParameterTypeNames, out var member))
+            memberName,
+            functionParameterTypeNames,
+            out var member,
+            LookupTargets.All))
         {
             member = this.CreateDummyField();
 
@@ -423,7 +429,10 @@ partial class Parser
             this.delayedLookupLocalMemberActions.Add(() =>
             {
                 if (TryGetMember(
-                    memberName, functionParameterTypeNames, out member))
+                    memberName,
+                    functionParameterTypeNames,
+                    out member,
+                    LookupTargets.All))
                 {
                     instruction.Operand = member;
                 }
@@ -479,7 +488,10 @@ partial class Parser
         this.delayedLookupLocalMemberActions.Add(() =>
         {
             if (!this.TryConstructTypeFromNode(
-                fsn.ReturnType, out var returnType, capturedFileScopedType))
+                fsn.ReturnType,
+                out var returnType,
+                capturedFileScopedType,
+                LookupTargets.All))
             {
                 this.OutputError(
                     this.GetCurrentLocation(functionSignatureToken),
@@ -492,7 +504,10 @@ partial class Parser
             foreach (var parameterNode in fsn.ParameterTypes)
             {
                 if (this.TryConstructTypeFromNode(
-                    parameterNode, out var parameterType, capturedFileScopedType))
+                    parameterNode,
+                    out var parameterType,
+                    capturedFileScopedType,
+                    LookupTargets.All))
                 {
                     callSite.Parameters.Add(new(parameterType));
                 }

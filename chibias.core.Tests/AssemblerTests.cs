@@ -116,6 +116,226 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
+    public Task CombinedMultipleSourceCode()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                ldc.i4.1
+                call foo
+                ret", @"
+            .function public int32 foo int32
+                ldarg.0
+                ret"});
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedFunctions1()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                ldc.i4.1
+                call foo
+                ret", @"
+            .function public int32 foo int32
+                ldarg.0
+                ret", @"
+            .function file int32 foo int32
+                ldarg.1
+                ret" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedFunctions2()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                ldc.i4.1
+                call foo
+                ret", @"
+            .function file int32 foo int32
+                ldarg.0
+                ret", @"
+            .function public int32 foo int32
+                ldarg.1
+                ret" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedFunctions3()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                ldc.i4.1
+                ret", @"
+            .function file int32 foo int32
+                ldarg.0
+                ret", @"
+            .function file int32 foo int32
+                ldarg.1
+                ret" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeForStructure()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                .local foo
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int32 v0
+                public int32 v1
+            ", @"
+            .structure public bar
+                public int32 v0
+                public int32 v1" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedStructure()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                .local foo
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int32 v0
+                public int32 v1
+            ", @"
+            .structure file foo
+                public int32 v0
+                public int32 v1
+                public int32 v2" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedStructure2()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                .local foo
+                ldloca 0
+                initobj foo
+                ret
+            .structure file foo
+                public int32 v0
+                public int32 v1
+            ", @"
+            .structure public foo
+                public int32 v0
+                public int32 v1
+                public int32 v2" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedStructure3()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                ldc.i4.0
+                ret
+            .structure file foo
+                public int32 v0
+                public int32 v1
+            ", @"
+            .structure file foo
+                public int32 v0
+                public int32 v1
+                public int32 v2" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeForEnumrerate()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                .local foo
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public int32 foo
+                beef 0
+                pork 1
+            ", @"
+            .enumeration public int32 bar
+                beef 0
+                pork 1" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedEnumrerate()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                .local foo
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public int32 foo
+                beef 0
+                pork 1
+            ", @"
+            .enumeration file int32 foo
+                beef 0
+                pork 1
+                chicken 2" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedEnumrerate2()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                .local foo
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration file int32 foo
+                beef 0
+                pork 1
+            ", @"
+            .enumeration public int32 foo
+                beef 0
+                pork 1
+                chicken 2" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CombinedMultipleSourceCodeDuplicatedEnumrerate3()
+    {
+        var actual = Run(new[] { @"
+            .function public int32 main
+                ldc.i4.0
+                ret
+            .enumeration file int32 foo
+                beef 0
+                pork 1
+            ", @"
+            .enumeration file int32 foo
+                beef 0
+                pork 1
+                chicken 2" });
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
     public Task VariableArgumentsFunction()
     {
         var actual = Run(@"
@@ -1477,90 +1697,6 @@ public sealed partial class AssemblerTests
             .structure public bar
                 public int16 a
                 public int64 b
-                public int32 c");
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task Structure5()
-    {
-        var actual = Run(@"
-            .function public void main
-                .local foo fv
-                ldloca 0
-                initobj foo
-                ret
-            .structure public foo
-                public int16 a
-                public int64 b
-                public int32 c
-            .structure public foo
-                public int16 a
-                public int64 b
-                public int32 c");
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task Structure6()
-    {
-        var actual = Run(@"
-            .function public void main
-                .local foo fv
-                ldloca 0
-                initobj foo
-                ret
-            .structure public foo 2
-                public int16 a
-                public int64 b
-                public int32 c
-            .structure public foo 2
-                public int16 a
-                public int64 b
-                public int32 c");
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task Structure7()
-    {
-        var actual = Run(@"
-            .function public void main
-                .local foo fv
-                ldloca 0
-                initobj foo
-                ret
-            .structure public foo explicit
-                public int16 a 0
-                public int64 b 2
-                public int32 c 4
-            .structure public foo explicit
-                public int16 a 0
-                public int64 b 2
-                public int32 c 4");
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task Structure8()
-    {
-        var actual = Run(@"
-            .function public void main
-                .local foo fv
-                ldloca 0
-                initobj foo
-                ret
-            .structure public foo
-                public int32 a
-                public bar b
-                public int32 c
-            .structure public bar
-                public int16 a
-                public int64 b
-                public int32 c
-            .structure public foo
-                public int32 a
-                public bar b
                 public int32 c");
         return Verify(actual);
     }

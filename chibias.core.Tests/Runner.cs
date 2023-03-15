@@ -23,7 +23,7 @@ partial class AssemblerTests
         $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{new Random().Next()}";
 
     private string Run(
-        string chibiasSourceCode,
+        string[] chibiasSourceCodes,
         AssemblyTypes assemblyType = AssemblyTypes.Dll,
         string[]? additionalReferencePaths = null,
         string targetFrameworkMoniker = "net45",
@@ -82,8 +82,9 @@ partial class AssemblerTests
                         TargetFrameworkMoniker = targetFrameworkMoniker,
                         DebugSymbolType = DebugSymbolTypes.Embedded,
                     },
-                    "source.s",
-                    new StringReader(chibiasSourceCode));
+                    chibiasSourceCodes.Select((sc, index) =>
+                        new SourceCodeItem(new StringReader(sc), index >= 1 ? $"source{index}.s" : "source.s")).
+                        ToArray());
 
                 var disassembledPath =
                     Path.Combine(basePath, "output.il");
@@ -145,4 +146,17 @@ partial class AssemblerTests
 
         return disassembledSourceCode.ToString();
     }
+
+    private string Run(
+        string chibiasSourceCode,
+        AssemblyTypes assemblyType = AssemblyTypes.Dll,
+        string[]? additionalReferencePaths = null,
+        string targetFrameworkMoniker = "net45",
+        [CallerMemberName] string memberName = null!) =>
+        this.Run(
+            new[] { chibiasSourceCode },
+            assemblyType,
+            additionalReferencePaths,
+            targetFrameworkMoniker,
+            memberName);
 }

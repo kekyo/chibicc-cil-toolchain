@@ -35,7 +35,11 @@ partial class Parser
     private TypeReference UnsafeGetType(
         string typeName)
     {
-        if (!this.TryGetType(typeName, out var type, null))
+        if (!this.TryGetType(
+            typeName,
+            out var type,
+            null,
+            LookupTargets.All))
         {
             this.caughtError = true;
             this.logger.Error($"Could not find for important type: {typeName}");
@@ -48,7 +52,12 @@ partial class Parser
     private MethodReference UnsafeGetMethod(
         string methodName, string[] parameterTypeNames)
     {
-        if (!this.TryGetMethod(methodName, parameterTypeNames, out var method, null))
+        if (!this.TryGetMethod(
+            methodName,
+            parameterTypeNames,
+            out var method,
+            null,
+            LookupTargets.All))
         {
             this.caughtError = true;
             this.logger.Error($"Could not find for important method: {methodName}");
@@ -60,10 +69,22 @@ partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
+    [Flags]
+    private enum LookupTargets
+    {
+        Assembly = 0x01,
+        File = 0x02,
+        CAbiSpecific = 0x04,
+        Important = 0x08,
+        References = 0x10,
+        All = 0x1f,
+    }
+
     private bool TryConstructTypeFromNode(
         TypeNode typeNode,
         out TypeReference type,
-        TypeDefinition? fileScopedType)
+        TypeDefinition? fileScopedType,
+        LookupTargets lookupTargets)
     {
         switch (typeNode)
         {
@@ -77,7 +98,7 @@ partial class Parser
                         if (dtn.ElementType is FunctionSignatureNode fsn)
                         {
                             if (this.TryConstructTypeFromNode(
-                                fsn.ReturnType, out var returnType, fileScopedType))
+                                fsn.ReturnType, out var returnType, fileScopedType, lookupTargets))
                             {
                                 var fpt = new FunctionPointerType()
                                 {
@@ -90,7 +111,7 @@ partial class Parser
                                 foreach (var parameterNode in fsn.ParameterTypes)
                                 {
                                     if (this.TryConstructTypeFromNode(
-                                        parameterNode, out var parameterType, fileScopedType))
+                                        parameterNode, out var parameterType, fileScopedType, lookupTargets))
                                     {
                                         fpt.Parameters.Add(new(parameterType));
                                     }
@@ -112,7 +133,7 @@ partial class Parser
                         }
 
                         if (this.TryConstructTypeFromNode(
-                            dtn.ElementType, out var elementType, fileScopedType))
+                            dtn.ElementType, out var elementType, fileScopedType, lookupTargets))
                         {
                             type = new PointerType(elementType);
                             return true;
@@ -124,7 +145,7 @@ partial class Parser
                     // "System.Int32&"
                     case DerivedTypes.Reference:
                         if (this.TryConstructTypeFromNode(
-                            dtn.ElementType, out var elementType2, fileScopedType))
+                            dtn.ElementType, out var elementType2, fileScopedType, lookupTargets))
                         {
                             type = new ByReferenceType(elementType2);
                             return true;
@@ -140,7 +161,7 @@ partial class Parser
             // Array types
             case ArrayTypeNode atn:
                 if (this.TryConstructTypeFromNode(
-                    atn.ElementType, out var elementType3, fileScopedType))
+                    atn.ElementType, out var elementType3, fileScopedType, lookupTargets))
                 {
                     // "System.Int32[13]"
                     if (atn.Length is { } length)
@@ -164,14 +185,16 @@ partial class Parser
                 //   Will lookup before this module, because the types redefinition by C headers
                 //   each assembly (by generating chibias).
                 //   Always we use first finding type, silently ignored when multiple declarations.
-                if (fileScopedType?.NestedTypes.FirstOrDefault(type =>
-                    type.Name == tin.Identity) is { } td2)
+                if (lookupTargets.HasFlag(LookupTargets.File) &&
+                    fileScopedType?.NestedTypes.FirstOrDefault(type =>
+                        type.Name == tin.Identity) is { } td2)
                 {
                     type = td2;
                     return true;
                 }
 
-                if (this.module.Types.FirstOrDefault(type =>
+                if (lookupTargets.HasFlag(LookupTargets.Assembly) &&
+                    this.module.Types.FirstOrDefault(type =>
                     (type.Namespace == "C.type" && type.Name == tin.Identity) ||
                     // FullName is needed because the value array type name is not CABI.
                     (type.FullName == tin.Identity)) is { } td3)
@@ -180,13 +203,15 @@ partial class Parser
                     return true;
                 }
 
-                if (this.cabiSpecificSymbols.TryGetMember<TypeReference>(tin.Identity, out var tr1))
+                if (lookupTargets.HasFlag(LookupTargets.CAbiSpecific) && 
+                    this.cabiSpecificSymbols.TryGetMember<TypeReference>(tin.Identity, out var tr1))
                 {
                     type = this.Import(tr1);
                     return true;
                 }
 
-                if (this.importantTypes.TryGetValue(tin.Identity, out type!))
+                if (lookupTargets.HasFlag(LookupTargets.Important) &&
+                    this.importantTypes.TryGetValue(tin.Identity, out type!))
                 {
                     return true;
                 }
@@ -196,10 +221,12 @@ partial class Parser
                     return this.TryGetType(
                         originTypeName,
                         out type,
-                        fileScopedType);
+                        fileScopedType,
+                        lookupTargets);
                 }
 
-                if (this.referenceTypes.TryGetMember(tin.Identity, out var td4))
+                if (lookupTargets.HasFlag(LookupTargets.References) &&
+                    this.referenceTypes.TryGetMember(tin.Identity, out var td4))
                 {
                     type = this.Import(td4);
                     return true;
@@ -223,13 +250,15 @@ partial class Parser
 
     private bool TryGetType(
         string typeName,
-        out TypeReference type) =>
-        this.TryGetType(typeName, out type, this.fileScopedType);
+        out TypeReference type,
+        LookupTargets lookupTargets = LookupTargets.All) =>
+        this.TryGetType(typeName, out type, this.fileScopedType, lookupTargets);
 
     private bool TryGetType(
         string typeName,
         out TypeReference type,
-        TypeDefinition? fileScopedType)
+        TypeDefinition? fileScopedType,
+        LookupTargets lookupTargets)
     {
         if (!TypeParser.TryParse(typeName, out var rootTypeNode))
         {
@@ -237,7 +266,7 @@ partial class Parser
             return false;
         }
 
-        return this.TryConstructTypeFromNode(rootTypeNode, out type, fileScopedType);
+        return this.TryConstructTypeFromNode(rootTypeNode, out type, fileScopedType, lookupTargets);
     }
 
     /////////////////////////////////////////////////////////////////////
@@ -245,15 +274,17 @@ partial class Parser
     private bool TryGetMethod(
         string name,
         string[] parameterTypeNames,
-        out MethodReference method) =>
+        out MethodReference method,
+        LookupTargets lookupTargets = LookupTargets.All) =>
         this.TryGetMethod(
-            name, parameterTypeNames, out method, this.fileScopedType);
+            name, parameterTypeNames, out method, this.fileScopedType, lookupTargets);
 
     private bool TryGetMethod(
         string name,
         string[] parameterTypeNames,
         out MethodReference method,
-        TypeDefinition? fileScopedType)
+        TypeDefinition? fileScopedType,
+        LookupTargets lookupTargets)
     {
         var methodNameIndex = name.LastIndexOf('.');
         var methodName = name.Substring(methodNameIndex + 1);
@@ -268,7 +299,8 @@ partial class Parser
             Select(parameterTypeName => this.TryGetType(
                 parameterTypeName,
                 out var type,
-                fileScopedType) ?
+                fileScopedType,
+                LookupTargets.All) ?
                     type.FullName : string.Empty).
             ToArray();
 
@@ -282,19 +314,22 @@ partial class Parser
         if (methodNameIndex <= 0)
         {
             MethodReference? foundMethod = null;
-            if (fileScopedType?.Methods.
+            if (lookupTargets.HasFlag(LookupTargets.File) &&
+                fileScopedType?.Methods.
                 FirstOrDefault(method => method.Name == methodName) is { } m2 &&
                 CecilUtilities.IsValidCAbiParameter(m2, strictParameterTypeNames))
             {
                 foundMethod = m2;
             }
-            else if (this.cabiTextType.Methods.
+            else if (lookupTargets.HasFlag(LookupTargets.Assembly) && 
+                this.cabiTextType.Methods.
                 FirstOrDefault(method => method.Name == methodName) is { } m3 &&
                 CecilUtilities.IsValidCAbiParameter(m3, strictParameterTypeNames))
             {
                 foundMethod = m3;
             }
-            else if (this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m) &&
+            else if (lookupTargets.HasFlag(LookupTargets.CAbiSpecific) && 
+                this.cabiSpecificSymbols.TryGetMember<MethodReference>(methodName, out var m) &&
                 CecilUtilities.IsValidCAbiParameter(m, strictParameterTypeNames))
             {
                 foundMethod = this.Import(m);
@@ -327,7 +362,11 @@ partial class Parser
             foreach (var parameterTypeName in
                 strictParameterTypeNames.Skip(foundMethod.Parameters.Count))
             {
-                if (!this.TryGetType(parameterTypeName, out var parameterType, fileScopedType))
+                if (!this.TryGetType(
+                    parameterTypeName,
+                    out var parameterType,
+                    fileScopedType,
+                    LookupTargets.All))
                 {
                     method = null!;
                     return false;
@@ -374,33 +413,38 @@ partial class Parser
 
     private bool TryGetField(
         string name,
-        out FieldReference field) =>
-        this.TryGetField(name, out field, this.fileScopedType);
+        out FieldReference field,
+        LookupTargets lookupTargets = LookupTargets.All) =>
+        this.TryGetField(name, out field, this.fileScopedType, lookupTargets);
 
     private bool TryGetField(
         string name,
         out FieldReference field,
-        TypeDefinition? fileScopedType)
+        TypeDefinition? fileScopedType,
+        LookupTargets lookupTargets)
     {
         var fieldNameIndex = name.LastIndexOf('.');
         var fieldName = name.Substring(fieldNameIndex + 1);
         if (fieldNameIndex <= 0)
         {
-            if (fileScopedType?.Fields.
+            if (lookupTargets.HasFlag(LookupTargets.File) &&
+                fileScopedType?.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f2)
             {
                 field = f2;
                 return true;
             }
             
-            if (this.cabiDataType.Fields.
+            if (lookupTargets.HasFlag(LookupTargets.Assembly) && 
+                this.cabiDataType.Fields.
                 FirstOrDefault(field => field.Name == fieldName) is { } f3)
             {
                 field = f3;
                 return true;
             }
 
-            if (this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
+            if (lookupTargets.HasFlag(LookupTargets.CAbiSpecific) &&
+                this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
             {
                 field = this.Import(f);
                 return true;
@@ -436,24 +480,35 @@ partial class Parser
         string memberName,
         string[] functionParameterTypeNames,
         out MemberReference member,
-        TypeDefinition fileScopedType)
+        TypeDefinition fileScopedType,
+        LookupTargets lookupTargets)
     {
         if (this.TryGetMethod(
-            memberName, functionParameterTypeNames, out var method, fileScopedType))
+            memberName,
+            functionParameterTypeNames,
+            out var method,
+            fileScopedType,
+            lookupTargets))
         {
             member = method;
             return true;
         }
         
         if (this.TryGetField(
-            memberName, out var field, fileScopedType))
+            memberName,
+            out var field,
+            fileScopedType,
+            lookupTargets))
         {
             member = field;
             return true;
         }
         
         if (this.TryGetType(
-            memberName, out var type, fileScopedType))
+            memberName,
+            out var type,
+            fileScopedType,
+            lookupTargets))
         {
             member = type;
             return true;
@@ -466,15 +521,17 @@ partial class Parser
     private bool TryGetMember(
         string memberName,
         string[] functionParameterTypeNames,
-        out MemberReference member) =>
+        out MemberReference member,
+        LookupTargets lookupTargets) =>
         this.TryGetMember(
-            memberName, functionParameterTypeNames, out member, this.fileScopedType);
+            memberName, functionParameterTypeNames, out member, this.fileScopedType, lookupTargets);
 
     /////////////////////////////////////////////////////////////////////
 
     private void DelayLookingUpType(
         string typeName,
         Token typeNameToken,
+        LookupTargets lookupTargets,
         Action<TypeReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -483,7 +540,8 @@ partial class Parser
             if (this.TryGetType(
                 typeName,
                 out var type,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(type);
             }
@@ -498,15 +556,18 @@ partial class Parser
 
     private void DelayLookingUpType(
         Token typeNameToken,
+        LookupTargets lookupTargets,
         Action<TypeReference> action) =>
         this.DelayLookingUpType(
             typeNameToken.Text,
             typeNameToken,
+            lookupTargets,
             action);
 
     private void DelayLookingUpType(
         string typeName,
         Location location,
+        LookupTargets lookupTargets,
         Action<TypeReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -515,7 +576,8 @@ partial class Parser
             if (this.TryGetType(
                 typeName,
                 out var type,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(type);
             }
@@ -533,6 +595,7 @@ partial class Parser
     private void DelayLookingUpField(
         string fieldName,
         Token fieldNameToken,
+        LookupTargets lookupTargets,
         Action<FieldReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -541,7 +604,8 @@ partial class Parser
             if (this.TryGetField(
                 fieldName,
                 out var field,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(field);
             }
@@ -556,6 +620,7 @@ partial class Parser
 
     private void DelayLookingUpField(
         Token fieldNameToken,
+        LookupTargets lookupTargets,
         Action<FieldReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -564,7 +629,8 @@ partial class Parser
             if (this.TryGetField(
                 fieldNameToken.Text,
                 out var field,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(field);
             }
@@ -580,6 +646,7 @@ partial class Parser
     private void DelayLookingUpField(
         string fieldName,
         Location location,
+        LookupTargets lookupTargets,
         Action<FieldReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -588,7 +655,8 @@ partial class Parser
             if (this.TryGetField(
                 fieldName,
                 out var field,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(field);
             }
@@ -606,6 +674,7 @@ partial class Parser
     private void DelayLookingUpMethod(
         Token methodNameToken,
         string[] parameterTypeNames,
+        LookupTargets lookupTargets,
         Action<MethodReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -615,7 +684,8 @@ partial class Parser
                 methodNameToken.Text,
                 parameterTypeNames,
                 out var method,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(method);
             }
@@ -632,6 +702,7 @@ partial class Parser
         string methodName,
         string[] parameterTypeNames,
         Location location,
+        LookupTargets lookupTargets,
         Action<MethodReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -641,7 +712,8 @@ partial class Parser
                 methodName,
                 parameterTypeNames,
                 out var method,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(method);
             }
@@ -660,6 +732,7 @@ partial class Parser
         string memberName,
         Token memberNameToken,
         string[] parameterTypeNames,
+        LookupTargets lookupTargets,
         Action<MemberReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -669,7 +742,8 @@ partial class Parser
                 memberName,
                 parameterTypeNames,
                 out var member,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(member);
             }
@@ -685,6 +759,7 @@ partial class Parser
     private void DelayLookingUpMember(
         Token memberNameToken,
         string[] parameterTypeNames,
+        LookupTargets lookupTargets,
         Action<MemberReference> action)
     {
         var capturedFileScopedType = this.fileScopedType;
@@ -694,7 +769,8 @@ partial class Parser
                 memberNameToken.Text,
                 parameterTypeNames,
                 out var member,
-                capturedFileScopedType))
+                capturedFileScopedType,
+                lookupTargets))
             {
                 action(member);
             }

@@ -752,9 +752,6 @@ Only the following types can be specified as underlying types:
 * `int32`, `uint32`
 * `int64`, `uint64`
 
-An enumeration type can appear multiple times with the same type name,
-as long as the definitions are completely identical.
-
 Note: To use an enumerated type, a reference to the `System.Enum` type must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
@@ -821,9 +818,6 @@ If you specify the number of array elements as `*`,
 that does not specify the number of elements.
 It is a special type for indexer accesses are not checked for element counts out of range.
 Naturally, the result of accessing an out of element will be undefined, so care must be taken.
-
-An structure type definition can appear multiple times with the same type name,
-as long as the definitions are completely identical.
 
 Note: To use an structure type, a reference to the `System.ValueType` type must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
