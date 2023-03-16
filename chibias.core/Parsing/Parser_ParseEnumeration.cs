@@ -101,7 +101,7 @@ partial class Parser
                 return;
             }
             
-            if (ef.Constant?.Equals(memberValue) ?? false)
+            if (!(ef.Constant?.Equals(memberValue) ?? true))
             {
                 this.OutputError(
                     memberNameToken,

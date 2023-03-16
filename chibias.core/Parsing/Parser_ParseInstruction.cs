@@ -17,10 +17,8 @@ namespace chibias.Parsing;
 partial class Parser
 {
     private Location GetCurrentLocation(Token startToken, Token endToken) =>
-        this.queuedLocation ??
-        this.lastLocation ??
         new(
-            this.currentFile,
+            this.currentCilFile,
             startToken.Line,
             startToken.StartColumn,
             endToken.Line,
@@ -586,7 +584,7 @@ partial class Parser
             this.queuedLocation ??
             this.lastLocation ??
             new Location(
-                this.currentFile,
+                this.currentCilFile,
                 tokens[0].Line,
                 tokens[0].StartColumn,
                 tokens[tokens.Length - 1].Line,

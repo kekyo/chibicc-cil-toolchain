@@ -1714,6 +1714,90 @@ public sealed partial class AssemblerTests
     }
 
     [Test]
+    public Task Structure5()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int16 a
+                public int64 b
+                public int32 c
+            .structure public foo
+                public int16 a
+                public int64 b
+                public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure6()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo 2
+                public int16 a
+                public int64 b
+                public int32 c
+            .structure public foo 2
+                public int16 a
+                public int64 b
+                public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure7()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo explicit
+                public int16 a 0
+                public int64 b 2
+                public int32 c 4
+            .structure public foo explicit
+                public int16 a 0
+                public int64 b 2
+                public int32 c 4");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure8()
+    {
+        var actual = Run(@"
+            .function public void main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int32 a
+                public bar b
+                public int32 c
+            .structure public bar
+                public int16 a
+                public int64 b
+                public int32 c
+            .structure public foo
+                public int32 a
+                public bar b
+                public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
     public Task Structure9()
     {
         var actual = Run(@"

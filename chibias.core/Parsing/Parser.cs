@@ -49,6 +49,7 @@ internal sealed partial class Parser
     private readonly bool produceDebuggingInformation;
 
     private int placeholderIndex;
+    private FileDescriptor currentCilFile;
     private FileDescriptor currentFile;
     private Location? queuedLocation;
     private Location? lastLocation;
@@ -128,6 +129,7 @@ internal sealed partial class Parser
             this.module.TypeSystem.Object);
         this.cabiDataTypeInitializer = CreateTypeInitializer();
 
+        this.currentCilFile = unknown;
         this.currentFile = unknown;
         this.fileScopedType = this.CreateFileScopedType(
              CecilUtilities.SanitizeFileNameToMemberName(unknown.RelativePath));
@@ -203,11 +205,13 @@ internal sealed partial class Parser
 
         this.BeginNewFileScope(sourcePathDebuggerHint);
 
-        this.currentFile = new(
+        this.currentCilFile = new(
             basePath,
             sourcePathDebuggerHint,
             DocumentLanguage.Cil,
             isVisible);
+        this.currentFile = this.currentCilFile;
+
         this.isProducedOriginalSourceCodeLocation = true;
         this.queuedLocation = null;
         this.lastLocation = null;
@@ -218,7 +222,7 @@ internal sealed partial class Parser
     private void OutputError(Token token, string message)
     {
         this.caughtError = true;
-        this.logger.Error($"{this.currentFile.RelativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
+        this.logger.Error($"{this.currentCilFile.RelativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
     }
 
     private void OutputError(Location location, string message)
@@ -576,7 +580,7 @@ internal sealed partial class Parser
         this.variableDebugInformationLists.Clear();
 
         this.isProducedOriginalSourceCodeLocation = true;
-        this.currentFile = unknown;
+        this.currentCilFile = unknown;
         this.queuedLocation = null;
         this.lastLocation = null;
         this.initializerIndex = 0;

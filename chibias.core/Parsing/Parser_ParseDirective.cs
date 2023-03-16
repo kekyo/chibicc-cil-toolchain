@@ -427,16 +427,71 @@ partial class Parser
 
         if (this.TryGetType(
             enumerationTypeName,
-            out var _,
+            out var etref,
             scopeDescriptor switch
             {
                 ScopeDescriptors.File => LookupTargets.File,
                 _ => LookupTargets.Assembly,
             }))
         {
-            this.OutputError(
-                enumerationTypeNameToken,
-                $"Duplicated type definition: {enumerationTypeName}");
+            // Checks equality
+            var et = etref.Resolve();
+            if ((et.Attributes & typeAttributes) != typeAttributes)
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Type attribute difference exists before declared type: {et.Attributes}");
+                return;
+            }
+
+            if (et.BaseType.FullName != "System.Enum")
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Base type difference exists before declared type: {et.BaseType.FullName}");
+                return;
+            }
+
+            if (et.GetEnumUnderlyingType() is { } ut &&
+                ut.FullName != underlyingType.FullName)
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Enumeration underlying type difference exists before declared type: {ut.FullName}");
+                return;
+            }
+
+            if (!(et.Fields.FirstOrDefault(f => f.Name == "value__") is { } evf))
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    "Enumeration value field type is not declared.");
+                return;
+            }
+
+            if (evf.FieldType.FullName != underlyingType.FullName)
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Enumeration value field type difference exists before declared type: {evf.FieldType.FullName}");
+                return;
+            }
+
+            if ((evf.Attributes & valueFieldAttributes) != valueFieldAttributes)
+            {
+                this.OutputError(
+                    enumerationTypeNameToken,
+                    $"Enumeration value field type attribute difference exists before declared type: {et.Attributes}");
+                return;
+            }
+
+            this.enumerationType = et;
+            this.checkingMemberIndex = 0;
+
+            this.enumerationUnderlyingType = underlyingType;
+            this.enumerationManipulator =
+                EnumerationMemberValueManipulator.GetInstance(underlyingType);
+
             return;
         }
 
@@ -557,16 +612,44 @@ partial class Parser
 
         if (this.TryGetType(
             structureTypeName,
-            out var _,
+            out var stref,
             scopeDescriptor switch
             {
                 ScopeDescriptors.File => LookupTargets.File,
                 _ => LookupTargets.Assembly,
             }))
         {
-            this.OutputError(
-                structureTypeNameToken,
-                $"Duplicated type definition: {structureTypeName}");
+            // Checks equality
+            var st = stref.Resolve();
+            if ((st.Attributes & typeAttributes) != typeAttributes)
+            {
+                this.OutputError(
+                    structureTypeNameToken,
+                    $"Type attribute difference exists before declared type: {st.Attributes}");
+                return;
+            }
+
+            if (packSize is { } ps2 &&
+                st.PackingSize != ps2)
+            {
+                this.OutputError(
+                    aligningToken!,
+                    $"Packing size difference exists before declared type: {st.PackingSize}");
+                return;
+            }
+
+            if (packSize == null &&
+                st.PackingSize >= 1)
+            {
+                this.OutputError(
+                    aligningToken!,
+                    $"Packing size difference exists before declared type: {st.PackingSize}");
+                return;
+            }
+
+            this.structureType = st;
+            this.checkingMemberIndex = 0;
+
             return;
         }
 
@@ -633,11 +716,7 @@ partial class Parser
                     Path.GetFileName(tokens[2].Text),
                     language,
                     true);
-                this.currentFile = file;
                 this.files[tokens[1].Text] = file;
-                this.queuedLocation = null;
-                this.lastLocation = null;
-                this.isProducedOriginalSourceCodeLocation = false;
             }
         }
         else
@@ -663,7 +742,7 @@ partial class Parser
 
         if (this.produceDebuggingInformation)
         {
-            this.currentFile = unknown;
+            this.currentFile = this.currentCilFile;
             this.queuedLocation = null;
             this.lastLocation = null;
             this.isProducedOriginalSourceCodeLocation = false;
@@ -725,9 +804,11 @@ partial class Parser
 
         if (this.produceDebuggingInformation)
         {
+            this.currentFile = file;
             var location = new Location(
                 file, vs[0], vs[1], vs[2], vs[3]);
             this.queuedLocation = location;
+            this.lastLocation = null;
             this.isProducedOriginalSourceCodeLocation = false;
         }
     }
