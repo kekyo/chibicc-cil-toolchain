@@ -407,6 +407,17 @@ internal sealed partial class Parser
 
             if (this.produceExecutable)
             {
+                static bool IsNonParameterMainEntryPoint(IList<ParameterDefinition> parameters) => parameters.
+                    Select(p => p.ParameterType.FullName).
+                    SequenceEqual(new[] { "C.type.__va_arglist" });
+                static bool IsMainEntryPoint(IList<ParameterDefinition> parameters)
+                {
+                    var typeNames = parameters.Select(p => p.ParameterType.FullName).ToArray();
+                    return
+                        typeNames.SequenceEqual(new[] { "C.type.__va_arglist" }) ||
+                        typeNames.SequenceEqual(new[] { "System.Int32", "System.SByte**" });
+                }
+
                 // Lookup main entry point.
                 var mainFunction = this.module.Types.
                     Where(type => type.IsAbstract && type.IsSealed && type.IsClass).
@@ -414,12 +425,8 @@ internal sealed partial class Parser
                     FirstOrDefault(m =>
                         m.IsStatic && m.Name == "main" &&
                         (m.ReturnType.FullName == "System.Void" ||
-                            m.ReturnType.FullName == "System.Int32") &&
-                        (m.Parameters.Count == 0 ||
-                            m.Parameters.
-                            Select(p => p.ParameterType.FullName).
-                            SequenceEqual(new[] { "System.Int32", "System.SByte**" }))) is { } mf ?
-                        mf : null;
+                         m.ReturnType.FullName == "System.Int32") &&
+                         IsMainEntryPoint(m.Parameters));
 
                 // Inject startup code when declared.
                 if (mainFunction != null)
@@ -429,13 +436,13 @@ internal sealed partial class Parser
                     Token[][] startupTokensList;
                     if (mainFunction.ReturnType.FullName == "System.Void")
                     {
-                        startupTokensList = mainFunction.Parameters.Count == 0 ?
+                        startupTokensList = IsNonParameterMainEntryPoint(mainFunction.Parameters) ?
                             EmbeddingCodeFragments.Startup_Void_Void :
                             EmbeddingCodeFragments.Startup_Void;
                     }
                     else
                     {
-                        startupTokensList = mainFunction.Parameters.Count == 0 ?
+                        startupTokensList = IsNonParameterMainEntryPoint(mainFunction.Parameters) ?
                             EmbeddingCodeFragments.Startup_Int32_Void :
                             EmbeddingCodeFragments.Startup_Int32;
                     }
