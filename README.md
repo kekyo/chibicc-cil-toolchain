@@ -295,13 +295,13 @@ The built-in type is as follows:
 |`uint64`|`System.UInt64`|`ulong`|
 |`float32`|`System.Single`|`float`, `single`|
 |`float64`|`System.Double`|`double`|
-|`intptr`|`System.IntPtr`|`nint`|
-|`uintptr`|`System.UIntPtr`|`nuint`|
+|`nint`|`System.IntPtr`|`intptr`|
+|`nuint`|`System.UIntPtr`|`uintptr`|
 |`bool`|`System.Boolean`| |
 |`char`|`System.Char`|`char16`|
 |`object`|`System.Object`| |
 |`string`|`System.String`| |
-|`typeref`|`System.TypedReference`| |
+|`typedref`|`System.TypedReference`| |
 
 Among the built-in types, the `System.Boolean` and `System.Char` types are special,
 and when we use these types, they always apply 1-byte or 2-byte marshalling.

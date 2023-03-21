@@ -48,13 +48,13 @@ internal static class CecilUtilities
         { "uint64", "System.UInt64" },
         { "float32", "System.Single" },
         { "float64", "System.Double" },
-        { "intptr", "System.IntPtr" },
-        { "uintptr", "System.UIntPtr" },
+        { "nint", "System.IntPtr" },
+        { "nuint", "System.UIntPtr" },
         { "bool", "System.Boolean" },
         { "char", "System.Char" },
         { "object", "System.Object" },
         { "string", "System.String" },
-        { "typeref", "System.TypedReference" },
+        { "typedref", "System.TypedReference" },
         { "byte", "System.Byte" },
         { "sbyte", "System.SByte" },
         { "short", "System.Int16" },
@@ -66,9 +66,9 @@ internal static class CecilUtilities
         { "single", "System.Single" },
         { "float", "System.Single" },
         { "double", "System.Double" },
-        { "nint", "System.IntPtr" },
-        { "nuint", "System.UIntPtr" },
         { "char16", "System.Char" },
+        { "intptr", "System.IntPtr" },
+        { "uintptr", "System.UIntPtr" },
     };
 
     private static readonly HashSet<string> enumerationUnderlyingTypes = new HashSet<string>()
