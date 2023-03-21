@@ -296,13 +296,13 @@ NAME:
 |`uint64`|`System.UInt64`|`ulong`|
 |`float32`|`System.Single`|`float`, `single`|
 |`float64`|`System.Double`|`double`|
-|`intptr`|`System.IntPtr`|`nint`|
-|`uintptr`|`System.UIntPtr`|`nuint`|
+|`nint`|`System.IntPtr`|`intptr`|
+|`nuint`|`System.UIntPtr`|`uintptr`|
 |`bool`|`System.Boolean`| |
 |`char`|`System.Char`|`char16`|
 |`object`|`System.Object`| |
 |`string`|`System.String`| |
-|`typeref`|`System.TypedReference`| |
+|`typedref`|`System.TypedReference`| |
 
 ビルトイン型のうち、`System.Boolean`型と`System.Char`型は特殊で、chibiasがこれらの型を使用する場合、常に1バイト又は2バイトマーシャリングを適用します。
 .NETのデフォルトでは、これらの型のフットプリントサイズは、状況によって変化しますが、
