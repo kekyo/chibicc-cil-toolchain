@@ -407,14 +407,11 @@ internal sealed partial class Parser
 
             if (this.produceExecutable)
             {
-                static bool IsNonParameterMainEntryPoint(IList<ParameterDefinition> parameters) => parameters.
-                    Select(p => p.ParameterType.FullName).
-                    SequenceEqual(new[] { "C.type.__va_arglist" });
                 static bool IsMainEntryPoint(IList<ParameterDefinition> parameters)
                 {
                     var typeNames = parameters.Select(p => p.ParameterType.FullName).ToArray();
                     return
-                        typeNames.SequenceEqual(new[] { "C.type.__va_arglist" }) ||
+                        typeNames.SequenceEqual(Utilities.Empty<string>()) ||
                         typeNames.SequenceEqual(new[] { "System.Int32", "System.SByte**" });
                 }
 
@@ -436,13 +433,13 @@ internal sealed partial class Parser
                     Token[][] startupTokensList;
                     if (mainFunction.ReturnType.FullName == "System.Void")
                     {
-                        startupTokensList = IsNonParameterMainEntryPoint(mainFunction.Parameters) ?
+                        startupTokensList = mainFunction.Parameters.Count == 0 ?
                             EmbeddingCodeFragments.Startup_Void_Void :
                             EmbeddingCodeFragments.Startup_Void;
                     }
                     else
                     {
-                        startupTokensList = IsNonParameterMainEntryPoint(mainFunction.Parameters) ?
+                        startupTokensList = mainFunction.Parameters.Count == 0 ?
                             EmbeddingCodeFragments.Startup_Int32_Void :
                             EmbeddingCodeFragments.Startup_Int32;
                     }
