@@ -84,10 +84,18 @@ partial class Parser
         }
 
         var parameters = new List<ParameterDefinition>();
+        var varargs = false;
         for (var index = 4; index < tokens.Length; index++)
         {
             var parameterToken = tokens[index];
             var parameterTokenText = parameterToken.Text;
+
+            if (index == (tokens.Length - 1) &&
+                parameterTokenText == "...")
+            {
+                varargs = true;
+                continue;
+            }
 
             var splitted = parameterTokenText.Split(':');
             if (splitted.Length >= 3)
@@ -142,6 +150,11 @@ partial class Parser
                 ScopeDescriptors.File => MethodAttributes.Public | MethodAttributes.Static,
                 _ => MethodAttributes.Assembly | MethodAttributes.Static,
             });
+
+        if (varargs)
+        {
+            method.CallingConvention = MethodCallingConvention.VarArg;
+        }
 
         // Special case: Force 1 byte footprint on boolean type.
         if (returnType.FullName == "System.Boolean")

@@ -1064,6 +1064,38 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
+    public Task DeclareVariadicFunction0()
+    {
+        var actual = Run(@"
+            .function public int32 foo ...
+                ldc.i4.s 123
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task DeclareVariadicFunction1()
+    {
+        var actual = Run(@"
+            .function public int32 foo arg0:int32 ...
+                ldarg.0
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task DeclareVariadicFunction2()
+    {
+        var actual = Run(@"
+            .function public int32 foo arg0:int32 arg1:string ...
+                ldarg.0
+                ret");
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
     public Task InitializerOnPublic()
     {
         var actual = Run(@"
