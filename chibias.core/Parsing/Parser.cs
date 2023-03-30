@@ -140,7 +140,7 @@ internal sealed partial class Parser
 
     private TypeDefinition CreateFileScopedType(string typeName) => new(
         "",
-        $"${typeName}",
+        $"<{typeName}>$",
         TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed |
         TypeAttributes.BeforeFieldInit | TypeAttributes.Class,
         this.module.TypeSystem.Object);

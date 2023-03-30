@@ -33,7 +33,7 @@
   .field public static literal int32 pork
 } // end of class C.type.foo
 
-.class private abstract auto ansi sealed beforefieldinit $source1
+.class private abstract auto ansi sealed beforefieldinit '<source1>$'
        extends [mscorlib]System.Object
 {
   .class auto ansi sealed nested public foo
@@ -45,7 +45,7 @@
     .field public static literal int32 chicken
   } // end of class foo
 
-} // end of class $source1
+} // end of class '<source1>$'
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object

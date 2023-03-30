@@ -25,7 +25,7 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit $source1
+.class private abstract auto ansi sealed beforefieldinit '<source1>$'
        extends [mscorlib]System.Object
 {
   .method public static int32  foo(int32 A_0) cil managed
@@ -34,9 +34,9 @@
     .maxstack  8
     IL_0000:  ldarg.0
     IL_0001:  ret
-  } // end of method $source1::foo
+  } // end of method '<source1>$'::foo
 
-} // end of class $source1
+} // end of class '<source1>$'
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
