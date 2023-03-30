@@ -169,7 +169,7 @@ partial class Parser
                                     ExplicitThis = false,
                                 };
 
-                                foreach (var parameterNode in fsn.ParameterTypes)
+                                foreach (var (parameterNode, _) in fsn.Parameters)
                                 {
                                     if (this.TryConstructTypeFromNode(
                                         parameterNode, out var parameterType, fileScopedType, lookupTargets))
@@ -548,9 +548,19 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<TypeReference> action)
     {
+        if (this.TryGetType(
+            typeName,
+            out var type,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(type);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
         var capturedLocation = this.GetCurrentLocation(typeNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupTypeActions.Enqueue(() =>
         {
             if (this.TryGetType(
                 typeName,
@@ -585,8 +595,18 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<TypeReference> action)
     {
+        if (this.TryGetType(
+            typeName,
+            out var type,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(type);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupTypeActions.Enqueue(() =>
         {
             if (this.TryGetType(
                 typeName,
@@ -605,6 +625,43 @@ partial class Parser
         });
     }
 
+    private void DelayLookingUpType(
+        TypeNode typeNode,
+        Token typeToken,
+        LookupTargets lookupTargets,
+        Action<TypeReference> action)
+    {
+        if (this.TryConstructTypeFromNode(
+            typeNode,
+            out var type,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(type);
+            return;
+        }
+
+        var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(typeToken);
+        this.delayedLookupTypeActions.Enqueue(() =>
+        {
+            if (this.TryConstructTypeFromNode(
+                typeNode,
+                out var type,
+                capturedFileScopedType,
+                lookupTargets))
+            {
+                action(type);
+            }
+            else
+            {
+                this.OutputError(
+                    capturedLocation,
+                    $"Could not find type: {typeNode}");
+            }
+        });
+    }
+
     /////////////////////////////////////////////////////////////////////
 
     private void DelayLookingUpField(
@@ -613,9 +670,18 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<FieldReference> action)
     {
+        if (this.TryGetField(
+            fieldName,
+            out var field,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(field);
+        }
+
         var capturedFileScopedType = this.fileScopedType;
         var capturedLocation = this.GetCurrentLocation(fieldNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetField(
                 fieldName,
@@ -639,9 +705,19 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<FieldReference> action)
     {
+        if (this.TryGetField(
+            fieldNameToken.Text,
+            out var field,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(field);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
         var capturedLocation = this.GetCurrentLocation(fieldNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetField(
                 fieldNameToken.Text,
@@ -666,8 +742,18 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<FieldReference> action)
     {
+        if (this.TryGetField(
+           fieldName,
+           out var field,
+           this.fileScopedType,
+           lookupTargets))
+        {
+            action(field);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
-        delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetField(
                 fieldName,
@@ -694,9 +780,20 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<MethodReference> action)
     {
+        if (this.TryGetMethod(
+            methodNameToken.Text,
+            parameterTypeNames,
+            out var method,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(method);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
         var capturedLocation = this.GetCurrentLocation(methodNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetMethod(
                 methodNameToken.Text,
@@ -723,8 +820,19 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<MethodReference> action)
     {
+        if (this.TryGetMethod(
+            methodName,
+            parameterTypeNames,
+            out var method,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(method);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetMethod(
                 methodName,
@@ -753,9 +861,20 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<MemberReference> action)
     {
+        if (this.TryGetMember(
+            memberName,
+            parameterTypeNames,
+            out var member,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(member);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
         var capturedLocation = this.GetCurrentLocation(memberNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetMember(
                 memberName,
@@ -781,9 +900,20 @@ partial class Parser
         LookupTargets lookupTargets,
         Action<MemberReference> action)
     {
+        if (this.TryGetMember(
+            memberNameToken.Text,
+            parameterTypeNames,
+            out var member,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(member);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
         var capturedLocation = this.GetCurrentLocation(memberNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetMember(
                 memberNameToken.Text,

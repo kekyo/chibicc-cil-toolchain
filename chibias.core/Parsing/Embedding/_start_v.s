@@ -1,4 +1,4 @@
-﻿.function _module_ void _start args:string[]
+﻿.function _module_ void(args:string[]) _start
 	.local int8** ; argv
 	.local int32  ; index
 

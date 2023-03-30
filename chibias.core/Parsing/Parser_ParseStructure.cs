@@ -153,7 +153,7 @@ partial class Parser
             var capturedMemberTypeNameToken = memberTypeNameToken;
             var capturedFileScopedType = this.fileScopedType;
             var capturedLocation = this.GetCurrentLocation(capturedMemberTypeNameToken);
-            this.delayedCheckAfterLookingupActions.Add(() =>
+            this.delayedCheckAfterLookingupActions.Enqueue(() =>
             {
                 // Checkup its structure member type.
                 if (!this.TryGetType(
@@ -174,36 +174,33 @@ partial class Parser
         }
 
         // Create a field into this structure.
-        FieldDefinition field = null!;
-        if (!this.TryGetType(memberTypeName, out var memberType))
-        {
-            memberType = this.CreateDummyType();
-
-            this.DelayLookingUpType(
-                memberTypeNameToken,
-                LookupTargets.All,
-                type => field.FieldType = type);
-        }
-
-        field = new FieldDefinition(
+        var field = new FieldDefinition(
             memberName,
             fieldAttribute,
-            memberType);
+            this.CreateDummyType());
 
         if (memberOffset is { } mo2)
         {
             field.Offset = mo2;
         }
 
-        // Special case: Force 1 byte footprint on boolean type.
-        if (memberType.FullName == "System.Boolean")
-        {
-            field.MarshalInfo = new(NativeType.U1);
-        }
-        else if (memberType.FullName == "System.Char")
-        {
-            field.MarshalInfo = new(NativeType.U2);
-        }
+        this.DelayLookingUpType(
+            memberTypeNameToken,
+            LookupTargets.All,
+            type =>
+            {
+                field.FieldType = type;
+
+                // Special case: Force 1 byte footprint on boolean type.
+                if (type.FullName == "System.Boolean")
+                {
+                    field.MarshalInfo = new(NativeType.U1);
+                }
+                else if (type.FullName == "System.Char")
+                {
+                    field.MarshalInfo = new(NativeType.U2);
+                }
+            });
 
         this.structureType!.Fields.Add(field);
     }

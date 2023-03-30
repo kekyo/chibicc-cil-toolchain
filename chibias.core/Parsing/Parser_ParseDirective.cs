@@ -11,7 +11,6 @@ using chibias.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -52,7 +51,7 @@ partial class Parser
     {
         this.FinishCurrentState();
 
-        if (tokens.Length < 4)
+        if (tokens.Length != 4)
         {
             this.OutputError(tokens.Last(), $"Missing directive operands.");
             return;
@@ -68,82 +67,39 @@ partial class Parser
             return;
         }
 
-        var returnTypeNameToken = tokens[2];
-        var returnTypeName = returnTypeNameToken.Text;
+        var functionSignatureToken = tokens[2];
+        var functionSignature = functionSignatureToken.Text;
         var functionName = tokens[3].Text;
 
-        MethodDefinition method = null!;
-        if (!this.TryGetType(returnTypeName, out var returnType))
+        if (!TypeParser.TryParse(functionSignature, out var rootTypeNode))
         {
-            returnType = this.CreateDummyType();
-
-            this.DelayLookingUpType(
-                returnTypeNameToken,
-                LookupTargets.All,
-                type => method.ReturnType = type);   // (captured)
+            this.OutputError(
+                this.GetCurrentLocation(functionSignatureToken),
+                $"Invalid function signature {functionSignature}");
+            return;
         }
 
-        var parameters = new List<ParameterDefinition>();
-        var varargs = false;
-        for (var index = 4; index < tokens.Length; index++)
+        if (!(rootTypeNode is FunctionSignatureNode fsn))
         {
-            var parameterToken = tokens[index];
-            var parameterTokenText = parameterToken.Text;
-
-            if (index == (tokens.Length - 1) &&
-                parameterTokenText == "...")
-            {
-                varargs = true;
-                continue;
-            }
-
-            var splitted = parameterTokenText.Split(':');
-            if (splitted.Length >= 3)
-            {
-                this.OutputError(
-                    parameterToken,
-                    $"Invalid parameter: {parameterTokenText}");
-                continue;
-            }
-
-            var parameterTypeName = splitted.Last();
-
-            ParameterDefinition parameter = null!;
-            if (!this.TryGetType(parameterTypeName, out var parameterType))
-            {
-                parameterType = CreateDummyType();
-
-                this.DelayLookingUpType(
-                    parameterTypeName,
-                    parameterToken,
-                    LookupTargets.All,
-                    type => parameter.ParameterType = type);
-            }
-
-            parameter = new(parameterType);
-
-            if (splitted.Length == 2)
-            {
-                parameter.Name = splitted[0];
-            }
-
-            // Special case: Force 1 byte footprint on boolean type.
-            if (parameterType.FullName == "System.Boolean")
-            {
-                parameter.MarshalInfo = new(NativeType.U1);
-            }
-            else if (parameterType.FullName == "System.Char")
-            {
-                parameter.MarshalInfo = new(NativeType.U2);
-            }
-
-            parameters.Add(parameter);
+            this.OutputError(
+                this.GetCurrentLocation(functionSignatureToken),
+                $"Invalid function signature: {functionSignature}");
+            return;
         }
 
-        method = this.SetupMethodDefinition(
+        var parameters =
+            fsn.Parameters.Select(p =>
+            {
+                var pd = new ParameterDefinition(this.CreateDummyType());
+                pd.Name = p.ParameterName;
+                return pd;
+            }).
+            ToArray();
+
+        var method = this.SetupMethodDefinition(
             functionName,
-            returnType,
-            parameters.ToArray(),
+            this.CreateDummyType(),
+            parameters,
             scopeDescriptor switch
             {
                 ScopeDescriptors.Public => MethodAttributes.Public | MethodAttributes.Static,
@@ -151,19 +107,55 @@ partial class Parser
                 _ => MethodAttributes.Assembly | MethodAttributes.Static,
             });
 
-        if (varargs)
-        {
-            method.CallingConvention = MethodCallingConvention.VarArg;
-        }
+        method.CallingConvention = fsn.CallingConvention;
 
-        // Special case: Force 1 byte footprint on boolean type.
-        if (returnType.FullName == "System.Boolean")
+        this.DelayLookingUpType(
+            fsn.ReturnType,
+            functionSignatureToken,
+            LookupTargets.All,
+            type =>
+            {
+                method.ReturnType = type;
+
+                // Special case: Force 1 byte footprint on boolean type.
+                if (type.FullName == "System.Boolean")
+                {
+                    method.MethodReturnType.MarshalInfo = new(NativeType.U1);
+                }
+                else if (type.FullName == "System.Char")
+                {
+                    method.MethodReturnType.MarshalInfo = new(NativeType.U2);
+                }
+            });
+
+        for (var index = 0; index < fsn.Parameters.Length; index++)
         {
-            method.MethodReturnType.MarshalInfo = new(NativeType.U1);
-        }
-        else if (returnType.FullName == "System.Char")
-        {
-            method.MethodReturnType.MarshalInfo = new(NativeType.U2);
+            var (parameterTypeNode, parameterName) = fsn.Parameters[index];
+
+            var capturedParameter = method.Parameters[index];
+            this.DelayLookingUpType(
+                parameterTypeNode,
+                functionSignatureToken,
+                LookupTargets.All,
+                type =>
+                {
+                    capturedParameter.ParameterType = type;
+
+                    if (!string.IsNullOrWhiteSpace(parameterName))
+                    {
+                        capturedParameter.Name = parameterName;
+                    }
+
+                    // Special case: Force 1 byte footprint on boolean type.
+                    if (type.FullName == "System.Boolean")
+                    {
+                        capturedParameter.MarshalInfo = new(NativeType.U1);
+                    }
+                    else if (type.FullName == "System.Char")
+                    {
+                        capturedParameter.MarshalInfo = new(NativeType.U2);
+                    }
+                });
         }
 
         switch (scopeDescriptor)

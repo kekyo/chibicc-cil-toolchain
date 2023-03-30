@@ -226,7 +226,7 @@ partial class Parser
 
         var capturedLocation =
             this.GetCurrentLocation(targetLabelNameToken);
-        this.delayedLookupBranchTargetActions.Add(() =>
+        this.delayedLookupBranchTargetActions.Enqueue(() =>
         {
             if (this.labelTargets.TryGetValue(targetLabelName, out var targetInstruction))
             {
@@ -321,21 +321,16 @@ partial class Parser
         var functionParameterTypeNames =
             tokens.Skip(2).Select(token => token.Text).ToArray();
 
-        Instruction instruction = null!;
-        if (!this.TryGetMethod(
-            functionName, functionParameterTypeNames, out var method))
-        {
-            method = this.CreateDummyMethod();
+        var instruction = Instruction.Create(
+            opCode, this.CreateDummyMethod());
 
-            this.DelayLookingUpMethod(
-                functionName,
-                functionParameterTypeNames,
-                this.GetCurrentLocation(functionNameToken, tokens.Last()),
-                LookupTargets.All,
-                method => instruction.Operand = method);
-        }
+        this.DelayLookingUpMethod(
+            functionName,
+            functionParameterTypeNames,
+            this.GetCurrentLocation(functionNameToken, tokens.Last()),
+            LookupTargets.All,
+            method => instruction.Operand = method);
 
-        instruction = Instruction.Create(opCode, method);
         return instruction;
     }
 
@@ -351,19 +346,15 @@ partial class Parser
 
         var fieldName = fieldNameToken.Text;
 
-        Instruction instruction = null!;
-        if (!this.TryGetField(fieldName, out var field))
-        {
-            field = this.CreateDummyField();
+        var instruction = Instruction.Create(
+            opCode, this.CreateDummyField());
 
-            this.DelayLookingUpField(
-                fieldName,
-                this.GetCurrentLocation(fieldNameToken, fieldNameToken),
-                LookupTargets.All,
-                field => instruction.Operand = field);
-        }
+        this.DelayLookingUpField(
+            fieldName,
+            this.GetCurrentLocation(fieldNameToken, fieldNameToken),
+            LookupTargets.All,
+            field => instruction.Operand = field);
 
-        instruction = Instruction.Create(opCode, field);
         return instruction;
     }
 
@@ -379,19 +370,15 @@ partial class Parser
 
         var typeName = typeNameToken.Text;
 
-        Instruction instruction = null!;
-        if (!this.TryGetType(typeName, out var type))
-        {
-            type = this.CreateDummyType();
+        var instruction = Instruction.Create(
+            opCode, this.CreateDummyType());
 
-            this.DelayLookingUpType(
-                typeName,
-                this.GetCurrentLocation(typeNameToken, typeNameToken),
-                LookupTargets.All,
-                type => instruction.Operand = type);
-        }
+        this.DelayLookingUpType(
+            typeName,
+            this.GetCurrentLocation(typeNameToken, typeNameToken),
+            LookupTargets.All,
+            type => instruction.Operand = type);
 
-        instruction = Instruction.Create(opCode, type);
         return instruction;
     }
 
@@ -413,37 +400,15 @@ partial class Parser
         var functionParameterTypeNames =
             tokens.Skip(2).Select(token => token.Text).ToArray();
 
-        Instruction instruction = null!;
-        if (!TryGetMember(
-            memberName,
+        var instruction = CecilUtilities.CreateInstruction(
+            opCode, this.CreateDummyField());
+
+        this.DelayLookingUpMember(
+            memberNameToken,
             functionParameterTypeNames,
-            out var member,
-            LookupTargets.All))
-        {
-            member = this.CreateDummyField();
+            LookupTargets.All,
+            member => instruction.Operand = member);
 
-            var capturedLocation = this.GetCurrentLocation(
-                memberNameToken, tokens.Last());
-            this.delayedLookupLocalMemberActions.Add(() =>
-            {
-                if (TryGetMember(
-                    memberName,
-                    functionParameterTypeNames,
-                    out member,
-                    LookupTargets.All))
-                {
-                    instruction.Operand = member;
-                }
-                else
-                {
-                    this.OutputError(
-                        capturedLocation,
-                        $"Could not find member: {memberName}");
-                }
-            });
-        }
-
-        instruction = CecilUtilities.CreateInstruction(opCode, member);
         return instruction;
     }
 
@@ -482,41 +447,25 @@ partial class Parser
             ExplicitThis = false,
         };
 
-        var capturedFileScopedType = this.fileScopedType;
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.DelayLookingUpType(
+            fsn.ReturnType,
+            functionSignatureToken,
+            LookupTargets.All,
+            type => callSite.ReturnType = type);
+
+        foreach (var (parameterTypeNode, parameterName) in fsn.Parameters)
         {
-            if (!this.TryConstructTypeFromNode(
-                fsn.ReturnType,
-                out var returnType,
-                capturedFileScopedType,
-                LookupTargets.All))
-            {
-                this.OutputError(
-                    this.GetCurrentLocation(functionSignatureToken),
-                    $"Could not find return type: {functionSignature}");
-                return;
-            }
+            var parameter = new ParameterDefinition(
+                this.CreateDummyType());
+            parameter.Name = parameterName;   // Not sure if that makes sense.
+            callSite.Parameters.Add(parameter);
 
-            callSite.ReturnType = returnType;
-
-            foreach (var parameterNode in fsn.ParameterTypes)
-            {
-                if (this.TryConstructTypeFromNode(
-                    parameterNode,
-                    out var parameterType,
-                    capturedFileScopedType,
-                    LookupTargets.All))
-                {
-                    callSite.Parameters.Add(new(parameterType));
-                }
-                else
-                {
-                    this.OutputError(
-                        this.GetCurrentLocation(functionSignatureToken),
-                        $"Could not find parameter type: {functionSignature}");
-                }
-            }
-        });
+            this.DelayLookingUpType(
+                parameterTypeNode,
+                functionSignatureToken,
+                LookupTargets.All,
+                type => parameter.ParameterType = type);
+        }
 
         return Instruction.Create(opCode, callSite);
     }

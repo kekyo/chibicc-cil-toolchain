@@ -38,9 +38,10 @@ internal sealed partial class Parser
     private readonly Dictionary<string, FileDescriptor> files = new();
     private readonly Dictionary<Instruction, Location> locationByInstructions = new();
     private readonly List<string> willApplyLabelingNames = new();
-    private readonly List<Action> delayedLookupBranchTargetActions = new();
-    private readonly List<Action> delayedLookupLocalMemberActions = new();
-    private readonly List<Action> delayedCheckAfterLookingupActions = new();
+    private readonly Queue<Action> delayedLookupBranchTargetActions = new();
+    private readonly Queue<Action> delayedLookupTypeActions = new();
+    private readonly Queue<Action> delayedLookupLocalMemberActions = new();
+    private readonly Queue<Action> delayedCheckAfterLookingupActions = new();
     private readonly Dictionary<string, List<VariableDebugInformation>> variableDebugInformationLists = new();
     private readonly Lazy<TypeReference> systemValueTypeType;
     private readonly Lazy<TypeReference> systemEnumType;
@@ -162,7 +163,7 @@ internal sealed partial class Parser
             // Schedule checking for type initializer when all initializer was applied.
             var capturedFileScopedType = this.fileScopedType;
             var capturedFileScopedTypeInitializer = this.fileScopedTypeInitializer;
-            this.delayedCheckAfterLookingupActions.Add(() =>
+            this.delayedCheckAfterLookingupActions.Enqueue(() =>
             {
                 // Add type initializer when body was appended.
                 if (capturedFileScopedTypeInitializer.Body is { } body &&
@@ -236,19 +237,14 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
-    private MethodDefinition CreateDummyMethod() =>
-        new($"<placeholder_method>_${this.placeholderIndex++}",
-            MethodAttributes.Private | MethodAttributes.Abstract,
-            this.UnsafeGetType("System.Void"));
+    private TypeDefinition CreateDummyType() =>
+        CecilUtilities.CreateDummyType(this.placeholderIndex++);
 
     private FieldDefinition CreateDummyField() =>
-        new($"<placeholder_field>_${this.placeholderIndex++}",
-            FieldAttributes.Private | FieldAttributes.InitOnly,
-            this.UnsafeGetType("System.Int32"));
+        CecilUtilities.CreateDummyField(this.placeholderIndex++);
 
-    private TypeDefinition CreateDummyType() =>
-        new("", $"<placeholder_type>_${this.placeholderIndex++}",
-            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
+    private MethodDefinition CreateDummyMethod() =>
+        CecilUtilities.CreateDummyMethod(this.placeholderIndex++);
 
     /////////////////////////////////////////////////////////////////////
 
@@ -306,6 +302,15 @@ internal sealed partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
+    private void FireDelayedBranchTargetActions()
+    {
+        while (this.delayedLookupBranchTargetActions.Count >= 1)
+        {
+            var action = this.delayedLookupBranchTargetActions.Dequeue();
+            action();
+        }
+    }
+
     private void FinishCurrentState()
     {
         if (this.method != null)
@@ -317,10 +322,7 @@ internal sealed partial class Parser
 
             if (!this.caughtError)
             {
-                foreach (var action in this.delayedLookupBranchTargetActions)
-                {
-                    action();
-                }
+                this.FireDelayedBranchTargetActions();
             }
 
             this.delayedLookupBranchTargetActions.Clear();
@@ -339,6 +341,8 @@ internal sealed partial class Parser
             Debug.Assert(this.instructions == null);
             Debug.Assert(this.body == null);
             Debug.Assert(this.structureType == null);
+
+            Debug.Assert(this.delayedLookupBranchTargetActions.Count == 0);
 
             if (this.checkingMemberIndex >= 0 &&
                 this.checkingMemberIndex < this.enumerationType.Fields.
@@ -384,6 +388,30 @@ internal sealed partial class Parser
         }
     }
 
+    private void FireDelayedActions()
+    {
+        // Fire lookups delayed types.
+        while (this.delayedLookupTypeActions.Count >= 1)
+        {
+            var action = this.delayedLookupTypeActions.Dequeue();
+            action();
+        }
+
+        // Fire lookups delayed local member.
+        while (this.delayedLookupLocalMemberActions.Count >= 1)
+        {
+            var action = this.delayedLookupLocalMemberActions.Dequeue();
+            action();
+        }
+
+        // Fire lookups checker.
+        while (this.delayedCheckAfterLookingupActions.Count >= 1)
+        {
+            var action = this.delayedCheckAfterLookingupActions.Dequeue();
+            action();
+        }
+    }
+
     public bool Finish(
         bool applyOptimization, bool disableJITOptimization)
     {
@@ -405,6 +433,9 @@ internal sealed partial class Parser
             {
                 this.module.Types.Add(this.cabiDataType);
             }
+
+            // Fire delayed actions.
+            this.FireDelayedActions();
 
             if (this.produceExecutable)
             {
@@ -455,6 +486,9 @@ internal sealed partial class Parser
 
                     this.FinishCurrentState();
 
+                    // Fire delayed actions.
+                    this.FireDelayedActions();
+
                     this.logger.Information($"Injected startup code.");
                 }
                 else
@@ -469,18 +503,6 @@ internal sealed partial class Parser
         {
             // Clean up for file scope type.
             this.BeginNewFileScope(unknown.RelativePath);
-
-            // Fire local member lookup.
-            foreach (var action in this.delayedLookupLocalMemberActions)
-            {
-                action();
-            }
-
-            // Fire lookup checker.
-            foreach (var action in this.delayedCheckAfterLookingupActions)
-            {
-                action();
-            }
 
             // Add type initializer when body was appended.
             if (this.cabiDataTypeInitializer.Body is { } cabiDataTypeInitializerBody &&
@@ -606,8 +628,10 @@ internal sealed partial class Parser
             }
         }
 
+        this.delayedLookupTypeActions.Clear();
         this.delayedLookupLocalMemberActions.Clear();
         this.delayedCheckAfterLookingupActions.Clear();
+
         this.files.Clear();
         this.locationByInstructions.Clear();
         this.variableDebugInformationLists.Clear();

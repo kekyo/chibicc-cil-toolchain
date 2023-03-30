@@ -201,6 +201,25 @@ internal static class CecilUtilities
         return true;
     }
 
+    public static TypeDefinition CreateDummyType(int postfix) =>
+        new("", $"<placeholder_type>_${postfix}",
+            TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
+    public static FieldDefinition CreateDummyField(int postfix) =>
+        new($"<placeholder_field>_${postfix}",
+            FieldAttributes.Private | FieldAttributes.InitOnly,
+            CreateDummyType(postfix));
+    public static MethodDefinition CreateDummyMethod(int postfix) =>
+        new($"<placeholder_method>_${postfix}",
+            MethodAttributes.Private | MethodAttributes.Abstract,
+            CreateDummyType(postfix));
+
+    public static bool IsPlaceholder(TypeReference type) =>
+        type.Name.StartsWith("<placeholder_type>_$");
+    public static bool IsPlaceholder(FieldReference field) =>
+        field.Name.StartsWith("<placeholder_field>_$");
+    public static bool IsPlaceholder(MethodReference method) =>
+        method.Name.StartsWith("<placeholder_method>_$");
+
     public static bool IsValidCAbiParameter(
         MethodReference method, string[] parameterTypeNames) =>
         method.CallingConvention switch

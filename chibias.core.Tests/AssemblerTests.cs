@@ -22,7 +22,7 @@ public sealed partial class AssemblerTests
     public Task SimpleOpCodeMainFunction()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -32,7 +32,7 @@ public sealed partial class AssemblerTests
     public Task Comment()
     {
         var actual = Run(@"
-            .function public int32 main  ; This is
+            .function public int32() main  ; This is
                 ldc.i4.1          ; Ignored.
                 ret");
         return Verify(actual);
@@ -43,7 +43,7 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .file 1 ""abc.c"" c
-            .function public int32 main
+            .function public int32() main
                 .location 1 123 8 123 20
                 ldc.i4.1
                 ret");
@@ -55,7 +55,7 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .file 1 ""abc.c"" c
-            .function public int32 main
+            .function public int32() main
                 .location 1 123 8 123 20
                 ldc.i4.1
                 ldc.i4.2
@@ -72,7 +72,7 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .hidden
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -82,10 +82,10 @@ public sealed partial class AssemblerTests
     public Task MultipleFunctions()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret
-            .function public int32 foo
+            .function public int32() foo
                 ldc.i4.2
                 ret");
         return Verify(actual);
@@ -95,7 +95,7 @@ public sealed partial class AssemblerTests
     public Task SimpleOpCodeMainFunctionInExe()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
             AssemblyTypes.Exe);
@@ -106,7 +106,7 @@ public sealed partial class AssemblerTests
     public Task SimpleOpCodeMainFunctionInWinExe()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
             AssemblyTypes.WinExe);
@@ -119,11 +119,11 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCode()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 call foo
                 ret", @"
-            .function public int32 foo int32
+            .function public int32(int32) foo
                 ldarg.0
                 ret"});
         return Verify(actual);
@@ -133,14 +133,14 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedFunctions1()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 call foo
                 ret", @"
-            .function public int32 foo int32
+            .function public int32(int32) foo
                 ldarg.0
                 ret", @"
-            .function file int32 foo int32
+            .function file int32(int32) foo
                 ldarg.1
                 ret" });
         return Verify(actual);
@@ -150,14 +150,14 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedFunctions2()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 call foo
                 ret", @"
-            .function file int32 foo int32
+            .function file int32(int32) foo
                 ldarg.0
                 ret", @"
-            .function public int32 foo int32
+            .function public int32(int32) foo
                 ldarg.1
                 ret" });
         return Verify(actual);
@@ -167,13 +167,13 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedFunctions3()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret", @"
-            .function file int32 foo int32
+            .function file int32(int32) foo
                 ldarg.0
                 ret", @"
-            .function file int32 foo int32
+            .function file int32(int32) foo
                 ldarg.1
                 ret" });
         return Verify(actual);
@@ -183,7 +183,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeForStructure()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 .local foo
                 ldloca 0
                 initobj foo
@@ -202,7 +202,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedStructure()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 .local foo
                 ldloca 0
                 initobj foo
@@ -222,7 +222,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedStructure2()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 .local foo
                 ldloca 0
                 initobj foo
@@ -242,7 +242,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedStructure3()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.0
                 ret
             .structure file foo
@@ -260,7 +260,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeForEnumrerate()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 .local foo
                 ldloca 0
                 initobj foo
@@ -279,7 +279,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedEnumrerate()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 .local foo
                 ldloca 0
                 initobj foo
@@ -299,7 +299,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedEnumrerate2()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 .local foo
                 ldloca 0
                 initobj foo
@@ -319,7 +319,7 @@ public sealed partial class AssemblerTests
     public Task CombinedMultipleSourceCodeDuplicatedEnumrerate3()
     {
         var actual = Run(new[] { @"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.0
                 ret
             .enumeration file int32 foo
@@ -339,7 +339,7 @@ public sealed partial class AssemblerTests
     public Task VariableArgumentsFunction()
     {
         var actual = Run(@"
-            .function internal void foo
+            .function internal void() foo
                 .local System.ArgIterator
                 ldloca.s 0
                 arglist
@@ -352,7 +352,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeFunction()
     {
         var actual = Run(@"
-            .function internal int32 foo
+            .function internal int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -362,7 +362,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeFunction()
     {
         var actual = Run(@"
-            .function file int32 foo
+            .function file int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -372,10 +372,10 @@ public sealed partial class AssemblerTests
     public Task InternalScopeFunctionReference1()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 call foo
                 ret
-            .function internal int32 foo
+            .function internal int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -385,10 +385,10 @@ public sealed partial class AssemblerTests
     public Task InternalScopeFunctionReference2()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 call foo
                 ret
-            .function internal int32 foo
+            .function internal int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -398,10 +398,10 @@ public sealed partial class AssemblerTests
     public Task InternalScopeFunctionReference3()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 call foo
                 ret
-            .function internal int32 foo
+            .function internal int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -411,10 +411,10 @@ public sealed partial class AssemblerTests
     public Task FileScopeFunctionReference1()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 call foo
                 ret
-            .function file int32 foo
+            .function file int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -424,10 +424,10 @@ public sealed partial class AssemblerTests
     public Task FileScopeFunctionReference2()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 call foo
                 ret
-            .function file int32 foo
+            .function file int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -437,10 +437,10 @@ public sealed partial class AssemblerTests
     public Task FileScopeFunctionReference3()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 call foo
                 ret
-            .function file int32 foo
+            .function file int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -450,7 +450,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeMainFunction()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 ldc.i4.1
                 ret",
                 AssemblyTypes.Exe);
@@ -461,13 +461,13 @@ public sealed partial class AssemblerTests
     public Task CombinedFunctionScopeVaries()
     {
         var actual = Run(@"
-            .function public int32 foo
+            .function public int32() foo
                 ldc.i4.1
                 ret
-            .function internal int32 bar
+            .function internal int32() bar
                 ldc.i4.1
                 ret
-            .function file int32 baz
+            .function file int32() baz
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -477,7 +477,7 @@ public sealed partial class AssemblerTests
     public Task MainFunctionWithoutReturn()
     {
         var actual = Run(@"
-            .function internal void main
+            .function internal void() main
                 ret",
                 AssemblyTypes.Exe);
         return Verify(actual);
@@ -487,7 +487,7 @@ public sealed partial class AssemblerTests
     public Task MainFunctionWithReturnAndParameters()
     {
         var actual = Run(@"
-            .function internal int32 main argc:int32 argv:int8**
+            .function internal int32(argc:int32,argv:int8**) main
                 ldc.i4.1
                 ret",
                 AssemblyTypes.Exe);
@@ -498,7 +498,7 @@ public sealed partial class AssemblerTests
     public Task MainFunctionWithoutReturnAndParameters()
     {
         var actual = Run(@"
-            .function internal void main argc:int32 argv:int8**
+            .function internal void(argc:int32,argv:int8**) main
                 ret",
                 AssemblyTypes.Exe);
         return Verify(actual);
@@ -510,7 +510,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeVariable()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldsfld foo
                 ret
             .global internal int32 foo");
@@ -521,7 +521,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeVariable()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldsfld foo
                 ret
             .global file int32 foo");
@@ -532,7 +532,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeVariableReference1()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 ldsfld foo
                 ret
             .global internal int32 foo");
@@ -543,7 +543,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeVariableReference2()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 ldsfld foo
                 ret
             .global file int32 foo");
@@ -554,7 +554,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeVariableReference1()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 ldsfld foo
                 ret
             .global internal int32 foo");
@@ -565,7 +565,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeVariableReference2()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 ldsfld foo
                 ret
             .global file int32 foo");
@@ -576,7 +576,7 @@ public sealed partial class AssemblerTests
     public Task CombinedVariableScopeVaries()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret
             .global public int32 foo
@@ -591,7 +591,7 @@ public sealed partial class AssemblerTests
     public Task StringLiteral1()
     {
         var actual = Run(@"
-            .function public string foo
+            .function public string() foo
                 ldstr ""abc""
                 ret");
         return Verify(actual);
@@ -601,7 +601,7 @@ public sealed partial class AssemblerTests
     public Task StringLiteral2()
     {
         var actual = Run(@"
-            .function public string foo
+            .function public string() foo
                 ldstr ""abc\adef\bghi\fjkl\nmno\rpqr\tstu\vvwx\""yzA\x7fBCD\u12abEFG""
                 ret");
         return Verify(actual);
@@ -613,7 +613,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies1()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.0
                 ret");
         return Verify(actual);
@@ -623,7 +623,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies2()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.s 0
                 ret");
         return Verify(actual);
@@ -633,7 +633,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies3()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4 0
                 ret");
         return Verify(actual);
@@ -643,7 +643,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies4()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4 {int.MaxValue}
                 ret");
         return Verify(actual);
@@ -653,7 +653,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies5()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4 {int.MinValue}
                 ret");
         return Verify(actual);
@@ -663,7 +663,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies6()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.s 0x42
                 ret");
         return Verify(actual);
@@ -673,7 +673,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies7()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4 0x12345678
                 ret");
         return Verify(actual);
@@ -683,7 +683,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies8()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.s {sbyte.MinValue}
                 ret");
         return Verify(actual);
@@ -693,7 +693,7 @@ public sealed partial class AssemblerTests
     public Task LdcI4Varies9()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.s {sbyte.MaxValue}
                 ret");
         return Verify(actual);
@@ -705,7 +705,7 @@ public sealed partial class AssemblerTests
     public Task LdcI8Varies1()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i8 {long.MaxValue}
                 pop
                 ldc.i4.1
@@ -717,7 +717,7 @@ public sealed partial class AssemblerTests
     public Task LdcI8Varies2()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i8 {long.MinValue}
                 pop
                 ldc.i4.1
@@ -731,7 +731,7 @@ public sealed partial class AssemblerTests
     public Task LdcR8()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.r8 {double.MaxValue}
                 pop
                 ldc.i4.1
@@ -743,7 +743,7 @@ public sealed partial class AssemblerTests
     public Task LdcR8Varies2()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.r8 {double.MinValue}
                 pop
                 ldc.i4.1
@@ -757,7 +757,7 @@ public sealed partial class AssemblerTests
     public Task LdcR4Varies1()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.r4 {float.MaxValue}
                 pop
                 ldc.i4.1
@@ -769,7 +769,7 @@ public sealed partial class AssemblerTests
     public Task LdcR4Varies2()
     {
         var actual = Run($@"
-            .function public int32 main
+            .function public int32() main
                 ldc.r4 {float.MinValue}
                 pop
                 ldc.i4.1
@@ -783,7 +783,7 @@ public sealed partial class AssemblerTests
     public Task BrVaries1()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 br LEND
               LEND:
                 ret");
@@ -794,7 +794,7 @@ public sealed partial class AssemblerTests
     public Task BrVaries2()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 br.s LEND
               LEND:
                 ret");
@@ -805,11 +805,11 @@ public sealed partial class AssemblerTests
     public Task BrVaries3()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 br.s LEND
               LEND:
                 ret
-            .function public int32 foo
+            .function public int32() foo
                 br.s LEND
               LEND:
                 ret");
@@ -820,14 +820,14 @@ public sealed partial class AssemblerTests
     public Task BrVaries4()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 br.s LEND1
               LEND1:
                 ldc.i4.1
                 br.s LEND2
               LEND2:
                 ret
-            .function public int32 foo
+            .function public int32() foo
                 br.s LEND1
               LEND1:
                 ldc.i4.1
@@ -843,7 +843,7 @@ public sealed partial class AssemblerTests
     public Task LocalVariable1()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 .local int32
                 ldc.i4.1
                 stloc.0
@@ -856,7 +856,7 @@ public sealed partial class AssemblerTests
     public Task LocalVariable2()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 .local int32
                 .local int32
                 ldc.i4.1
@@ -872,7 +872,7 @@ public sealed partial class AssemblerTests
     public Task LocalVariable3()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 .local int32
                 ldc.i4.1
                 stloc 0
@@ -885,7 +885,7 @@ public sealed partial class AssemblerTests
     public Task LocalVariable4()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 .local int32
                 ldc.i4.1
                 stloc.s 0
@@ -898,7 +898,7 @@ public sealed partial class AssemblerTests
     public Task LocalVariable5()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 .local int32 abc
                 ldc.i4.1
                 stloc.0
@@ -911,7 +911,7 @@ public sealed partial class AssemblerTests
     public Task LocalVariable6()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 .local int32 abc
                 ldc.i4.1
                 stloc abc
@@ -926,7 +926,7 @@ public sealed partial class AssemblerTests
     public Task Argument1()
     {
         var actual = Run(@"
-            .function public int32 foo int32
+            .function public int32(int32) foo
                 ldarg.0
                 ret");
         return Verify(actual);
@@ -936,7 +936,7 @@ public sealed partial class AssemblerTests
     public Task Argument2()
     {
         var actual = Run(@"
-            .function public int32 foo int32
+            .function public int32(int32) foo
                 ldarg.s 0
                 ret");
         return Verify(actual);
@@ -946,7 +946,7 @@ public sealed partial class AssemblerTests
     public Task Argument3()
     {
         var actual = Run(@"
-            .function public int32 foo int32
+            .function public int32(int32) foo
                 ldarg 0
                 ret");
         return Verify(actual);
@@ -956,7 +956,7 @@ public sealed partial class AssemblerTests
     public Task Argument4()
     {
         var actual = Run(@"
-            .function public int32 foo int32 int32
+            .function public int32(int32,int32) foo
                 ldarg.0
                 pop
                 ldarg.s 1
@@ -968,7 +968,7 @@ public sealed partial class AssemblerTests
     public Task Argument5()
     {
         var actual = Run(@"
-            .function public int32 foo a:int32
+            .function public int32(a:int32) foo
                 ldarg.s 0
                 ret");
         return Verify(actual);
@@ -978,7 +978,7 @@ public sealed partial class AssemblerTests
     public Task Argument6()
     {
         var actual = Run(@"
-            .function public int32 foo abc:int32
+            .function public int32(abc:int32) foo
                 ldarg abc
                 ret");
         return Verify(actual);
@@ -990,7 +990,7 @@ public sealed partial class AssemblerTests
     public Task AccessCAbiTargetField()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4 123
                 stsfld gvalue
                 ldsfld gvalue
@@ -1002,7 +1002,7 @@ public sealed partial class AssemblerTests
     public Task AccessSameAssemblyGlobalVariable()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4 123
                 stsfld foo
                 ldsfld foo
@@ -1015,7 +1015,7 @@ public sealed partial class AssemblerTests
     public Task AccessExternalAssemblyField()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldsfld System.Int32.MaxValue
                 ret");
         return Verify(actual);
@@ -1027,7 +1027,7 @@ public sealed partial class AssemblerTests
     public Task CallCAbiTargetFunction()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 call ret3
                 ret");
         return Verify(actual);
@@ -1037,7 +1037,7 @@ public sealed partial class AssemblerTests
     public Task CallCAbiTargetFunctionWithVariadic()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.s 123
                 ldc.i8 456
                 ldc.r8 123.456
@@ -1052,10 +1052,10 @@ public sealed partial class AssemblerTests
     public Task CallSameAssemblyFunction()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 call foo
                 ret
-            .function public int32 foo
+            .function public int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -1067,7 +1067,7 @@ public sealed partial class AssemblerTests
     public Task DeclareVariadicFunction0()
     {
         var actual = Run(@"
-            .function public int32 foo ...
+            .function public int32(...) foo
                 ldc.i4.s 123
                 ret");
         return Verify(actual);
@@ -1077,7 +1077,7 @@ public sealed partial class AssemblerTests
     public Task DeclareVariadicFunction1()
     {
         var actual = Run(@"
-            .function public int32 foo arg0:int32 ...
+            .function public int32(arg0:int32,...) foo
                 ldarg.0
                 ret");
         return Verify(actual);
@@ -1087,7 +1087,7 @@ public sealed partial class AssemblerTests
     public Task DeclareVariadicFunction2()
     {
         var actual = Run(@"
-            .function public int32 foo arg0:int32 arg1:string ...
+            .function public int32(arg0:int32,arg1:string,...) foo
                 ldarg.0
                 ret");
         return Verify(actual);
@@ -1152,7 +1152,7 @@ public sealed partial class AssemblerTests
     public Task UInt8Type()
     {
         var actual = Run(@"
-            .function public uint8 foo
+            .function public uint8() foo
                 ldc.i4.1
                 conv.u1
                 ret");
@@ -1163,7 +1163,7 @@ public sealed partial class AssemblerTests
     public Task Int8Type()
     {
         var actual = Run(@"
-            .function public int8 foo
+            .function public int8() foo
                 ldc.i4.1
                 conv.i1
                 ret");
@@ -1174,7 +1174,7 @@ public sealed partial class AssemblerTests
     public Task Int16Type()
     {
         var actual = Run(@"
-            .function public int16 foo
+            .function public int16() foo
                 ldc.i4.1
                 conv.i2
                 ret");
@@ -1185,7 +1185,7 @@ public sealed partial class AssemblerTests
     public Task UInt16Type()
     {
         var actual = Run(@"
-            .function public uint16 foo
+            .function public uint16() foo
                 ldc.i4.1
                 conv.u2
                 ret");
@@ -1196,7 +1196,7 @@ public sealed partial class AssemblerTests
     public Task Int32Type()
     {
         var actual = Run(@"
-            .function public int32 foo
+            .function public int32() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -1206,7 +1206,7 @@ public sealed partial class AssemblerTests
     public Task UInt32Type()
     {
         var actual = Run(@"
-            .function public uint32 foo
+            .function public uint32() foo
                 ldc.i4.1
                 conv.u4
                 ret");
@@ -1217,7 +1217,7 @@ public sealed partial class AssemblerTests
     public Task Int64Type()
     {
         var actual = Run(@"
-            .function public int64 foo
+            .function public int64() foo
                 ldc.i8 1
                 ret");
         return Verify(actual);
@@ -1227,7 +1227,7 @@ public sealed partial class AssemblerTests
     public Task UInt64Type()
     {
         var actual = Run(@"
-            .function public uint64 foo
+            .function public uint64() foo
                 ldc.i8 1
                 conv.u8
                 ret");
@@ -1238,7 +1238,7 @@ public sealed partial class AssemblerTests
     public Task Float32Type()
     {
         var actual = Run(@"
-            .function public float32 foo
+            .function public float32() foo
                 ldc.r4 1.234
                 ret");
         return Verify(actual);
@@ -1248,7 +1248,7 @@ public sealed partial class AssemblerTests
     public Task Float64Type()
     {
         var actual = Run(@"
-            .function public float64 foo
+            .function public float64() foo
                 ldc.r8 1.234
                 ret");
         return Verify(actual);
@@ -1258,7 +1258,7 @@ public sealed partial class AssemblerTests
     public Task NativeIntType()
     {
         var actual = Run(@"
-            .function public intptr foo
+            .function public intptr() foo
                 ldc.i4.1
                 conv.i
                 ret");
@@ -1269,7 +1269,7 @@ public sealed partial class AssemblerTests
     public Task NativeUIntType()
     {
         var actual = Run(@"
-            .function public uintptr foo
+            .function public uintptr() foo
                 ldc.i4.1
                 conv.u
                 ret");
@@ -1280,7 +1280,7 @@ public sealed partial class AssemblerTests
     public Task VoidType()
     {
         var actual = Run(@"
-            .function public void foo
+            .function public void() foo
                 ldc.i4.1
                 pop
                 ret");
@@ -1291,7 +1291,7 @@ public sealed partial class AssemblerTests
     public Task BoolType()
     {
         var actual = Run(@"
-            .function public void foo
+            .function public void() foo
                 .local bool a
                 ret");
         return Verify(actual);
@@ -1301,7 +1301,7 @@ public sealed partial class AssemblerTests
     public Task CharType()
     {
         var actual = Run(@"
-            .function public char foo
+            .function public char() foo
                 ldc.i4.1
                 conv.u2
                 ret");
@@ -1312,7 +1312,7 @@ public sealed partial class AssemblerTests
     public Task ObjectType()
     {
         var actual = Run(@"
-            .function public object foo
+            .function public object() foo
                 ldc.i4.1
                 box int32
                 ret");
@@ -1323,7 +1323,7 @@ public sealed partial class AssemblerTests
     public Task StringType()
     {
         var actual = Run(@"
-            .function public string foo
+            .function public string() foo
                 ldstr ""abc""
                 ret");
         return Verify(actual);
@@ -1333,7 +1333,7 @@ public sealed partial class AssemblerTests
     public Task PointerType()
     {
         var actual = Run(@"
-            .function public int32* foo
+            .function public int32*() foo
                 ldc.i4.1
                 conv.i
                 ret");
@@ -1344,7 +1344,7 @@ public sealed partial class AssemblerTests
     public Task PointerPointerType()
     {
         var actual = Run(@"
-            .function public int32** foo
+            .function public int32**() foo
                 ldc.i4.1
                 conv.i
                 ret");
@@ -1355,7 +1355,7 @@ public sealed partial class AssemblerTests
     public Task ByReferenceType()
     {
         var actual = Run(@"
-            .function public int32& foo
+            .function public int32&() foo
                 ldc.i4.1
                 conv.i
                 ret");
@@ -1366,7 +1366,7 @@ public sealed partial class AssemblerTests
     public Task ArrayType()
     {
         var actual = Run(@"
-            .function public int32[] foo
+            .function public int32[]() foo
                 ldc.i4.4
                 newarr int32
                 ret");
@@ -1377,7 +1377,7 @@ public sealed partial class AssemblerTests
     public Task ArrayArrayType()
     {
         var actual = Run(@"
-            .function public int32[][] foo
+            .function public int32[][]() foo
                 ldc.i4.4
                 newarr int32[]
                 ret");
@@ -1388,10 +1388,10 @@ public sealed partial class AssemblerTests
     public Task FunctionPointerType()
     {
         var actual = Run(@"
-            .function public string(int32,int8&)* foo
+            .function public string(int32,int8&)*() foo
                 ldftn bar
                 ret
-            .function file string bar a:int32 b:int8&
+            .function file string(a:int32,b:int8&) bar
                 ldstr ""ABC""
                 ret");
         return Verify(actual);
@@ -1401,10 +1401,10 @@ public sealed partial class AssemblerTests
     public Task FunctionPointerTypeWithVariadic()
     {
         var actual = Run(@"
-            .function public string(int32,int8&,...)* foo
+            .function public string(int32,int8&,...)*() foo
                 ldftn bar
                 ret
-            .function file string bar a:int32 b:int8&
+            .function file string(a:int32,b:int8&,...) bar
                 .local System.ArgIterator
                 ldloca.s 0
                 arglist
@@ -1418,10 +1418,10 @@ public sealed partial class AssemblerTests
     public Task FunctionPointerTypeWithVariadicTypes()
     {
         var actual = Run(@"
-            .function public string(int32,int8&,...)* foo
+            .function public string(int32,int8&,...)*() foo
                 ldftn bar int32 int8&
                 ret
-            .function file string bar a:int32 b:int8&
+            .function file string(a:int32,b:int8&,...) bar
                 .local System.ArgIterator
                 ldloca.s 0
                 arglist
@@ -1437,7 +1437,7 @@ public sealed partial class AssemblerTests
     public Task CallDotNetAssemblyMethod()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 ldstr ""Hello world""
                 call System.Console.WriteLine string
                 ret",
@@ -1450,7 +1450,7 @@ public sealed partial class AssemblerTests
     public Task CallDotNetAssemblyMethod2()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 ldc.i4.1
                 box int32
                 ldc.i4.3
@@ -1468,7 +1468,7 @@ public sealed partial class AssemblerTests
     public Task SizeOfByType()
     {
         var actual = Run(@"
-            .function public int32 foo
+            .function public int32() foo
                 sizeof int32
                 ret");
         return Verify(actual);
@@ -1480,7 +1480,7 @@ public sealed partial class AssemblerTests
     public Task GlobalVariableWithInitializingData1()
     {
         var actual = Run(@"
-            .function public int32 foo
+            .function public int32() foo
                 ldsfld bar
                 ret
             .global public int32 bar 0x10 0x32 0x54 0x76");
@@ -1491,7 +1491,7 @@ public sealed partial class AssemblerTests
     public Task GlobalVariableWithInitializingData2()
     {
         var actual = Run(@"
-            .function public uint8[6] foo
+            .function public uint8[6]() foo
                 ldsfld bar
                 ret
             .global public uint8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
@@ -1504,7 +1504,7 @@ public sealed partial class AssemblerTests
     public Task GlobalVariableToken()
     {
         var actual = Run(@"
-            .function public intptr foo
+            .function public intptr() foo
                 ldtoken bar
                 conv.i
                 ret
@@ -1516,7 +1516,7 @@ public sealed partial class AssemblerTests
     public Task FieldToken()
     {
         var actual = Run(@"
-            .function public intptr foo
+            .function public intptr() foo
                 ldtoken System.Int32.MaxValue
                 conv.i
                 ret");
@@ -1527,11 +1527,11 @@ public sealed partial class AssemblerTests
     public Task FunctionToken()
     {
         var actual = Run(@"
-            .function public intptr foo
+            .function public intptr() foo
                 ldtoken bar
                 conv.i
                 ret
-            .function public int32 bar
+            .function public int32() bar
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -1541,7 +1541,7 @@ public sealed partial class AssemblerTests
     public Task MethodToken()
     {
         var actual = Run(@"
-            .function public intptr foo
+            .function public intptr() foo
                 ldtoken System.Int32.Parse string
                 conv.i
                 ret");
@@ -1552,7 +1552,7 @@ public sealed partial class AssemblerTests
     public Task TypeToken()
     {
         var actual = Run(@"
-            .function public intptr foo
+            .function public intptr() foo
                 ldtoken System.Int32
                 conv.i
                 ret");
@@ -1565,7 +1565,7 @@ public sealed partial class AssemblerTests
     public Task CallIndirectWithSignature()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldstr ""123""
                 ldftn System.Int32.Parse string
                 calli int32(string)
@@ -1579,7 +1579,7 @@ public sealed partial class AssemblerTests
     public Task ValueArray1()
     {
         var actual = Run(@"
-            .function public int8[6] foo
+            .function public int8[6]() foo
                 ldsfld bar
                 ret
             .global public int8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
@@ -1590,7 +1590,7 @@ public sealed partial class AssemblerTests
     public Task ValueArray2()
     {
         var actual = Run(@"
-            .function public uint8[6]* foo
+            .function public uint8[6]*() foo
                 ldsfld bar
                 ret
             .global public uint8[6]* bar");
@@ -1601,7 +1601,7 @@ public sealed partial class AssemblerTests
     public Task ValueArray3()
     {
         var actual = Run(@"
-            .function public uint8*[6] foo
+            .function public uint8*[6]() foo
                 ldsfld bar
                 ret
             .global public uint8*[6] bar");
@@ -1612,7 +1612,7 @@ public sealed partial class AssemblerTests
     public Task ValueArray4()
     {
         var actual = Run(@"
-            .function public uint8&[6] foo
+            .function public uint8&[6]() foo
                 ldsfld bar
                 ret
             .global public uint8&[6] bar");
@@ -1623,7 +1623,7 @@ public sealed partial class AssemblerTests
     public Task ValueArray5()
     {
         var actual = Run(@"
-            .function public uint8[3][6] foo
+            .function public uint8[3][6]() foo
                 ldsfld bar
                 ret
             .global public uint8[3][6] bar");
@@ -1634,7 +1634,7 @@ public sealed partial class AssemblerTests
     public Task ValueArray6()
     {
         var actual = Run(@"
-            .function public uint8[3]*[6] foo
+            .function public uint8[3]*[6]() foo
                 ldsfld bar
                 ret
             .global public uint8[3]*[6] bar");
@@ -1645,7 +1645,7 @@ public sealed partial class AssemblerTests
     public Task ValueArrayWithBoolean()
     {
         var actual = Run(@"
-            .function public bool[3]*[6] foo
+            .function public bool[3]*[6]() foo
                 ldsfld bar
                 ret
             .global public bool[3]*[6] bar");
@@ -1656,7 +1656,7 @@ public sealed partial class AssemblerTests
     public Task ValueArrayWithChar()
     {
         var actual = Run(@"
-            .function public char[3]*[6] foo
+            .function public char[3]*[6]() foo
                 ldsfld bar
                 ret
             .global public char[3]*[6] bar");
@@ -1668,7 +1668,7 @@ public sealed partial class AssemblerTests
     {
         // It is illegal variable/result type, but chibias will generate.
         var actual = Run(@"
-            .function public char[*] foo
+            .function public char[*]() foo
                 ldsfld bar
                 ret
             .global public char[*] bar");
@@ -1681,7 +1681,7 @@ public sealed partial class AssemblerTests
     public Task Structure1()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1697,7 +1697,7 @@ public sealed partial class AssemblerTests
     public Task Structure2()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1713,7 +1713,7 @@ public sealed partial class AssemblerTests
     public Task Structure3()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1729,7 +1729,7 @@ public sealed partial class AssemblerTests
     public Task Structure4()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1749,7 +1749,7 @@ public sealed partial class AssemblerTests
     public Task Structure5()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1769,7 +1769,7 @@ public sealed partial class AssemblerTests
     public Task Structure6()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1789,7 +1789,7 @@ public sealed partial class AssemblerTests
     public Task Structure7()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1809,7 +1809,7 @@ public sealed partial class AssemblerTests
     public Task Structure8()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1833,7 +1833,7 @@ public sealed partial class AssemblerTests
     public Task Structure9()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1849,7 +1849,7 @@ public sealed partial class AssemblerTests
     public Task StructureWithFlexibleArray()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo* pfoo
                 ldc.i4.0
                 stloc pfoo
@@ -1865,7 +1865,7 @@ public sealed partial class AssemblerTests
     public Task StructureWithBoolean()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1879,7 +1879,7 @@ public sealed partial class AssemblerTests
     public Task StructureWithChar()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1893,7 +1893,7 @@ public sealed partial class AssemblerTests
     public Task StructureWithArray1()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1909,7 +1909,7 @@ public sealed partial class AssemblerTests
     public Task StructureWithArray2()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1925,7 +1925,7 @@ public sealed partial class AssemblerTests
     public Task StructureWithArray3()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1945,7 +1945,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeStructure()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1961,7 +1961,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeStructure()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1977,7 +1977,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeStructureReference1()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -1993,7 +1993,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeStructureReference2()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2009,7 +2009,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeStructureReference1()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2025,7 +2025,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeStructureReference2()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2043,7 +2043,7 @@ public sealed partial class AssemblerTests
     public Task FunctionWithBoolean1()
     {
         var actual = Run(@"
-            .function public bool foo
+            .function public bool() foo
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -2053,7 +2053,7 @@ public sealed partial class AssemblerTests
     public Task FunctionWithBoolean2()
     {
         var actual = Run(@"
-            .function public void foo a:bool
+            .function public void(a:bool) foo
                 ret");
         return Verify(actual);
     }
@@ -2062,7 +2062,7 @@ public sealed partial class AssemblerTests
     public Task FunctionWithChar1()
     {
         var actual = Run(@"
-            .function public char foo
+            .function public char() foo
                 ldc.i4.2
                 ret");
         return Verify(actual);
@@ -2072,7 +2072,7 @@ public sealed partial class AssemblerTests
     public Task FunctionWithChar2()
     {
         var actual = Run(@"
-            .function public void foo a:char
+            .function public void(a:char) foo
                 ret");
         return Verify(actual);
     }
@@ -2082,7 +2082,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration1()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2098,7 +2098,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration2()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2114,7 +2114,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration3()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2130,7 +2130,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration4()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2146,7 +2146,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration5()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2162,7 +2162,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration6()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2178,7 +2178,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration7()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2194,7 +2194,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration8()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2210,7 +2210,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration9()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2226,7 +2226,7 @@ public sealed partial class AssemblerTests
     public Task Enumeration10()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2242,7 +2242,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeEnumeration()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2258,7 +2258,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeEnumeration()
     {
         var actual = Run(@"
-            .function public void main
+            .function public void() main
                 .local foo fv
                 ldloca 0
                 initobj foo
@@ -2274,7 +2274,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeEnumerationReference1()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 .local foo fv
                 ldloc 0
                 ret
@@ -2289,7 +2289,7 @@ public sealed partial class AssemblerTests
     public Task InternalScopeEnumerationReference2()
     {
         var actual = Run(@"
-            .function internal int32 main
+            .function internal int32() main
                 .local foo fv
                 ldloc 0
                 ret
@@ -2304,7 +2304,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeEnumerationReference1()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 .local foo fv
                 ldloc 0
                 ret
@@ -2319,7 +2319,7 @@ public sealed partial class AssemblerTests
     public Task FileScopeEnumerationReference2()
     {
         var actual = Run(@"
-            .function file int32 main
+            .function file int32() main
                 .local foo fv
                 ldloc 0
                 ret
@@ -2336,7 +2336,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific10()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net10");
@@ -2347,7 +2347,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific11()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net11");
@@ -2358,7 +2358,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific20()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net20");
@@ -2369,7 +2369,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific30()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net30");
@@ -2380,7 +2380,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific35()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net35");
@@ -2391,7 +2391,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific35Client()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net35-client");
@@ -2402,7 +2402,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific40()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net40");
@@ -2413,7 +2413,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific40Client()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net40-client");
@@ -2424,7 +2424,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific45()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net45");
@@ -2435,7 +2435,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecific48()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net48");
@@ -2446,7 +2446,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificStandard10()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netstandard1.0");
@@ -2457,7 +2457,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificStandard16()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netstandard1.6");
@@ -2468,7 +2468,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificStandard20()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netstandard2.0");
@@ -2479,7 +2479,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificStandard21()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netstandard2.1");
@@ -2490,7 +2490,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp10()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netcoreapp1.0");
@@ -2501,7 +2501,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp11()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netcoreapp1.1");
@@ -2512,7 +2512,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp20()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netcoreapp2.0");
@@ -2523,7 +2523,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp21()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netcoreapp2.1");
@@ -2534,7 +2534,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp22()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netcoreapp2.2");
@@ -2545,7 +2545,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp30()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netcoreapp3.0");
@@ -2556,7 +2556,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp31()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "netcoreapp3.1");
@@ -2567,7 +2567,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp50()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net5.0");
@@ -2578,7 +2578,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp60()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net6.0");
@@ -2589,7 +2589,7 @@ public sealed partial class AssemblerTests
     public Task TfmSpecificCoreApp70()
     {
         var actual = Run(@"
-            .function public int32 main
+            .function public int32() main
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net7.0");
