@@ -81,6 +81,7 @@ partial class AssemblerTests
                         AssemblyType = assemblyType,
                         TargetFrameworkMoniker = targetFrameworkMoniker,
                         DebugSymbolType = DebugSymbolTypes.Embedded,
+                        Options = AssembleOptions.Deterministic,
                     },
                     chibiasSourceCodes.Select((sc, index) =>
                         new SourceCodeItem(new StringReader(sc), index >= 1 ? $"source{index}.s" : "source.s")).

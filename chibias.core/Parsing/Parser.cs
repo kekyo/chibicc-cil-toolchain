@@ -86,7 +86,7 @@ internal sealed partial class Parser
         this.referenceTypes = new(
             this.logger,
             referenceTypes.OfType<TypeDefinition>(),
-            type => type.FullName);
+            type => type.FullName.Replace('/', '.'));
         this.produceExecutable = produceExecutable;
         this.produceDebuggingInformation = produceDebuggingInformation;
 
@@ -384,7 +384,8 @@ internal sealed partial class Parser
         }
     }
 
-    public bool Finish(bool applyOptimization)
+    public bool Finish(
+        bool applyOptimization, bool disableJITOptimization)
     {
         this.FinishCurrentState();
 
@@ -495,13 +496,41 @@ internal sealed partial class Parser
             if (this.TryGetMethod(
                 "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
                 new[] { "System.String" },
-                out var tfctor))
+                out var tfactor))
             {
-                var tfa = new CustomAttribute(tfctor);
+                var tfa = new CustomAttribute(tfactor);
                 tfa.ConstructorArguments.Add(new(
                     this.UnsafeGetType("System.String"),
                     this.targetFramework.ToString()));
                 this.module.Assembly.CustomAttributes.Add(tfa);
+            }
+            else
+            {
+                this.logger.Warning(
+                    $"TargetFrameworkAttribute was not found, so not applied. Because maybe did not reference core library.");
+            }
+
+            // Apply DA if could be imported.
+            if (disableJITOptimization)
+            {
+                if (this.TryGetMethod(
+                    "System.Diagnostics.DebuggableAttribute..ctor",
+                    new[] { "System.Diagnostics.DebuggableAttribute.DebuggingModes" },
+                    out var dactor) &&
+                    this.TryGetType(
+                        "System.Diagnostics.DebuggableAttribute.DebuggingModes",
+                        out var dm))
+                {
+                    var da = new CustomAttribute(dactor);
+                    da.ConstructorArguments.Add(new(
+                        dm, (int)DebuggableAttribute.DebuggingModes.DisableOptimizations));
+                    this.module.Assembly.CustomAttributes.Add(da);
+                }
+                else
+                {
+                    this.logger.Warning(
+                        $"DebuggableAttribute was not found, so not applied. Because maybe did not reference core library.");
+                }
             }
 
             // (Completed all CIL implementations in this place.)

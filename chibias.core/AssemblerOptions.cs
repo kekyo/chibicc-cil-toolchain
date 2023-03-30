@@ -46,6 +46,7 @@ public enum AssembleOptions
     None = 0x00,
     ApplyOptimization = 0x01,
     Deterministic = 0x02,
+    DisableJITOptimization = 0x04,
 }
 
 public sealed class AssemblerOptions
@@ -54,7 +55,7 @@ public sealed class AssemblerOptions
     public AssemblyTypes AssemblyType = AssemblyTypes.Exe;
     public TargetWindowsArchitectures TargetWindowsArchitecture = TargetWindowsArchitectures.AnyCPU;
     public DebugSymbolTypes DebugSymbolType = DebugSymbolTypes.Embedded;
-    public AssembleOptions Options = AssembleOptions.Deterministic;
+    public AssembleOptions Options = AssembleOptions.Deterministic | AssembleOptions.DisableJITOptimization;
     public Version Version = new Version(1, 0, 0, 0);
     public string TargetFrameworkMoniker = ThisAssembly.AssemblyMetadata.TargetFramework;
     public bool ProduceRuntimeConfigurationIfRequired = true;
