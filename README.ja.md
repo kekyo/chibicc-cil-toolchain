@@ -95,7 +95,7 @@ chibiasを使って "Hello world" を実行してみましょう。
 新しいソースコード・ファイル `hello.s` を作り、以下のようにコードを書きます。この4行だけでOKです:
 
 ```
-.function public void main
+.function public void() main
     ldstr "Hello world with chibias!"
     call System.Console.WriteLine string
     ret
@@ -123,7 +123,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 また、ビルトイン型（後述）だけを使用するコードをアセンブルした場合は、他のアセンブリへの参照は必要ありません:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4.1
     ldc.i4.2
     add
@@ -136,6 +136,8 @@ $ ./adder.exe
 $ echo $?
 3
 ```
+
+* 注意: この例では、アセンブル時に属性に関する警告が発生しますが、無視して構いません。
 
 ### .NET 6や.NET Coreなどで動かすには
 
@@ -199,7 +201,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 ### 最小でエントリーポイントのみ含む例
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123    ; これはコメントです
     ret
 ```
@@ -211,9 +213,8 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 * ピリオド ('.') で始まる単語は、「アセンブラディレクティブ」とみなされます。
   * `.function` ディレクティブは、関数の開始を意味しています。以下の順にオペランドが続きます:
     * スコープ記述子
-    * 戻り値の型名
+    * 関数のシグネチャ
     * 関数名
-    * 追加引数群（もしあれば）
   * 次の関数ディレクティブが現れるまで、関数の本体が続きます。
 
 スコープ記述子は、他の宣言でも共通です。
@@ -230,12 +231,12 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 
 `main`関数のシグネチャは、以下のバリエーションを受け付けます:
 
-|引数群|戻り値|対応するC言語でのシグネチャ例|
-|:----|:----|:----|
-|`int32, sbyte**`|`int32`|`int main(int argc, char** argv)`|
-|`int32, sbyte**`|`void`|`void main(int argc, char** argv)`|
-|`void`|`int32`|`int main(void)`|
-|`void`|`void`|`void main(void)`|
+|関数シグネチャ|対応するC言語でのシグネチャ例|
+|:----|:----|
+|`int32(argc:int32, argv:sbyte**)`|`int main(int argc, char** argv)`|
+|`void(argc:int32, argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`int32()`|`int main(void)`|
+|`void()`|`void() main(void)`|
 
 奇妙に思えるかもしれませんが、引数の`argv`は、現実にポインタへのポインタです。
 そしてその先は、Unicodeではない、終端文字を含む8ビット文字列を示します。
@@ -245,7 +246,7 @@ chibiasは`wmain`による、UTF-16LEワイド幅文字列を含むエントリ�
 ### リテラル
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123
     ldc.r8 1.234
     ldstr "abc\"def\"ghi"
@@ -264,7 +265,7 @@ chibiasは`wmain`による、UTF-16LEワイド幅文字列を含むエントリ�
 ### ラベル
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123
     br NAME
     nop
@@ -341,6 +342,7 @@ string(int8,int32,...)*
 * `int32**`
 * `int32&`
 * `string(int32&,int8)*[42]`
+* `int(sbyte*)*(string,int8)*`
 
 配列の要素数を指定した型は、「値型配列」と呼ばれます。
 
@@ -350,7 +352,7 @@ string(int8,int32,...)*
 ### ローカル変数
 
 ```
-.function public int32 main
+.function public int32() main
     .local int32
     .local int32 abc
     ldc.i4 1
@@ -366,7 +368,7 @@ string(int8,int32,...)*
 また、オプコードのオペランドで、変数名を使用して参照することができます:
 
 ```
-.function public void foo
+.function public void() foo
     .local int32 abc
     ldc.i4 1
     stloc abc
@@ -376,19 +378,19 @@ string(int8,int32,...)*
 ### 別の関数を呼び出す
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 1
     ldc.i4 2
     call add2
     ret
-.function public int32 add2 x:int32 y:int32
+.function public int32(x:int32,y:int32) add2 
     ldarg 0
     ldarg y   ; パラメータ名で参照することができる
     add
     ret
 ```
 
-パラメータの定義は任意です。フォーマットは:
+関数シグネチャのパラメータの定義は任意です。フォーマットは:
 
 * `int32`: 型名だけを指定する。
 * `x:int32`: パラメータ名と型名を指定する。
@@ -401,7 +403,7 @@ string(int8,int32,...)*
 関数の引数で、追加の可変引数を受け取ることが出来ます:
 
 ```
-.function public int32 add_n count:int32
+.function public int32(count:int32,...) add_n
     .local System.ArgIterator
     ldloca.s 0
     arglist
@@ -410,7 +412,7 @@ string(int8,int32,...)*
     ret
 ```
 
-関数内で `arglist` オプコードを使用していると、この関数は可変引数を受け取ることが出来るようにマークされます。
+関数シグネチャの引数リストの終端に `...` を指定する事で、可変引数を受け取るようにマークされます。
 
 但し、この可変引数は、C#における可変引数とは扱いが異なることに注意してください。
 C#では、可変引数を.NET配列で受け取りますが、chibiasではCILの`arglist`と呼ばれる機能を使います。
@@ -422,15 +424,15 @@ C#では、可変引数を.NET配列で受け取りますが、chibiasではCIL�
 例えば、上記の`add_n`を呼び出す場合は:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4.s 123
     ldc.r8 123.456    ; <-- 追加引数
     ldstr "ABC"       ; <-- 追加引数
-    call add_n int32 float64 string
+    call int32(int32,float64,string) add_n
     ret
 ```
 
-追加引数に相当する型を含めた、関数呼び出しで渡すべきパラメータのすべての型を明示します。
+追加引数に相当する型を含めた、関数呼び出しで渡すべきパラメータのすべての型を、シグネチャとして明示します。
 chibiasはオプコードのフロー解析を行わないため、この指定が誤っていると、可変引数を持つ関数の呼び出しが実行時に失敗します。
 
 ### 外部アセンブリの関数の呼び出し
@@ -438,7 +440,7 @@ chibiasはオプコードのフロー解析を行わないため、この指定�
 事前に `test.dll` を作っておきます。内容は以下の通りです:
 
 ```
-.function public int32 add2 a:int32 b:int32
+.function public int32(a:int32,b:int32) add2
     ldarg 0
     ldarg 1
     add
@@ -452,7 +454,7 @@ $ chibias -c test.s
 その後、以下のように、上記アセンブリの関数を呼び出します:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -466,8 +468,8 @@ $ chibias -r test.dll main.s
 関数（.NET CILメソッド）は、`C.text`という名前のクラス内に配置されます。
 そのマッピングは:
 
-* `int32 main` --> `public static int32 C.text::main()`
-* `int32 add2 a:int32 b:int32` --> `public static int32 C.text::add2(int32 a, int32 b)`
+* `int32() main` --> `public static int32 C.text::main()`
+* `int32(a:int32,b:int32) add2` --> `public static int32 C.text::add2(int32 a, int32 b)`
 
 疑似的にC#で記述すると (test.dll):
 
@@ -501,19 +503,21 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 
 ### 外部アセンブリの.NETメソッドの呼び出し
 
-.NETのメソッドを呼び出す場合は、完全なメソッド名と引数型リストを指定します:
+.NETのメソッドを呼び出す場合は、メソッドのシグネチャと完全なメソッド名を指定します:
 
 ```
-.function public void main
+.function public void() main
     ldstr "Hello world"
-    call System.Console.WriteLine string
+    call string() System.Console.WriteLine
     ret
 ```
 
 指定する.NETのメソッドは `public` でなければならず、ジェネリックパラメータを持つメソッドを指定することはできません。
-インスタンスメソッドも指定できますが、当然ながら `this` の参照が評価スタックにプッシュされる必要があります。
+インスタンスメソッドも指定できますが、メソッドシグネチャの引数に、 `this` の型は記述しません。
+当然ながら `this` の参照が評価スタックにプッシュされる必要があります。
 
-引数型リストは、メソッドのオーバーロードを特定するために使用されます。
+メソッドのシグネチャは、メソッドのオーバーロードを特定するために使用されます。
+通常、戻り値の型は検証されませんが、 `op_Implicit` 及び `op_Explicit` メソッドの場合のみ、戻り値の型も一致する事が確認されます。
 
 .NETメソッドを参照するために、コマンドラインオプション `-r` で、メソッド定義を含むアセンブリを指定する必要があります。これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
 
@@ -535,12 +539,14 @@ getterに`get_Length()`、setterに`set_Length()`というメソッド名に対�
 
 関数シグネチャとは、`calli` オペコードで指定する、呼び出し対象メソッドのシグネチャです。
 コールサイトと呼ばれる場合もあります。
-chibiasでは、関数ポインタ型と同じような構文で指定します:
+chibiasでは、関数ポインタ型と同じような構文で指定します。
+
+これらは、関数ディレクティブや、`call` や `ldftn` オプコードでメソッドのオーバーロードを特定したり、 `calli` オプコードで使用します:
 
 ```
-.function public int32 main
+.function public int32() main
     ldstr "123"
-    ldftn System.Int32.Parse string
+    ldftn int32(string) System.Int32.Parse
     calli int32(string)
     ret
 ```
@@ -553,7 +559,7 @@ chibiasでは、関数ポインタ型と同じような構文で指定します:
 ただし、関数本体定義の外側に配置します:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123
     stsfld foo
     ldsfld foo
@@ -590,7 +596,7 @@ public static class text
 グローバル変数の宣言は、初期化データを含むことが出来ます:
 
 ```
-.function public int32 bar
+.function public int32() bar
     ldsfld foo
     ret
 ; int32 foo = 0x76543210
@@ -816,7 +822,7 @@ public struct foo
 
 ```
 .file 1 "/home/kouji/Projects/test.c" c
-.function public int32 main
+.function public int32() main
     .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456
@@ -859,7 +865,7 @@ public struct foo
 
 ```
 .hidden
-.function public int32 main
+.function public int32() main
     ldc.i4 123     ; <-- シーケンスポイントは出力されない
     ldc.i4 456
     add

@@ -96,7 +96,7 @@ Let's play "Hello world" with chibias.
 You should create a new source code file `hello.s` with the contents only need 4 lines:
 
 ```
-.function public void main
+.function public void() main
     ldstr "Hello world with chibias!"
     call System.Console.WriteLine string
     ret
@@ -122,7 +122,7 @@ Linux and other operating systems can be used in the same way, by adding referen
 Also, if you assemble code that uses only built-in types (see below), you do not need references to other assemblies:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4.1
     ldc.i4.2
     add
@@ -135,6 +135,9 @@ $ ./adder.exe
 $ echo $?
 3
 ```
+
+* Note: In this example, some warnings about attributes is generated during assembly.
+  Which can be ignored.
 
 ### To run with .NET 6, .NET Core and others
 
@@ -198,7 +201,7 @@ but it should be much easier to write than ILAsm.
 ### Minimum, included only main entry point
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123    ; This is comment.
     ret
 ```
@@ -211,9 +214,8 @@ but it should be much easier to write than ILAsm.
   * The `.function` directive means the start of a function.
     It is followed by operands in the following order:
     * Scope descriptor
-    * Return type name
+    * Function signature descriptor
     * Function name
-    * Parameter type list (when required)
   * The function body continues until the next function directive appears.
 
 Scope descriptors are common in other declarations.
@@ -229,12 +231,12 @@ Scope descriptors are common in other declarations.
 
 The signature of the `main` function accepts the following variations:
 
-|Arguments|Return value|Example signature in the C language|
-|:----|:----|:----|
-|`int32, sbyte**`|`int32`|`int main(int argc, char** argv)`|
-|`int32, sbyte**`|`void`|`void main(int argc, char** argv)`|
-|`void`|`int32`|`int main(void)`|
-|`void`|`void`|`void main(void)`|
+|Function signature|Example signature in the C language|
+|:----|:----|
+|`int32(argc:int32, argv:sbyte**)`|`int main(int argc, char** argv)`|
+|`void(argc:int32, argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`int32()`|`int main(void)`|
+|`void()`|`void() main(void)`|
 
 It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
 And the destination is a non-Unicode, 8-bit string containing the terminating character.
@@ -244,7 +246,7 @@ chibias does not support entry points containing UTF-16LE wide-length strings by
 ### Literals
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123
     ldc.r8 1.234
     ldstr "abc\"def\"ghi"
@@ -263,7 +265,7 @@ chibias does not support entry points containing UTF-16LE wide-length strings by
 ### Labels
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123
     br NAME
     nop
@@ -325,7 +327,7 @@ static string foo(sbyte a, int b)
 unsafe delegate*<sbyte, int, string>
 ```
 
-It can also represent function pointer types with variable arguments marked `...`:
+It can also represent variadic function pointer types marked `...`:
 
 ```
 string(int8,int32,...)*
@@ -341,6 +343,7 @@ You can combine array/pointer/refernces.
 * `int32**`
 * `int32&`
 * `string(int32&,int8)*[42]`
+* `int(sbyte*)*(string,int8)*`
 
 A type that specifies the number of elements in an array is called a "Value array type."
 
@@ -352,7 +355,7 @@ See separate section for details.
 ### Local variables
 
 ```
-.function public int32 main
+.function public int32() main
     .local int32
     .local int32 abc
     ldc.i4 1
@@ -378,19 +381,19 @@ We can refer with variable name in operand:
 ### Call another function
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 1
     ldc.i4 2
     call add2
     ret
-.function public int32 add2 x:int32 y:int32
+.function public int32(x:int32,y:int32) add2 
     ldarg 0
     ldarg y   ; We can refer by parameter name
     add
     ret
 ```
 
-The parameters are optional. Formats are:
+The parameters for function signature are optional. Formats are:
 
 * `int32`: Only type name.
 * `x:int32`: Type name with parameter name.
@@ -404,7 +407,7 @@ In another hand, .NET overloaded methods, an parameter type list is required.
 Function accepts additional variable arguments:
 
 ```
-.function public int32 addn a1:int32
+.function public int32(a1:int32,...) addn
     .local System.ArgIterator
     ldloca.s 0
     arglist
@@ -413,7 +416,7 @@ Function accepts additional variable arguments:
     ret
 ```
 
-The use of the `arglist` opcode in the function marks to be able to accept variable arguments.
+A trailing `...` at the end of the argument list of the function signature to mark it as accepting variable arguments.
 
 However, that this variable parameter is handled differently from variable parameters (.NET array) in C#.
 chibias uses `arglist` semantics in defined CIL.
@@ -425,16 +428,17 @@ Calls to functions with variable parameters require an explicit list of paramete
 For example, calls above function `add_n` would use:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4.s 123
     ldc.r8 123.456    ; <-- Additional parameter
     ldstr "ABC"       ; <-- Additional parameter
-    call add_n int32 float64 string
+    call int32(int32,float64,string) add_n
     ret
 ```
 
-Specify all types of parameters to be passed in the function call,
-including the types corresponding to the additional parameters.
+All types of parameters to be passed in a function call, including types corresponding to additional arguments,
+are made explicit as signatures.
+
 Because chibias does not perform flow analysis to detect parameter types automatically.
 If this declaration is incorrect, calls will fail at runtime.
 
@@ -443,7 +447,7 @@ If this declaration is incorrect, calls will fail at runtime.
 Before assemble to make `test.dll`
 
 ```
-.function public int32 add2 a:int32 b:int32
+.function public int32(a:int32,b:int32) add2
     ldarg 0
     ldarg 1
     add
@@ -457,7 +461,7 @@ $ chibias -c test.s
 Then:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -471,8 +475,8 @@ $ chibias -r test.dll main.s
 The functions (.NET CIL methods) are placed into single class named `C.text`.
 That mapping is:
 
-* `int32 main` --> `public static int32 C.text::main()`
-* `int32 add2 a:int32 b:int32` --> `public static int32 C.text::add2(int32 a, int32 b)`
+* `int32() main` --> `public static int32 C.text::main()`
+* `int32(a:int32,b:int32) add2` --> `public static int32 C.text::add2(int32 a, int32 b)`
 
 Pseudo code in C# (test.dll):
 
@@ -507,19 +511,22 @@ it cannot be referenced from external assemblies and is not CABI compliant.
 
 ### Call external .NET method
 
-Simply specify a .NET method with full name and parameter types:
+Specify the method signature and full method name:
 
 ```
-.function public void main
+.function public void() main
     ldstr "Hello world"
-    call System.Console.WriteLine string
+    call string() System.Console.WriteLine
     ret
 ```
 
-The .NET method you specify must be `public`, and could not refer method with any generic parameters.
-Instance methods can also be specified, but of course `this` reference must be pushed onto the evaluation stack.
+You must specify a .NET method that is `public` scope, and you cannot specify a method with generic parameters.
+You can also specify an instance method, but the first argument of the method signature will not be of type `this`.
+Naturally, a reference to `this` must be pushed onto the evaluation stack.
 
 A list of parameter types is used to identify overloads.
+Generally, the return type is not verified,
+but the return type is also verified to match when using only for the `op_Implicit` and `op_Explicit` methods.
 
 You have to give it containing assembly on command line option `-r`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
@@ -545,10 +552,13 @@ The function signature is must be indicated by the `calli` opcode.
 Sometimes referred to as "Call sites."
 In the case of chibias, they are specified with a syntax similar to function pointer types.
 
+These are used in function directives, to identify method overloads in the `call` and `ldftn` opcodes,
+and in the `calli` opcode:
+
 ```
-.function public int32 main
+.function public int32() main
     ldstr "123"
-    ldftn System.Int32.Parse string
+    ldftn int32(string) System.Int32.Parse
     calli int32(string)
     ret
 ```
@@ -562,7 +572,7 @@ Global variable format is same as local variable format plus scope descriptor.
 However, excludes declarations outside function body:
 
 ```
-.function public int32 main
+.function public int32() main
     ldc.i4 123
     stsfld foo
     ldsfld foo
@@ -599,7 +609,7 @@ public static class text
 The global variable declares with initializing data:
 
 ```
-.function public int32 bar
+.function public int32() bar
     ldsfld foo
     ret
 ; int32 foo = 0x76543210
@@ -833,7 +843,7 @@ This information is optional and does not affect assembly task if it is not pres
 
 ```
 .file 1 "/home/kouji/Projects/test.c" c
-.function public int32 main
+.function public int32() main
     .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456
@@ -876,7 +886,7 @@ Use the `.hidden` directive to prevent subsequent code from generating sequence 
 
 ```
 .hidden
-.function public int32 main
+.function public int32() main
     ldc.i4 123     ; <-- Sequence points are not emit below.
     ldc.i4 456
     add

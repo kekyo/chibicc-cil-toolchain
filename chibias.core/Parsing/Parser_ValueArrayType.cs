@@ -10,6 +10,7 @@
 using chibias.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using System;
 using System.Globalization;
 using System.Linq;
 
@@ -34,6 +35,8 @@ partial class Parser
             "System.Double" => 8,
             _ => -1,
         };
+    private static FunctionSignatureNode defaultMemberCtorSignature =
+        TypeParser.UnsafeParse<FunctionSignatureNode>("void(string)");
 
     private TypeDefinition CreateValueArrayType(
         string valueArrayTypeNamespace,
@@ -84,22 +87,14 @@ partial class Parser
                 $"item{index}", FieldAttributes.Private, elementType);
             valueArrayType.Fields.Add(itemField);
 
-            // Special case: Force 1 byte footprint on boolean type.
-            if (elementType.FullName == "System.Boolean")
-            {
-                itemField.MarshalInfo = new(NativeType.U1);
-            }
-            else if (elementType.FullName == "System.Char")
-            {
-                itemField.MarshalInfo = new(NativeType.U2);
-            }
+            CecilUtilities.SetFieldType(itemField, elementType);
         }
 
         ///////////////////////////////
 
         if (this.TryGetMethod(
             "System.Reflection.DefaultMemberAttribute..ctor",
-            new[] { "string" },
+            defaultMemberCtorSignature,
             out var defaultMemberAttributeConstructor))
         {
             var defaultMemberCustomAttribute = new CustomAttribute(

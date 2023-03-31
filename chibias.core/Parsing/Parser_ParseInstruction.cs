@@ -77,22 +77,9 @@ partial class Parser
     /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineNone(
-        OpCode opCode, Token[] tokens)
-    {
-        if (this.FetchOperands(tokens, 0) is { })
-        {
-            if (opCode.Code == Code.Arglist)
-            {
-                // Marked variadic function.
-                this.method!.CallingConvention = MethodCallingConvention.VarArg;
-            }
-            return Instruction.Create(opCode);
-        }
-        else
-        {
-            return null;
-        }
-    }
+        OpCode opCode, Token[] tokens) =>
+        this.FetchOperands(tokens, 0) is { } ?
+            Instruction.Create(opCode) : null;
 
     /////////////////////////////////////////////////////////////////////
 
@@ -226,7 +213,7 @@ partial class Parser
 
         var capturedLocation =
             this.GetCurrentLocation(targetLabelNameToken);
-        this.delayedLookupBranchTargetActions.Add(() =>
+        this.delayedLookupBranchTargetActions.Enqueue(() =>
         {
             if (this.labelTargets.TryGetValue(targetLabelName, out var targetInstruction))
             {
@@ -315,27 +302,58 @@ partial class Parser
                 $"Missing operand.");
             return null;
         }
-
-        var functionNameToken = tokens[1];
-        var functionName = functionNameToken.Text;
-        var functionParameterTypeNames =
-            tokens.Skip(2).Select(token => token.Text).ToArray();
-
-        Instruction instruction = null!;
-        if (!this.TryGetMethod(
-            functionName, functionParameterTypeNames, out var method))
+        if (tokens.Length >= 4)
         {
-            method = this.CreateDummyMethod();
+            this.OutputError(
+                this.GetCurrentLocation(tokens[3]),
+                $"Too many operands.");
+            return null;
+        }
+
+        var functionNameToken = tokens.Last();
+        var functionName = functionNameToken.Text;
+
+        var instruction = Instruction.Create(
+            opCode, this.CreateDummyMethod());
+
+        if (tokens.Length == 3)
+        {
+            var functionSignatureToken = tokens[1];
+            var functionSignature = functionSignatureToken.Text;
+
+            if (!TypeParser.TryParse(functionSignature, out var rootTypeNode))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature {functionSignature}");
+                return null;
+            }
+
+            if (!(rootTypeNode is FunctionSignatureNode fsn))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature: {functionSignature}");
+                return null;
+            }
 
             this.DelayLookingUpMethod(
-                functionName,
-                functionParameterTypeNames,
-                this.GetCurrentLocation(functionNameToken, tokens.Last()),
+                functionNameToken,
+                fsn,
+                functionSignatureToken,
+                LookupTargets.All,
+                method => instruction.Operand = method);
+        }
+        else
+        {
+            this.DelayLookingUpMethod(
+                functionNameToken,
+                null,
+                functionNameToken,
                 LookupTargets.All,
                 method => instruction.Operand = method);
         }
 
-        instruction = Instruction.Create(opCode, method);
         return instruction;
     }
 
@@ -349,21 +367,15 @@ partial class Parser
             return null;
         }
 
-        var fieldName = fieldNameToken.Text;
+        var instruction = Instruction.Create(
+            opCode, this.CreateDummyField());
 
-        Instruction instruction = null!;
-        if (!this.TryGetField(fieldName, out var field))
-        {
-            field = this.CreateDummyField();
+        this.DelayLookingUpField(
+            fieldNameToken,
+            fieldNameToken,
+            LookupTargets.All,
+            field => instruction.Operand = field);
 
-            this.DelayLookingUpField(
-                fieldName,
-                this.GetCurrentLocation(fieldNameToken, fieldNameToken),
-                LookupTargets.All,
-                field => instruction.Operand = field);
-        }
-
-        instruction = Instruction.Create(opCode, field);
         return instruction;
     }
 
@@ -377,21 +389,15 @@ partial class Parser
             return null;
         }
 
-        var typeName = typeNameToken.Text;
+        var instruction = Instruction.Create(
+            opCode, this.CreateDummyType());
 
-        Instruction instruction = null!;
-        if (!this.TryGetType(typeName, out var type))
-        {
-            type = this.CreateDummyType();
+        this.DelayLookingUpType(
+            typeNameToken,
+            typeNameToken,
+            LookupTargets.All,
+            type => instruction.Operand = type);
 
-            this.DelayLookingUpType(
-                typeName,
-                this.GetCurrentLocation(typeNameToken, typeNameToken),
-                LookupTargets.All,
-                type => instruction.Operand = type);
-        }
-
-        instruction = Instruction.Create(opCode, type);
         return instruction;
     }
 
@@ -407,43 +413,58 @@ partial class Parser
                 $"Missing operand.");
             return null;
         }
-
-        var memberNameToken = tokens[1];
-        var memberName = memberNameToken.Text;
-        var functionParameterTypeNames =
-            tokens.Skip(2).Select(token => token.Text).ToArray();
-
-        Instruction instruction = null!;
-        if (!TryGetMember(
-            memberName,
-            functionParameterTypeNames,
-            out var member,
-            LookupTargets.All))
+        if (tokens.Length >= 4)
         {
-            member = this.CreateDummyField();
-
-            var capturedLocation = this.GetCurrentLocation(
-                memberNameToken, tokens.Last());
-            this.delayedLookupLocalMemberActions.Add(() =>
-            {
-                if (TryGetMember(
-                    memberName,
-                    functionParameterTypeNames,
-                    out member,
-                    LookupTargets.All))
-                {
-                    instruction.Operand = member;
-                }
-                else
-                {
-                    this.OutputError(
-                        capturedLocation,
-                        $"Could not find member: {memberName}");
-                }
-            });
+            this.OutputError(
+                this.GetCurrentLocation(tokens[3]),
+                $"Too many operands.");
+            return null;
         }
 
-        instruction = CecilUtilities.CreateInstruction(opCode, member);
+        var memberNameToken = tokens.Last();
+        var memberName = memberNameToken.Text;
+
+        var instruction = CecilUtilities.CreateInstruction(
+            opCode, this.CreateDummyField());
+
+        if (tokens.Length == 3)
+        {
+            var functionSignatureToken = tokens[1];
+            var functionSignature = functionSignatureToken.Text;
+
+            if (!TypeParser.TryParse(functionSignature, out var rootTypeNode))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature {functionSignature}");
+                return null;
+            }
+
+            if (!(rootTypeNode is FunctionSignatureNode fsn))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature: {functionSignature}");
+                return null;
+            }
+
+            this.DelayLookingUpMember(
+                memberNameToken,
+                fsn,
+                functionSignatureToken,
+                LookupTargets.All,
+                method => instruction.Operand = method);
+        }
+        else
+        {
+            this.DelayLookingUpMember(
+                memberNameToken,
+                null,
+                memberNameToken,
+                LookupTargets.All,
+                method => instruction.Operand = method);
+        }
+
         return instruction;
     }
 
@@ -482,41 +503,25 @@ partial class Parser
             ExplicitThis = false,
         };
 
-        var capturedFileScopedType = this.fileScopedType;
-        this.delayedLookupLocalMemberActions.Add(() =>
+        this.DelayLookingUpType(
+            fsn.ReturnType,
+            functionSignatureToken,
+            LookupTargets.All,
+            type => callSite.ReturnType = type);
+
+        foreach (var (parameterTypeNode, parameterName) in fsn.Parameters)
         {
-            if (!this.TryConstructTypeFromNode(
-                fsn.ReturnType,
-                out var returnType,
-                capturedFileScopedType,
-                LookupTargets.All))
-            {
-                this.OutputError(
-                    this.GetCurrentLocation(functionSignatureToken),
-                    $"Could not find return type: {functionSignature}");
-                return;
-            }
+            var parameter = new ParameterDefinition(
+                this.CreateDummyType());
+            parameter.Name = parameterName;   // Not sure if that makes sense.
+            callSite.Parameters.Add(parameter);
 
-            callSite.ReturnType = returnType;
-
-            foreach (var parameterNode in fsn.ParameterTypes)
-            {
-                if (this.TryConstructTypeFromNode(
-                    parameterNode,
-                    out var parameterType,
-                    capturedFileScopedType,
-                    LookupTargets.All))
-                {
-                    callSite.Parameters.Add(new(parameterType));
-                }
-                else
-                {
-                    this.OutputError(
-                        this.GetCurrentLocation(functionSignatureToken),
-                        $"Could not find parameter type: {functionSignature}");
-                }
-            }
-        });
+            this.DelayLookingUpType(
+                parameterTypeNode,
+                functionSignatureToken,
+                LookupTargets.All,
+                type => parameter.ParameterType = type);
+        }
 
         return Instruction.Create(opCode, callSite);
     }

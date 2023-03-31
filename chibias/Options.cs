@@ -122,10 +122,14 @@ internal sealed class Options
                                     case '0':
                                         options.AssemblerOptions.Options &=
                                             ~AssembleOptions.ApplyOptimization;
+                                        options.AssemblerOptions.Options |=
+                                            AssembleOptions.DisableJITOptimization;
                                         continue;
                                     case '1':
                                         options.AssemblerOptions.Options |=
                                             AssembleOptions.ApplyOptimization;
+                                        options.AssemblerOptions.Options &=
+                                            ~AssembleOptions.DisableJITOptimization;
                                         continue;
                                 }
                             }
@@ -133,6 +137,8 @@ internal sealed class Options
                             {
                                 options.AssemblerOptions.Options |=
                                     AssembleOptions.ApplyOptimization;
+                                options.AssemblerOptions.Options &=
+                                    ~AssembleOptions.DisableJITOptimization;
                                 continue;
                             }
                             break;

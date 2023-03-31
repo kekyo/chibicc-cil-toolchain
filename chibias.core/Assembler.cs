@@ -103,15 +103,33 @@ public sealed class Assembler
 #endif
             ;
 
+        static IEnumerable<TypeDefinition> IterateTypesDescendants(TypeDefinition type)
+        {
+            yield return type;
+            foreach (var nestedType in type.NestedTypes)
+            {
+                if (nestedType.IsNestedPublic &&
+                    (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
+                    type.GenericParameters.Count == 0)
+                {
+                    foreach (var childType in IterateTypesDescendants(nestedType))
+                    {
+                        yield return childType;
+                    }
+                }
+            }
+        }
+
         var types = assemblies.
             SelectMany(assembly => assembly.Modules).
             SelectMany(module => module.Types).
-            Distinct(TypeDefinitionComparer.Instance).
-            Collect(type => type?.Resolve()).
             Where(type =>
                 type.IsPublic &&
                 (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
-                type.GenericParameters.Count == 0)
+                type.GenericParameters.Count == 0).
+            SelectMany(IterateTypesDescendants).
+            Distinct(TypeDefinitionComparer.Instance).
+            Collect(type => type?.Resolve())
 #if DEBUG
             .ToArray()
 #endif
@@ -294,7 +312,8 @@ public sealed class Assembler
         if (allFinished)
         {
             allFinished = parser.Finish(
-                options.Options.HasFlag(AssembleOptions.ApplyOptimization));
+                options.Options.HasFlag(AssembleOptions.ApplyOptimization),
+                options.Options.HasFlag(AssembleOptions.DisableJITOptimization));
         }
 
         cabiSpecificSymbols.Finish();

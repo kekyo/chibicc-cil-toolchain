@@ -50,11 +50,12 @@ partial class Parser
     }
 
     private MethodReference UnsafeGetMethod(
-        string methodName, string[] parameterTypeNames)
+        string methodName,
+        FunctionSignatureNode? functionSignature)
     {
         if (!this.TryGetMethod(
             methodName,
-            parameterTypeNames,
+            functionSignature,
             out var method,
             null,
             LookupTargets.All))
@@ -141,125 +142,19 @@ partial class Parser
         return false;
     }
 
-    private bool TryConstructTypeFromNode(
+    private bool TryGetType(
         TypeNode typeNode,
         out TypeReference type,
         TypeDefinition? fileScopedType,
         LookupTargets lookupTargets)
     {
-        switch (typeNode)
-        {
-            // Derived types (pointer and reference)
-            case DerivedTypeNode dtn:
-                switch (dtn.Type)
-                {
-                    // "System.Int32*"
-                    case DerivedTypes.Pointer:
-                        // Special case: Function pointer "System.String(System.Int32&,System.Int8)*"
-                        if (dtn.ElementType is FunctionSignatureNode fsn)
-                        {
-                            if (this.TryConstructTypeFromNode(
-                                fsn.ReturnType, out var returnType, fileScopedType, lookupTargets))
-                            {
-                                var fpt = new FunctionPointerType()
-                                {
-                                    ReturnType = returnType,
-                                    CallingConvention = fsn.CallingConvention,
-                                    HasThis = false,
-                                    ExplicitThis = false,
-                                };
+        bool TryLookupTypeByTypeName(string typeName, out TypeReference type) =>
+            this.TryLookupTypeByTypeName(typeName, out type, fileScopedType, lookupTargets);
+        TypeReference GetValueArrayType(TypeReference elementType, int length) =>
+            this.GetValueArrayType(elementType, length, fileScopedType, lookupTargets);
 
-                                foreach (var parameterNode in fsn.ParameterTypes)
-                                {
-                                    if (this.TryConstructTypeFromNode(
-                                        parameterNode, out var parameterType, fileScopedType, lookupTargets))
-                                    {
-                                        fpt.Parameters.Add(new(parameterType));
-                                    }
-                                    else
-                                    {
-                                        type = null!;
-                                        return false;
-                                    }
-                                }
-
-                                type = fpt;
-                                return true;
-                            }
-                            else
-                            {
-                                type = null!;
-                                return false;
-                            }
-                        }
-
-                        if (this.TryConstructTypeFromNode(
-                            dtn.ElementType, out var elementType, fileScopedType, lookupTargets))
-                        {
-                            type = new PointerType(elementType);
-                            return true;
-                        }
-
-                        type = null!;
-                        return false;
-
-                    // "System.Int32&"
-                    case DerivedTypes.Reference:
-                        if (this.TryConstructTypeFromNode(
-                            dtn.ElementType, out var elementType2, fileScopedType, lookupTargets))
-                        {
-                            type = new ByReferenceType(elementType2);
-                            return true;
-                        }
-
-                        type = null!;
-                        return false;
-
-                    default:
-                        throw new InvalidOperationException();
-                }
-
-            // Array types
-            case ArrayTypeNode atn:
-                if (this.TryConstructTypeFromNode(
-                    atn.ElementType, out var elementType3, fileScopedType, lookupTargets))
-                {
-                    // "System.Int32[13]"
-                    if (atn.Length is { } length)
-                    {
-                        // "System.Int32_len13"
-                        type = this.GetValueArrayType(
-                            elementType3, length, fileScopedType, lookupTargets);
-                        return true;
-                    }
-
-                    // "System.Int32[]"
-                    type = new ArrayType(elementType3);
-                    return true;
-                }
-
-                type = null!;
-                return false;
-
-            // Other types
-            case TypeIdentityNode tin:
-                return this.TryLookupTypeByTypeName(
-                    tin.Identity,
-                    out type,
-                    fileScopedType,
-                    lookupTargets);
-
-            // Function signature
-            case FunctionSignatureNode _:
-                // Invalid format:
-                //   Function signature (NOT function pointer type) cannot be attributed to .NET type.
-                type = null!;
-                return false;
-
-            default:
-                type = null!;
-                return false;
-        }
+        return TypeParser.TryConstructTypeFromNode(
+            typeNode, out type, TryLookupTypeByTypeName, GetValueArrayType);
     }
 
     private bool TryGetType(
@@ -280,22 +175,21 @@ partial class Parser
             return false;
         }
 
-        return this.TryConstructTypeFromNode(rootTypeNode, out type, fileScopedType, lookupTargets);
+        return this.TryGetType(rootTypeNode, out type, fileScopedType, lookupTargets);
     }
 
     /////////////////////////////////////////////////////////////////////
 
     private bool TryGetMethod(
         string name,
-        string[] parameterTypeNames,
+        FunctionSignatureNode? functionSignature,
         out MethodReference method,
         LookupTargets lookupTargets = LookupTargets.All) =>
-        this.TryGetMethod(
-            name, parameterTypeNames, out method, this.fileScopedType, lookupTargets);
+        this.TryGetMethod(name, functionSignature, out method, this.fileScopedType, lookupTargets);
 
     private bool TryGetMethod(
         string name,
-        string[] parameterTypeNames,
+        FunctionSignatureNode? functionSignature,
         out MethodReference method,
         TypeDefinition? fileScopedType,
         LookupTargets lookupTargets)
@@ -309,16 +203,17 @@ partial class Parser
             methodNameIndex--;
         }
 
-        var strictParameterTypeNames = parameterTypeNames.
-            Select(parameterTypeName => this.TryGetType(
-                parameterTypeName,
+        var strictParameterTypes = functionSignature?.Parameters.
+            Select(parameter => this.TryGetType(
+                parameter.ParameterType,
                 out var type,
                 fileScopedType,
                 LookupTargets.All) ?
-                    type.FullName : string.Empty).
-            ToArray();
+                    type : null!).
+            ToArray() ??
+            Utilities.Empty<TypeReference>();
 
-        if (strictParameterTypeNames.Contains(string.Empty))
+        if (strictParameterTypes.Contains(null))
         {
             method = null!;
             return false;
@@ -327,6 +222,10 @@ partial class Parser
         // CABI specific case: No need to check any parameters except variadics.
         if (methodNameIndex <= 0)
         {
+            var strictParameterTypeNames = strictParameterTypes.
+                Select(type => type.FullName).
+                ToArray();
+
             MethodReference? foundMethod = null;
             if (lookupTargets.HasFlag(LookupTargets.File) &&
                 fileScopedType?.Methods.
@@ -355,6 +254,10 @@ partial class Parser
                 return false;
             }
 
+            // Will be ignored in `functionSignature.CallingConvention`.
+            // Because we do not need strictly matching parameter counts
+            // between variadic/non-variadic function on CABI.
+
             if (foundMethod.CallingConvention != MethodCallingConvention.VarArg)
             {
                 method = foundMethod;
@@ -373,19 +276,9 @@ partial class Parser
 
             // Append sentinel parameters each parameter types.
             var first = true;
-            foreach (var parameterTypeName in
-                strictParameterTypeNames.Skip(foundMethod.Parameters.Count))
+            foreach (var parameterType in
+                strictParameterTypes.Skip(foundMethod.Parameters.Count))
             {
-                if (!this.TryGetType(
-                    parameterTypeName,
-                    out var parameterType,
-                    fileScopedType,
-                    LookupTargets.All))
-                {
-                    method = null!;
-                    return false;
-                }
-
                 if (first)
                 {
                     m5.Parameters.Add(new(parameterType.MakeSentinelType()));
@@ -409,11 +302,36 @@ partial class Parser
             return false;
         }
 
+        bool IsMatched(MethodDefinition method)
+        {
+            if (method.IsPublic && method.Name == methodName)
+            {
+                if (strictParameterTypes.Select(type => type.FullName).
+                    SequenceEqual(method.Parameters.Select(p => p.ParameterType.FullName)))
+                {
+                    // Custom cast overloads.
+                    if (method.Name == "op_Explicit" || method.Name == "op_Implicit")
+                    {
+                        if (this.TryGetType(
+                            functionSignature!.ReturnType,
+                            out var type,
+                            fileScopedType,
+                            LookupTargets.All))
+                        {
+                            return method.ReturnType.FullName == type.FullName;
+                        }
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         // Take only public method at imported.
-        if (type.Methods.FirstOrDefault(method =>
-            method.IsPublic && method.Name == methodName &&
-            strictParameterTypeNames.SequenceEqual(
-                method.Parameters.Select(p => p.ParameterType.FullName))) is { } m4)
+        if (type.Methods.FirstOrDefault(IsMatched) is { } m4)
         {
             method = this.Import(m4);
             return true;
@@ -424,12 +342,6 @@ partial class Parser
     }
 
     /////////////////////////////////////////////////////////////////////
-
-    private bool TryGetField(
-        string name,
-        out FieldReference field,
-        LookupTargets lookupTargets = LookupTargets.All) =>
-        this.TryGetField(name, out field, this.fileScopedType, lookupTargets);
 
     private bool TryGetField(
         string name,
@@ -492,14 +404,14 @@ partial class Parser
 
     private bool TryGetMember(
         string memberName,
-        string[] functionParameterTypeNames,
+        FunctionSignatureNode? functionSignature,
         out MemberReference member,
         TypeDefinition fileScopedType,
         LookupTargets lookupTargets)
     {
         if (this.TryGetMethod(
             memberName,
-            functionParameterTypeNames,
+            functionSignature,
             out var method,
             fileScopedType,
             lookupTargets))
@@ -507,7 +419,7 @@ partial class Parser
             member = method;
             return true;
         }
-        
+
         if (this.TryGetField(
             memberName,
             out var field,
@@ -517,7 +429,7 @@ partial class Parser
             member = field;
             return true;
         }
-        
+
         if (this.TryGetType(
             memberName,
             out var type,
@@ -532,64 +444,30 @@ partial class Parser
         return false;
     }
 
-    private bool TryGetMember(
-        string memberName,
-        string[] functionParameterTypeNames,
-        out MemberReference member,
-        LookupTargets lookupTargets) =>
-        this.TryGetMember(
-            memberName, functionParameterTypeNames, out member, this.fileScopedType, lookupTargets);
-
     /////////////////////////////////////////////////////////////////////
 
     private void DelayLookingUpType(
-        string typeName,
         Token typeNameToken,
+        Token declarationToken,
         LookupTargets lookupTargets,
         Action<TypeReference> action)
     {
-        var capturedFileScopedType = this.fileScopedType;
-        var capturedLocation = this.GetCurrentLocation(typeNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
-        {
-            if (this.TryGetType(
-                typeName,
-                out var type,
-                capturedFileScopedType,
-                lookupTargets))
-            {
-                action(type);
-            }
-            else
-            {
-                this.OutputError(
-                    capturedLocation,
-                    $"Could not find type: {typeName}");
-            }
-        });
-    }
-
-    private void DelayLookingUpType(
-        Token typeNameToken,
-        LookupTargets lookupTargets,
-        Action<TypeReference> action) =>
-        this.DelayLookingUpType(
+        if (this.TryGetType(
             typeNameToken.Text,
-            typeNameToken,
-            lookupTargets,
-            action);
+            out var type,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(type);
+            return;
+        }
 
-    private void DelayLookingUpType(
-        string typeName,
-        Location location,
-        LookupTargets lookupTargets,
-        Action<TypeReference> action)
-    {
         var capturedFileScopedType = this.fileScopedType;
-        this.delayedLookupLocalMemberActions.Add(() =>
+        var capturedLocation = this.GetCurrentLocation(declarationToken);
+        this.delayedLookupTypeActions.Enqueue(() =>
         {
             if (this.TryGetType(
-                typeName,
+            typeNameToken.Text,
                 out var type,
                 capturedFileScopedType,
                 lookupTargets))
@@ -599,8 +477,45 @@ partial class Parser
             else
             {
                 this.OutputError(
-                    location,
-                    $"Could not find type: {typeName}");
+                    capturedLocation,
+                    $"Could not find type: {typeNameToken.Text}");
+            }
+        });
+    }
+
+    private void DelayLookingUpType(
+        TypeNode typeNode,
+        Token declarationToken,
+        LookupTargets lookupTargets,
+        Action<TypeReference> action)
+    {
+        if (this.TryGetType(
+            typeNode,
+            out var type,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(type);
+            return;
+        }
+
+        var capturedFileScopedType = this.fileScopedType;
+        var capturedLocation = this.GetCurrentLocation(declarationToken);
+        this.delayedLookupTypeActions.Enqueue(() =>
+        {
+            if (this.TryGetType(
+                typeNode,
+                out var type,
+                capturedFileScopedType,
+                lookupTargets))
+            {
+                action(type);
+            }
+            else
+            {
+                this.OutputError(
+                    capturedLocation,
+                    $"Could not find type: {typeNode}");
             }
         });
     }
@@ -608,40 +523,24 @@ partial class Parser
     /////////////////////////////////////////////////////////////////////
 
     private void DelayLookingUpField(
-        string fieldName,
         Token fieldNameToken,
+        Token declarationToken,
         LookupTargets lookupTargets,
         Action<FieldReference> action)
     {
-        var capturedFileScopedType = this.fileScopedType;
-        var capturedLocation = this.GetCurrentLocation(fieldNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        if (this.TryGetField(
+            fieldNameToken.Text,
+            out var field,
+            this.fileScopedType,
+            lookupTargets))
         {
-            if (this.TryGetField(
-                fieldName,
-                out var field,
-                capturedFileScopedType,
-                lookupTargets))
-            {
-                action(field);
-            }
-            else
-            {
-                this.OutputError(
-                    capturedLocation,
-                    $"Could not find field: {fieldName}");
-            }
-        });
-    }
+            action(field);
+            return;
+        }
 
-    private void DelayLookingUpField(
-        Token fieldNameToken,
-        LookupTargets lookupTargets,
-        Action<FieldReference> action)
-    {
         var capturedFileScopedType = this.fileScopedType;
-        var capturedLocation = this.GetCurrentLocation(fieldNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        var capturedLocation = this.GetCurrentLocation(declarationToken);
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetField(
                 fieldNameToken.Text,
@@ -660,47 +559,33 @@ partial class Parser
         });
     }
 
-    private void DelayLookingUpField(
-        string fieldName,
-        Location location,
-        LookupTargets lookupTargets,
-        Action<FieldReference> action)
-    {
-        var capturedFileScopedType = this.fileScopedType;
-        delayedLookupLocalMemberActions.Add(() =>
-        {
-            if (this.TryGetField(
-                fieldName,
-                out var field,
-                capturedFileScopedType,
-                lookupTargets))
-            {
-                action(field);
-            }
-            else
-            {
-                this.OutputError(
-                    location,
-                    $"Could not find field: {fieldName}");
-            }
-        });
-    }
-
     /////////////////////////////////////////////////////////////////////
 
     private void DelayLookingUpMethod(
         Token methodNameToken,
-        string[] parameterTypeNames,
+        FunctionSignatureNode? functionSignature,
+        Token declarationToken,
         LookupTargets lookupTargets,
         Action<MethodReference> action)
     {
+        if (this.TryGetMethod(
+            methodNameToken.Text,
+            functionSignature,
+            out var method,
+            this.fileScopedType,
+            lookupTargets))
+        {
+            action(method);
+            return;
+        }
+
         var capturedFileScopedType = this.fileScopedType;
-        var capturedLocation = this.GetCurrentLocation(methodNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        var capturedLocation = this.GetCurrentLocation(declarationToken);
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetMethod(
                 methodNameToken.Text,
-                parameterTypeNames,
+                functionSignature,
                 out var method,
                 capturedFileScopedType,
                 lookupTargets))
@@ -716,78 +601,33 @@ partial class Parser
         });
     }
 
-    private void DelayLookingUpMethod(
-        string methodName,
-        string[] parameterTypeNames,
-        Location location,
-        LookupTargets lookupTargets,
-        Action<MethodReference> action)
-    {
-        var capturedFileScopedType = this.fileScopedType;
-        this.delayedLookupLocalMemberActions.Add(() =>
-        {
-            if (this.TryGetMethod(
-                methodName,
-                parameterTypeNames,
-                out var method,
-                capturedFileScopedType,
-                lookupTargets))
-            {
-                action(method);
-            }
-            else
-            {
-                this.OutputError(
-                    location,
-                    $"Could not find method: {methodName}");
-            }
-        });
-    }
-
     /////////////////////////////////////////////////////////////////////
 
     private void DelayLookingUpMember(
-        string memberName,
         Token memberNameToken,
-        string[] parameterTypeNames,
+        FunctionSignatureNode? functionSignature,
+        Token declarationToken,
         LookupTargets lookupTargets,
         Action<MemberReference> action)
     {
-        var capturedFileScopedType = this.fileScopedType;
-        var capturedLocation = this.GetCurrentLocation(memberNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        if (this.TryGetMember(
+            memberNameToken.Text,
+            functionSignature,
+            out var member,
+            this.fileScopedType,
+            lookupTargets))
         {
-            if (this.TryGetMember(
-                memberName,
-                parameterTypeNames,
-                out var member,
-                capturedFileScopedType,
-                lookupTargets))
-            {
-                action(member);
-            }
-            else
-            {
-                this.OutputError(
-                    capturedLocation,
-                    $"Could not find member: {memberName}");
-            }
-        });
-    }
+            action(member);
+            return;
+        }
 
-    private void DelayLookingUpMember(
-        Token memberNameToken,
-        string[] parameterTypeNames,
-        LookupTargets lookupTargets,
-        Action<MemberReference> action)
-    {
         var capturedFileScopedType = this.fileScopedType;
-        var capturedLocation = this.GetCurrentLocation(memberNameToken);
-        this.delayedLookupLocalMemberActions.Add(() =>
+        var capturedLocation = this.GetCurrentLocation(declarationToken);
+        this.delayedLookupLocalMemberActions.Enqueue(() =>
         {
             if (this.TryGetMember(
                 memberNameToken.Text,
-                parameterTypeNames,
+                functionSignature,
                 out var member,
                 capturedFileScopedType,
                 lookupTargets))
