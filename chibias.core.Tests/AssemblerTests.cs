@@ -339,11 +339,11 @@ public sealed partial class AssemblerTests
     public Task VariableArgumentsFunction()
     {
         var actual = Run(@"
-            .function internal void() foo
+            .function internal void(...) foo
                 .local System.ArgIterator
                 ldloca.s 0
                 arglist
-                call System.ArgIterator..ctor System.RuntimeArgumentHandle
+                call void(System.RuntimeArgumentHandle) System.ArgIterator..ctor
                 ret");
         return Verify(actual);
     }
@@ -1043,7 +1043,10 @@ public sealed partial class AssemblerTests
                 ldc.r8 123.456
                 ldstr ""ABC""
                 ldc.i4.1
-                call va int32 int64 float64 string bool
+                call int32(int32,int64,float64,string,bool) va 
+                ret
+            .function file int32(int32,int64,float64,...) va
+                ldc.i4.s 123
                 ret");
         return Verify(actual);
     }
@@ -1408,7 +1411,7 @@ public sealed partial class AssemblerTests
                 .local System.ArgIterator
                 ldloca.s 0
                 arglist
-                call System.ArgIterator..ctor System.RuntimeArgumentHandle
+                call void(System.RuntimeArgumentHandle) System.ArgIterator..ctor
                 ldstr ""ABC""
                 ret");
         return Verify(actual);
@@ -1419,13 +1422,13 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .function public string(int32,int8&,...)*() foo
-                ldftn bar int32 int8&
+                ldftn string(int32,int8&) bar
                 ret
             .function file string(a:int32,b:int8&,...) bar
                 .local System.ArgIterator
                 ldloca.s 0
                 arglist
-                call System.ArgIterator..ctor System.RuntimeArgumentHandle
+                call void(System.RuntimeArgumentHandle) System.ArgIterator..ctor
                 ldstr ""ABC""
                 ret");
         return Verify(actual);
@@ -1439,7 +1442,7 @@ public sealed partial class AssemblerTests
         var actual = Run(@"
             .function public void() main
                 ldstr ""Hello world""
-                call System.Console.WriteLine string
+                call void(string) System.Console.WriteLine
                 ret",
             AssemblyTypes.Exe,
             new[] { typeof(System.Console).Assembly.Location });
@@ -1454,7 +1457,7 @@ public sealed partial class AssemblerTests
                 ldc.i4.1
                 box int32
                 ldc.i4.3
-                call System.Runtime.InteropServices.GCHandle.Alloc object System.Runtime.InteropServices.GCHandleType
+                call System.Runtime.InteropServices.GCHandle(object,System.Runtime.InteropServices.GCHandleType) System.Runtime.InteropServices.GCHandle.Alloc
                 pop
                 ret",
             AssemblyTypes.Exe,
@@ -1542,7 +1545,7 @@ public sealed partial class AssemblerTests
     {
         var actual = Run(@"
             .function public intptr() foo
-                ldtoken System.Int32.Parse string
+                ldtoken int32(string) System.Int32.Parse
                 conv.i
                 ret");
         return Verify(actual);
@@ -1567,7 +1570,7 @@ public sealed partial class AssemblerTests
         var actual = Run(@"
             .function public int32() main
                 ldstr ""123""
-                ldftn System.Int32.Parse string
+                ldftn int32(string) System.Int32.Parse
                 calli int32(string)
                 ret");
         return Verify(actual);

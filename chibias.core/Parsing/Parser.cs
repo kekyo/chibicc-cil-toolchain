@@ -114,7 +114,9 @@ internal sealed partial class Parser
         this.systemEnumType = new(() =>
             this.UnsafeGetType("System.Enum"));
         this.indexOutOfRangeCtor = new(() =>
-            this.UnsafeGetMethod("System.IndexOutOfRangeException..ctor", new string[0]));
+            this.UnsafeGetMethod(
+                "System.IndexOutOfRangeException..ctor",
+                TypeParser.UnsafeParse<FunctionSignatureNode>("void()")));
 
         this.cabiTextType = new TypeDefinition(
             "C",
@@ -489,7 +491,10 @@ internal sealed partial class Parser
                     // Fire delayed actions.
                     this.FireDelayedActions();
 
-                    this.logger.Information($"Injected startup code.");
+                    if (!this.caughtError)
+                    {
+                        this.logger.Information($"Injected startup code.");
+                    }
                 }
                 else
                 {
@@ -517,7 +522,7 @@ internal sealed partial class Parser
             // Apply TFA if could be imported.
             if (this.TryGetMethod(
                 "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
-                new[] { "System.String" },
+                TypeParser.UnsafeParse<FunctionSignatureNode>("void(string)"),
                 out var tfactor))
             {
                 var tfa = new CustomAttribute(tfactor);
@@ -537,7 +542,7 @@ internal sealed partial class Parser
             {
                 if (this.TryGetMethod(
                     "System.Diagnostics.DebuggableAttribute..ctor",
-                    new[] { "System.Diagnostics.DebuggableAttribute.DebuggingModes" },
+                    TypeParser.UnsafeParse<FunctionSignatureNode>("void(System.Diagnostics.DebuggableAttribute.DebuggingModes)"),
                     out var dactor) &&
                     this.TryGetType(
                         "System.Diagnostics.DebuggableAttribute.DebuggingModes",

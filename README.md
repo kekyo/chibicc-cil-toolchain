@@ -327,7 +327,7 @@ static string foo(sbyte a, int b)
 unsafe delegate*<sbyte, int, string>
 ```
 
-It can also represent function pointer types with variable arguments marked `...`:
+It can also represent variadic function pointer types marked `...`:
 
 ```
 string(int8,int32,...)*
@@ -407,7 +407,7 @@ In another hand, .NET overloaded methods, an parameter type list is required.
 Function accepts additional variable arguments:
 
 ```
-.function public int32(a1:int32) addn
+.function public int32(a1:int32,...) addn
     .local System.ArgIterator
     ldloca.s 0
     arglist
@@ -416,7 +416,7 @@ Function accepts additional variable arguments:
     ret
 ```
 
-The use of the `arglist` opcode in the function marks to be able to accept variable arguments.
+A trailing `...` at the end of the argument list of the function signature to mark it as accepting variable arguments.
 
 However, that this variable parameter is handled differently from variable parameters (.NET array) in C#.
 chibias uses `arglist` semantics in defined CIL.
@@ -432,12 +432,13 @@ For example, calls above function `add_n` would use:
     ldc.i4.s 123
     ldc.r8 123.456    ; <-- Additional parameter
     ldstr "ABC"       ; <-- Additional parameter
-    call add_n int32 float64 string
+    call int32(int32,float64,string) add_n
     ret
 ```
 
-Specify all types of parameters to be passed in the function call,
-including the types corresponding to the additional parameters.
+All types of parameters to be passed in a function call, including types corresponding to additional arguments,
+are made explicit as signatures.
+
 Because chibias does not perform flow analysis to detect parameter types automatically.
 If this declaration is incorrect, calls will fail at runtime.
 
@@ -510,17 +511,18 @@ it cannot be referenced from external assemblies and is not CABI compliant.
 
 ### Call external .NET method
 
-Simply specify a .NET method with full name and parameter types:
+Specify the method signature and full method name:
 
 ```
 .function public void() main
     ldstr "Hello world"
-    call System.Console.WriteLine string
+    call string() System.Console.WriteLine
     ret
 ```
 
-The .NET method you specify must be `public`, and could not refer method with any generic parameters.
-Instance methods can also be specified, but of course `this` reference must be pushed onto the evaluation stack.
+You must specify a .NET method that is `public` scope, and you cannot specify a method with generic parameters.
+You can also specify an instance method, but the first argument of the method signature will not be of type `this`.
+Naturally, a reference to `this` must be pushed onto the evaluation stack.
 
 A list of parameter types is used to identify overloads.
 
@@ -548,10 +550,13 @@ The function signature is must be indicated by the `calli` opcode.
 Sometimes referred to as "Call sites."
 In the case of chibias, they are specified with a syntax similar to function pointer types.
 
+These are used in function directives, to identify method overloads in the `call` and `ldftn` opcodes,
+and in the `calli` opcode:
+
 ```
 .function public int32() main
     ldstr "123"
-    ldftn System.Int32.Parse string
+    ldftn int32(string) System.Int32.Parse
     calli int32(string)
     ret
 ```

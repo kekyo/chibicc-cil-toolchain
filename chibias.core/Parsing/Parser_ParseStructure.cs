@@ -186,21 +186,9 @@ partial class Parser
 
         this.DelayLookingUpType(
             memberTypeNameToken,
+            memberTypeNameToken,
             LookupTargets.All,
-            type =>
-            {
-                field.FieldType = type;
-
-                // Special case: Force 1 byte footprint on boolean type.
-                if (type.FullName == "System.Boolean")
-                {
-                    field.MarshalInfo = new(NativeType.U1);
-                }
-                else if (type.FullName == "System.Char")
-                {
-                    field.MarshalInfo = new(NativeType.U2);
-                }
-            });
+            type => CecilUtilities.SetFieldType(field, type));
 
         this.structureType!.Fields.Add(field);
     }

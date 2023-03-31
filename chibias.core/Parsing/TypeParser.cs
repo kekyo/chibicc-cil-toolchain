@@ -9,6 +9,7 @@
 
 using chibias.Internal;
 using Mono.Cecil;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,11 +17,11 @@ using System.Text;
 
 namespace chibias.Parsing;
 
-internal abstract class TypeNode
+public abstract class TypeNode
 {
 }
 
-internal sealed class TypeIdentityNode : TypeNode
+public sealed class TypeIdentityNode : TypeNode
 {
     public readonly string Identity;
 
@@ -36,13 +37,13 @@ internal sealed class TypeIdentityNode : TypeNode
         identity = this.Identity;
 }
 
-internal enum DerivedTypes
+public enum DerivedTypes
 {
     Pointer,
     Reference,
 }
 
-internal sealed class DerivedTypeNode : TypeNode
+public sealed class DerivedTypeNode : TypeNode
 {
     public readonly DerivedTypes Type;
     public readonly TypeNode ElementType;
@@ -70,7 +71,7 @@ internal sealed class DerivedTypeNode : TypeNode
     }
 }
 
-internal sealed class ArrayTypeNode : TypeNode
+public sealed class ArrayTypeNode : TypeNode
 {
     public readonly TypeNode ElementType;
     public readonly int? Length;
@@ -97,7 +98,7 @@ internal sealed class ArrayTypeNode : TypeNode
     }
 }
 
-internal sealed class FunctionParameter
+public sealed class FunctionParameter
 {
     public readonly TypeNode ParameterType;
     public readonly string? ParameterName;
@@ -122,7 +123,7 @@ internal sealed class FunctionParameter
     }
 }
 
-internal sealed class FunctionSignatureNode : TypeNode
+public sealed class FunctionSignatureNode : TypeNode
 {
     public readonly TypeNode ReturnType;
     public readonly FunctionParameter[] Parameters;
@@ -151,7 +152,7 @@ internal sealed class FunctionSignatureNode : TypeNode
     }
 }
 
-internal static class TypeParser
+public static class TypeParser
 {
     private readonly struct OuterNode
     {
@@ -170,6 +171,8 @@ internal static class TypeParser
             name = this.Name;
         }
     }
+
+    ///////////////////////////////////////////////////////////////////////////
 
     public static bool TryParse(string typeName, out TypeNode typeNode)
     {
@@ -383,6 +386,138 @@ internal static class TypeParser
         {
             typeNode = null!;
             return false;
+        }
+    }
+
+    public static T UnsafeParse<T>(string typeName)
+        where T : TypeNode =>
+        TryParse(typeName, out var typeNode) && typeNode is T node ?
+            node : throw new ArgumentException();
+
+    ///////////////////////////////////////////////////////////////////////////
+
+    public delegate bool TryLookupTypeByTypeNameDelegate(
+        string typeName, out TypeReference type);
+
+    public delegate TypeReference GetValueArrayTypeDelegate(
+        TypeReference elementType, int length);
+
+    public static bool TryConstructTypeFromNode(
+        TypeNode typeNode,
+        out TypeReference type,
+        TryLookupTypeByTypeNameDelegate tryLookupTypeByTypeName,
+        GetValueArrayTypeDelegate getValueArrayType)
+    {
+        switch (typeNode)
+        {
+            // Derived types (pointer and reference)
+            case DerivedTypeNode dtn:
+                switch (dtn.Type)
+                {
+                    // "System.Int32*"
+                    case DerivedTypes.Pointer:
+                        // Special case: Function pointer "System.String(System.Int32&,System.Int8)*"
+                        if (dtn.ElementType is FunctionSignatureNode fsn)
+                        {
+                            if (TryConstructTypeFromNode(
+                                fsn.ReturnType, out var returnType, tryLookupTypeByTypeName, getValueArrayType))
+                            {
+                                var fpt = new FunctionPointerType()
+                                {
+                                    ReturnType = returnType,
+                                    CallingConvention = fsn.CallingConvention,
+                                    HasThis = false,
+                                    ExplicitThis = false,
+                                };
+
+                                foreach (var (parameterNode, _) in fsn.Parameters)
+                                {
+                                    if (TryConstructTypeFromNode(
+                                        parameterNode, out var parameterType, tryLookupTypeByTypeName, getValueArrayType))
+                                    {
+                                        fpt.Parameters.Add(new(parameterType));
+                                    }
+                                    else
+                                    {
+                                        type = null!;
+                                        return false;
+                                    }
+                                }
+
+                                type = fpt;
+                                return true;
+                            }
+                            else
+                            {
+                                type = null!;
+                                return false;
+                            }
+                        }
+
+                        if (TryConstructTypeFromNode(
+                            dtn.ElementType, out var elementType, tryLookupTypeByTypeName, getValueArrayType))
+                        {
+                            type = new PointerType(elementType);
+                            return true;
+                        }
+
+                        type = null!;
+                        return false;
+
+                    // "System.Int32&"
+                    case DerivedTypes.Reference:
+                        if (TryConstructTypeFromNode(
+                            dtn.ElementType, out var elementType2, tryLookupTypeByTypeName, getValueArrayType))
+                        {
+                            type = new ByReferenceType(elementType2);
+                            return true;
+                        }
+
+                        type = null!;
+                        return false;
+
+                    default:
+                        throw new InvalidOperationException();
+                }
+
+            // Array types
+            case ArrayTypeNode atn:
+                if (TryConstructTypeFromNode(
+                    atn.ElementType, out var elementType3, tryLookupTypeByTypeName, getValueArrayType))
+                {
+                    // "System.Int32[13]"
+                    if (atn.Length is { } length)
+                    {
+                        // "System.Int32_len13"
+                        type = getValueArrayType(
+                            elementType3, length);
+                        return true;
+                    }
+
+                    // "System.Int32[]"
+                    type = new ArrayType(elementType3);
+                    return true;
+                }
+
+                type = null!;
+                return false;
+
+            // Other types
+            case TypeIdentityNode tin:
+                return tryLookupTypeByTypeName(
+                    tin.Identity,
+                    out type);
+
+            // Function signature
+            case FunctionSignatureNode _:
+                // Invalid format:
+                //   Function signature (NOT function pointer type) cannot be attributed to .NET type.
+                type = null!;
+                return false;
+
+            default:
+                type = null!;
+                return false;
         }
     }
 }

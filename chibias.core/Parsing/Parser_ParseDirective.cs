@@ -265,21 +265,9 @@ partial class Parser
         }
 
         var globalTypeNameToken = tokens[2];
-        var globalTypeName = globalTypeNameToken.Text;
         var globalName = tokens[3].Text;
 
-        FieldDefinition field = null!;
-        if (!this.TryGetType(globalTypeName, out var globalType))
-        {
-            globalType = this.CreateDummyType();
-
-            this.DelayLookingUpType(
-                globalTypeNameToken,
-                LookupTargets.All,
-                type => field.FieldType = type);   // (captured)
-        }
-
-        field = new FieldDefinition(
+        var field = new FieldDefinition(
             globalName,
             scopeDescriptor switch
             {
@@ -287,13 +275,19 @@ partial class Parser
                 ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static,
                 _ => FieldAttributes.Assembly | FieldAttributes.Static,
             },
-            globalType);
+            this.CreateDummyType());
 
         if (data != null)
         {
             field.InitialValue = data;
             field.IsInitOnly = true;
         }
+
+        this.DelayLookingUpType(
+            globalTypeNameToken,
+            globalTypeNameToken,
+            LookupTargets.All,
+            type => CecilUtilities.SetFieldType(field, type));
 
         switch (scopeDescriptor)
         {
@@ -336,20 +330,17 @@ partial class Parser
             return;
         }
 
-        var localTypeName = tokens[1].Text;
+        var localTypeNameToken = tokens[1];
 
-        VariableDefinition variable = null!;
-        if (!this.TryGetType(localTypeName, out var localType))
-        {
-            localType = this.CreateDummyType();
+        var variable = new VariableDefinition(
+            this.CreateDummyType());
 
-            this.DelayLookingUpType(
-                tokens[1],
-                LookupTargets.All,
-                type => variable.VariableType = type);   // (captured)
-        }
+        this.DelayLookingUpType(
+            localTypeNameToken,
+            localTypeNameToken,
+            LookupTargets.All,
+            type => variable.VariableType = type);
 
-        variable = new VariableDefinition(localType);
         this.body!.Variables.Add(variable);
 
         if (tokens.Length == 3)

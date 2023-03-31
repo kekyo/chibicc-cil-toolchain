@@ -77,22 +77,9 @@ partial class Parser
     /////////////////////////////////////////////////////////////////////
 
     private Instruction? ParseInlineNone(
-        OpCode opCode, Token[] tokens)
-    {
-        if (this.FetchOperands(tokens, 0) is { })
-        {
-            if (opCode.Code == Code.Arglist)
-            {
-                // Marked variadic function.
-                this.method!.CallingConvention = MethodCallingConvention.VarArg;
-            }
-            return Instruction.Create(opCode);
-        }
-        else
-        {
-            return null;
-        }
-    }
+        OpCode opCode, Token[] tokens) =>
+        this.FetchOperands(tokens, 0) is { } ?
+            Instruction.Create(opCode) : null;
 
     /////////////////////////////////////////////////////////////////////
 
@@ -315,21 +302,57 @@ partial class Parser
                 $"Missing operand.");
             return null;
         }
+        if (tokens.Length >= 4)
+        {
+            this.OutputError(
+                this.GetCurrentLocation(tokens[3]),
+                $"Too many operands.");
+            return null;
+        }
 
-        var functionNameToken = tokens[1];
+        var functionNameToken = tokens.Last();
         var functionName = functionNameToken.Text;
-        var functionParameterTypeNames =
-            tokens.Skip(2).Select(token => token.Text).ToArray();
 
         var instruction = Instruction.Create(
             opCode, this.CreateDummyMethod());
 
-        this.DelayLookingUpMethod(
-            functionName,
-            functionParameterTypeNames,
-            this.GetCurrentLocation(functionNameToken, tokens.Last()),
-            LookupTargets.All,
-            method => instruction.Operand = method);
+        if (tokens.Length == 3)
+        {
+            var functionSignatureToken = tokens[1];
+            var functionSignature = functionSignatureToken.Text;
+
+            if (!TypeParser.TryParse(functionSignature, out var rootTypeNode))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature {functionSignature}");
+                return null;
+            }
+
+            if (!(rootTypeNode is FunctionSignatureNode fsn))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature: {functionSignature}");
+                return null;
+            }
+
+            this.DelayLookingUpMethod(
+                functionNameToken,
+                fsn,
+                functionSignatureToken,
+                LookupTargets.All,
+                method => instruction.Operand = method);
+        }
+        else
+        {
+            this.DelayLookingUpMethod(
+                functionNameToken,
+                null,
+                functionNameToken,
+                LookupTargets.All,
+                method => instruction.Operand = method);
+        }
 
         return instruction;
     }
@@ -344,14 +367,12 @@ partial class Parser
             return null;
         }
 
-        var fieldName = fieldNameToken.Text;
-
         var instruction = Instruction.Create(
             opCode, this.CreateDummyField());
 
         this.DelayLookingUpField(
-            fieldName,
-            this.GetCurrentLocation(fieldNameToken, fieldNameToken),
+            fieldNameToken,
+            fieldNameToken,
             LookupTargets.All,
             field => instruction.Operand = field);
 
@@ -368,14 +389,12 @@ partial class Parser
             return null;
         }
 
-        var typeName = typeNameToken.Text;
-
         var instruction = Instruction.Create(
             opCode, this.CreateDummyType());
 
         this.DelayLookingUpType(
-            typeName,
-            this.GetCurrentLocation(typeNameToken, typeNameToken),
+            typeNameToken,
+            typeNameToken,
             LookupTargets.All,
             type => instruction.Operand = type);
 
@@ -394,20 +413,57 @@ partial class Parser
                 $"Missing operand.");
             return null;
         }
+        if (tokens.Length >= 4)
+        {
+            this.OutputError(
+                this.GetCurrentLocation(tokens[3]),
+                $"Too many operands.");
+            return null;
+        }
 
-        var memberNameToken = tokens[1];
+        var memberNameToken = tokens.Last();
         var memberName = memberNameToken.Text;
-        var functionParameterTypeNames =
-            tokens.Skip(2).Select(token => token.Text).ToArray();
 
         var instruction = CecilUtilities.CreateInstruction(
             opCode, this.CreateDummyField());
 
-        this.DelayLookingUpMember(
-            memberNameToken,
-            functionParameterTypeNames,
-            LookupTargets.All,
-            member => instruction.Operand = member);
+        if (tokens.Length == 3)
+        {
+            var functionSignatureToken = tokens[1];
+            var functionSignature = functionSignatureToken.Text;
+
+            if (!TypeParser.TryParse(functionSignature, out var rootTypeNode))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature {functionSignature}");
+                return null;
+            }
+
+            if (!(rootTypeNode is FunctionSignatureNode fsn))
+            {
+                this.OutputError(
+                    this.GetCurrentLocation(functionSignatureToken),
+                    $"Invalid function signature: {functionSignature}");
+                return null;
+            }
+
+            this.DelayLookingUpMember(
+                memberNameToken,
+                fsn,
+                functionSignatureToken,
+                LookupTargets.All,
+                method => instruction.Operand = method);
+        }
+        else
+        {
+            this.DelayLookingUpMember(
+                memberNameToken,
+                null,
+                memberNameToken,
+                LookupTargets.All,
+                method => instruction.Operand = method);
+        }
 
         return instruction;
     }
