@@ -525,6 +525,8 @@ You can also specify an instance method, but the first argument of the method si
 Naturally, a reference to `this` must be pushed onto the evaluation stack.
 
 A list of parameter types is used to identify overloads.
+Generally, the return type is not verified,
+but the return type is also verified to match when using only for the `op_Implicit` and `op_Explicit` methods.
 
 You have to give it containing assembly on command line option `-r`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.

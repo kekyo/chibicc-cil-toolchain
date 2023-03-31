@@ -302,12 +302,36 @@ partial class Parser
             return false;
         }
 
+        bool IsMatched(MethodDefinition method)
+        {
+            if (method.IsPublic && method.Name == methodName)
+            {
+                if (strictParameterTypes.Select(type => type.FullName).
+                    SequenceEqual(method.Parameters.Select(p => p.ParameterType.FullName)))
+                {
+                    // Custom cast overloads.
+                    if (method.Name == "op_Explicit" || method.Name == "op_Implicit")
+                    {
+                        if (this.TryGetType(
+                            functionSignature!.ReturnType,
+                            out var type,
+                            fileScopedType,
+                            LookupTargets.All))
+                        {
+                            return method.ReturnType.FullName == type.FullName;
+                        }
+                    }
+                    else
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         // Take only public method at imported.
-        if (type.Methods.FirstOrDefault(method =>
-            method.IsPublic && method.Name == methodName &&
-            strictParameterTypes.Select(type => type.FullName).
-            SequenceEqual(
-                method.Parameters.Select(p => p.ParameterType.FullName))) is { } m4)
+        if (type.Methods.FirstOrDefault(IsMatched) is { } m4)
         {
             method = this.Import(m4);
             return true;

@@ -2,8 +2,8 @@
   "profiles": {
     "chibias": {
         "commandName": "Project",
-        //"commandLineArgs": "--log trace -f net45 -w x86 -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\mscorlib.dll -r ..\\..\\..\\..\\..\\libc-cil\\libc-bootstrap\\bin\\Debug\\net45\\libc-bootstrap.dll -o ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\chibicc.exe ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\codegen.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\main.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\parse.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\strings.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\tokenize.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\type.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\utils.s",
-        "commandLineArgs": "--log trace -f net45 -w x86 -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\mscorlib.dll -r ..\\..\\..\\..\\..\\libc-cil\\libc-bootstrap\\bin\\Debug\\net45\\libc-bootstrap.dll -o ..\\..\\..\\..\\..\\chibicc-cil\\test\\alignof.exe ..\\..\\..\\..\\..\\chibicc-cil\\test\\alignof.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common.s"
+        //"commandLineArgs": "--log trace -f net45 -w x86 -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\mscorlib.dll -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\libc-bootstrap.dll -o ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\chibicc.exe ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\codegen.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\main.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\parse.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\strings.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\tokenize.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\type.s ..\\..\\..\\..\\..\\chibicc-cil\\stage2\\utils.s",
+        "commandLineArgs": "--log trace -f net45 -w x86 -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\mscorlib.dll -r ..\\..\\..\\..\\..\\chibicc-cil\\test\\libc-bootstrap.dll -o ..\\..\\..\\..\\..\\chibicc-cil\\test\\alignof.exe ..\\..\\..\\..\\..\\chibicc-cil\\test\\alignof.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common.s"
     }
   }
 }

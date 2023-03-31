@@ -1576,6 +1576,29 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task CallExplicitConversion()
+    {
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.s 123
+                call nint(int32) System.IntPtr.op_Explicit
+                conv.i4
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CallImplicitConversion()
+    {
+        var actual = Run(@"
+            .function public System.Decimal() foo
+                ldc.i4.s 123
+                call System.Decimal(int32) System.Decimal.op_Implicit
+                ret");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]
