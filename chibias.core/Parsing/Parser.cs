@@ -390,6 +390,8 @@ internal sealed partial class Parser
         }
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     private void FireDelayedActions()
     {
         // Fire lookups delayed types.
@@ -413,6 +415,226 @@ internal sealed partial class Parser
             action();
         }
     }
+
+    private void AddFundamentalAttributes(bool disableJITOptimization)
+    {
+        // Apply TFA if could be imported.
+        if (this.TryGetMethod(
+            "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
+            TypeParser.UnsafeParse<FunctionSignatureNode>("void(string)"),
+            out var tfactor))
+        {
+            var tfa = new CustomAttribute(tfactor);
+            tfa.ConstructorArguments.Add(new(
+                this.UnsafeGetType("System.String"),
+                this.targetFramework.ToString()));
+            this.module.Assembly.CustomAttributes.Add(tfa);
+
+            this.logger.Trace(
+                $"TargetFrameworkAttribute is applied.");
+        }
+        else
+        {
+            this.logger.Warning(
+                $"TargetFrameworkAttribute was not found, so not applied. Because maybe did not reference core library.");
+        }
+
+        // Apply DA if could be imported.
+        if (disableJITOptimization)
+        {
+            if (this.TryGetMethod(
+                "System.Diagnostics.DebuggableAttribute..ctor",
+                TypeParser.UnsafeParse<FunctionSignatureNode>("void(System.Diagnostics.DebuggableAttribute.DebuggingModes)"),
+                out var dactor) &&
+                this.TryGetType(
+                    "System.Diagnostics.DebuggableAttribute.DebuggingModes",
+                    out var dm))
+            {
+                var da = new CustomAttribute(dactor);
+                da.ConstructorArguments.Add(new(
+                    dm, (int)(DebuggableAttribute.DebuggingModes.Default | DebuggableAttribute.DebuggingModes.DisableOptimizations)));
+                this.module.Assembly.CustomAttributes.Add(da);
+
+                this.logger.Trace(
+                    $"DebuggableAttribute is applied.");
+            }
+            else
+            {
+                this.logger.Warning(
+                    $"DebuggableAttribute was not found, so not applied. Because maybe did not reference core library.");
+            }
+        }
+
+        // Apply pointer visualizers if could be imported.
+        if (this.TryGetType(
+                "System.Type",
+                out var typeType,
+                LookupTargets.All) &&
+            this.TryGetMethod(
+                "System.Diagnostics.DebuggerTypeProxyAttribute..ctor",
+                TypeParser.UnsafeParse<FunctionSignatureNode>("void(System.Type)"),
+                out var dtpactor) &&
+            this.TryGetType(
+                "C.type.__pointer_visualizer",
+                out var pvtype,
+                LookupTargets.All))
+        {
+            foreach (var targetTypeName in new[] { "void*", "byte*", "sbyte*" })
+            {
+                var targetType = this.UnsafeGetType(targetTypeName);
+
+                var dtpa = new CustomAttribute(dtpactor);
+                dtpa.ConstructorArguments.Add(new(typeType, pvtype));
+                dtpa.Properties.Add(new("Target", new(typeType, targetType)));
+                this.module.Assembly.CustomAttributes.Add(dtpa);
+            }
+
+            this.logger.Trace(
+                $"DebuggerTypeProxyAttribute is applied.");
+        }
+        else
+        {
+            this.logger.Warning(
+                $"DebuggerTypeProxyAttribute or related types was not found, so not applied. Because maybe did not reference core library and/or libc.");
+        }
+    }
+
+    private void SetupMainEntryPoint()
+    {
+        static bool IsMainEntryPoint(IList<ParameterDefinition> parameters)
+        {
+            var typeNames = parameters.Select(p => p.ParameterType.FullName).ToArray();
+            return
+                typeNames.SequenceEqual(Utilities.Empty<string>()) ||
+                typeNames.SequenceEqual(new[] { "System.Int32", "System.SByte**" });
+        }
+
+        // Lookup main entry point.
+        var mainFunction = this.module.Types.
+            Where(type => type.IsAbstract && type.IsSealed && type.IsClass).
+            SelectMany(type => type.Methods).
+            FirstOrDefault(m =>
+                m.IsStatic && m.Name == "main" &&
+                (m.ReturnType.FullName == "System.Void" ||
+                 m.ReturnType.FullName == "System.Int32") &&
+                 IsMainEntryPoint(m.Parameters));
+
+        // Inject startup code when declared.
+        if (mainFunction != null)
+        {
+            this.BeginNewCilSourceCode(null, "_start.s", false);
+
+            Token[][] startupTokensList;
+            if (mainFunction.ReturnType.FullName == "System.Void")
+            {
+                startupTokensList = mainFunction.Parameters.Count == 0 ?
+                    EmbeddingCodeFragments.Startup_Void_Void :
+                    EmbeddingCodeFragments.Startup_Void;
+            }
+            else
+            {
+                startupTokensList = mainFunction.Parameters.Count == 0 ?
+                    EmbeddingCodeFragments.Startup_Int32_Void :
+                    EmbeddingCodeFragments.Startup_Int32;
+            }
+
+            foreach (var tokens in startupTokensList)
+            {
+                this.Parse(tokens);
+            }
+
+            Debug.Assert(this.method != null);
+            this.module.EntryPoint = this.method!;
+
+            this.FinishCurrentState();
+
+            // Fire delayed actions.
+            this.FireDelayedActions();
+
+            if (!this.caughtError)
+            {
+                this.logger.Information($"Injected startup code.");
+            }
+        }
+        else
+        {
+            this.caughtError = true;
+            this.logger.Error($"Could not find main entry point.");
+        }
+    }
+
+    private void ApplyFinalAdjustments(bool applyOptimization)
+    {
+        var documents = new Dictionary<string, Document>();
+        foreach (var method in this.module.Types.
+            SelectMany(type => type.Methods).
+            Where(method =>
+                !method.IsAbstract &&
+                method.HasBody &&
+                method.Body.Instructions.Count >= 1))
+        {
+            var body = method.Body;
+
+            // Apply optimization.
+            if (applyOptimization)
+            {
+                body.Optimize();
+            }
+
+            // After optimization, the instructions maybe changed absolute layouts,
+            // so we could set debugging information scope after that.
+            if (this.produceDebuggingInformation)
+            {
+                method.DebugInformation.Scope = new ScopeDebugInformation(
+                    body.Instructions.First(),
+                    body.Instructions.Last());
+
+                // Will make sequence points:
+                foreach (var instruction in body.Instructions)
+                {
+                    if (this.locationByInstructions.TryGetValue(instruction, out var location) &&
+                        location.File.IsVisible)
+                    {
+                        if (!documents.TryGetValue(location.File.RelativePath, out var document))
+                        {
+                            document = new(location.File.BasePath is { } basePath ?
+                                Path.Combine(basePath, location.File.RelativePath) :
+                                location.File.RelativePath);
+                            document.Type = DocumentType.Text;
+                            if (location.File.Language is { } language)
+                            {
+                                document.Language = language;
+                            }
+                            documents.Add(location.File.RelativePath, document);
+                        }
+
+                        var sequencePoint = new SequencePoint(
+                            instruction, document);
+
+                        sequencePoint.StartLine = (int)(location.StartLine + 1);
+                        sequencePoint.StartColumn = (int)(location.StartColumn + 1);
+                        sequencePoint.EndLine = (int)(location.EndLine + 1);
+                        sequencePoint.EndColumn = (int)(location.EndColumn + 1);
+
+                        method.DebugInformation.SequencePoints.Add(
+                            sequencePoint);
+                    }
+                }
+
+                // Will make local variable naming.
+                if (this.variableDebugInformationLists.TryGetValue(method.Name, out var list))
+                {
+                    foreach (var variableDebugInformation in list)
+                    {
+                        method.DebugInformation.Scope.Variables.Add(
+                            variableDebugInformation);
+                    }
+                }
+            }
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////
 
     public bool Finish(
         bool applyOptimization, bool disableJITOptimization)
@@ -439,68 +661,10 @@ internal sealed partial class Parser
             // Fire delayed actions.
             this.FireDelayedActions();
 
+            // Setup entry point when set producing executable.
             if (this.produceExecutable)
             {
-                static bool IsMainEntryPoint(IList<ParameterDefinition> parameters)
-                {
-                    var typeNames = parameters.Select(p => p.ParameterType.FullName).ToArray();
-                    return
-                        typeNames.SequenceEqual(Utilities.Empty<string>()) ||
-                        typeNames.SequenceEqual(new[] { "System.Int32", "System.SByte**" });
-                }
-
-                // Lookup main entry point.
-                var mainFunction = this.module.Types.
-                    Where(type => type.IsAbstract && type.IsSealed && type.IsClass).
-                    SelectMany(type => type.Methods).
-                    FirstOrDefault(m =>
-                        m.IsStatic && m.Name == "main" &&
-                        (m.ReturnType.FullName == "System.Void" ||
-                         m.ReturnType.FullName == "System.Int32") &&
-                         IsMainEntryPoint(m.Parameters));
-
-                // Inject startup code when declared.
-                if (mainFunction != null)
-                {
-                    this.BeginNewCilSourceCode(null, "_start.s", false);
-
-                    Token[][] startupTokensList;
-                    if (mainFunction.ReturnType.FullName == "System.Void")
-                    {
-                        startupTokensList = mainFunction.Parameters.Count == 0 ?
-                            EmbeddingCodeFragments.Startup_Void_Void :
-                            EmbeddingCodeFragments.Startup_Void;
-                    }
-                    else
-                    {
-                        startupTokensList = mainFunction.Parameters.Count == 0 ?
-                            EmbeddingCodeFragments.Startup_Int32_Void :
-                            EmbeddingCodeFragments.Startup_Int32;
-                    }
-
-                    foreach (var tokens in startupTokensList)
-                    {
-                        this.Parse(tokens);
-                    }
-
-                    Debug.Assert(this.method != null);
-                    this.module.EntryPoint = this.method!;
-
-                    this.FinishCurrentState();
-
-                    // Fire delayed actions.
-                    this.FireDelayedActions();
-
-                    if (!this.caughtError)
-                    {
-                        this.logger.Information($"Injected startup code.");
-                    }
-                }
-                else
-                {
-                    this.caughtError = true;
-                    this.logger.Error($"Could not find main entry point.");
-                }
+                this.SetupMainEntryPoint();
             }
         }
 
@@ -519,118 +683,15 @@ internal sealed partial class Parser
                 this.cabiDataType.Methods.Add(this.cabiDataTypeInitializer);
             }
 
-            // Apply TFA if could be imported.
-            if (this.TryGetMethod(
-                "System.Runtime.Versioning.TargetFrameworkAttribute..ctor",
-                TypeParser.UnsafeParse<FunctionSignatureNode>("void(string)"),
-                out var tfactor))
-            {
-                var tfa = new CustomAttribute(tfactor);
-                tfa.ConstructorArguments.Add(new(
-                    this.UnsafeGetType("System.String"),
-                    this.targetFramework.ToString()));
-                this.module.Assembly.CustomAttributes.Add(tfa);
-            }
-            else
-            {
-                this.logger.Warning(
-                    $"TargetFrameworkAttribute was not found, so not applied. Because maybe did not reference core library.");
-            }
-
-            // Apply DA if could be imported.
-            if (disableJITOptimization)
-            {
-                if (this.TryGetMethod(
-                    "System.Diagnostics.DebuggableAttribute..ctor",
-                    TypeParser.UnsafeParse<FunctionSignatureNode>("void(System.Diagnostics.DebuggableAttribute.DebuggingModes)"),
-                    out var dactor) &&
-                    this.TryGetType(
-                        "System.Diagnostics.DebuggableAttribute.DebuggingModes",
-                        out var dm))
-                {
-                    var da = new CustomAttribute(dactor);
-                    da.ConstructorArguments.Add(new(
-                        dm, (int)DebuggableAttribute.DebuggingModes.DisableOptimizations));
-                    this.module.Assembly.CustomAttributes.Add(da);
-                }
-                else
-                {
-                    this.logger.Warning(
-                        $"DebuggableAttribute was not found, so not applied. Because maybe did not reference core library.");
-                }
-            }
-
             // (Completed all CIL implementations in this place.)
 
             ///////////////////////////////////////////////
 
-            var documents = new Dictionary<string, Document>();
-            foreach (var method in this.module.Types.
-                SelectMany(type => type.Methods).
-                Where(method =>
-                    !method.IsAbstract &&
-                    method.HasBody &&
-                    method.Body.Instructions.Count >= 1))
-            {
-                var body = method.Body;
+            // Try add fundamental attributes.
+            this.AddFundamentalAttributes(disableJITOptimization);
 
-                // Apply optimization.
-                if (applyOptimization)
-                {
-                    body.Optimize();
-                }
-
-                // After optimization, the instructions maybe changed absolute layouts,
-                // so we could set debugging information scope after that.
-                if (this.produceDebuggingInformation)
-                {
-                    method.DebugInformation.Scope = new ScopeDebugInformation(
-                        body.Instructions.First(),
-                        body.Instructions.Last());
-
-                    // Will make sequence points:
-                    foreach (var instruction in body.Instructions)
-                    {
-                        if (this.locationByInstructions.TryGetValue(instruction, out var location) &&
-                            location.File.IsVisible)
-                        {
-                            if (!documents.TryGetValue(location.File.RelativePath, out var document))
-                            {
-                                document = new(location.File.BasePath is { } basePath ?
-                                    Path.Combine(basePath, location.File.RelativePath) :
-                                    location.File.RelativePath);
-                                document.Type = DocumentType.Text;
-                                if (location.File.Language is { } language)
-                                {
-                                    document.Language = language;
-                                }
-                                documents.Add(location.File.RelativePath, document);
-                            }
-
-                            var sequencePoint = new SequencePoint(
-                                instruction, document);
-
-                            sequencePoint.StartLine = (int)(location.StartLine + 1);
-                            sequencePoint.StartColumn = (int)(location.StartColumn + 1);
-                            sequencePoint.EndLine = (int)(location.EndLine + 1);
-                            sequencePoint.EndColumn = (int)(location.EndColumn + 1);
-
-                            method.DebugInformation.SequencePoints.Add(
-                                sequencePoint);
-                        }
-                    }
-
-                    // Will make local variable naming.
-                    if (this.variableDebugInformationLists.TryGetValue(method.Name, out var list))
-                    {
-                        foreach (var variableDebugInformation in list)
-                        {
-                            method.DebugInformation.Scope.Variables.Add(
-                                variableDebugInformation);
-                        }
-                    }
-                }
-            }
+            // Apply final adjustments.
+            this.ApplyFinalAdjustments(applyOptimization);
         }
 
         this.delayedLookupTypeActions.Clear();
