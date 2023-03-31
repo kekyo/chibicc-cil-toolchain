@@ -233,8 +233,8 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 
 |関数シグネチャ|対応するC言語でのシグネチャ例|
 |:----|:----|
-|`int32(argc:int32, argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32, argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
+|`void(argc:int32,argv:sbyte**)`|`void() main(int argc, char** argv)`|
 |`int32()`|`int main(void)`|
 |`void()`|`void() main(void)`|
 
@@ -517,6 +517,7 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 当然ながら `this` の参照が評価スタックにプッシュされる必要があります。
 
 メソッドのシグネチャは、メソッドのオーバーロードを特定するために使用されます。
+シグネチャを指定せず、オーバーロードメソッドが複数存在する場合は、誤ったメソッドを選択する可能性があります。
 通常、戻り値の型は検証されませんが、 `op_Implicit` 及び `op_Explicit` メソッドの場合のみ、戻り値の型も一致する事が確認されます。
 
 .NETメソッドを参照するために、コマンドラインオプション `-r` で、メソッド定義を含むアセンブリを指定する必要があります。これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
@@ -537,11 +538,12 @@ getterに`get_Length()`、setterに`set_Length()`というメソッド名に対�
 
 ### 関数シグネチャ構文
 
-関数シグネチャとは、`calli` オペコードで指定する、呼び出し対象メソッドのシグネチャです。
-コールサイトと呼ばれる場合もあります。
+関数シグネチャは、呼び出し対象メソッドの引数群と戻り値の型を示す構文です。
+.NETでは、コールサイトと呼ばれる場合もあります。
 chibiasでは、関数ポインタ型と同じような構文で指定します。
 
-これらは、関数ディレクティブや、`call` や `ldftn` オプコードでメソッドのオーバーロードを特定したり、 `calli` オプコードで使用します:
+これらは、関数ディレクティブや、`call` や `ldftn` オプコードでメソッドのオーバーロードを特定したり、
+`calli` オプコードで使用します:
 
 ```
 .function public int32() main
@@ -636,7 +638,7 @@ chibiasは、 `value array` 型を使ってこれを擬似的に実現するこ�
 値型の配列を使用するには、以下のように型を宣言します:
 
 ```
-.function public int8[5] bar   ; <-- 値型の配列には要素数が必要
+.function public int8[5]() bar   ; <-- 値型の配列には要素数が必要
     ldsfld foo
     ret
 .global internal int8[5] foo 0x10 0x32 0x54 0x76 0x98
@@ -677,7 +679,8 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 * `int8[5][3]` --> `System.SByte_len5_len3`
 * `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
-ネストした配列型を宣言する場合は、要素の順序に注意が必要です。例えば、C言語で以下のように表現される型は、chibiasでは要素の順序が逆になります:
+ネストした配列型を宣言する場合は、要素の順序に注意が必要です。
+例えば、C言語で以下のように表現される型は、chibiasでは要素の順序が逆になります:
 
 ```c
 // C言語

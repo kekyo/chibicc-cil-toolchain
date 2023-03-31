@@ -233,8 +233,8 @@ The signature of the `main` function accepts the following variations:
 
 |Function signature|Example signature in the C language|
 |:----|:----|
-|`int32(argc:int32, argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32, argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
+|`void(argc:int32,argv:sbyte**)`|`void() main(int argc, char** argv)`|
 |`int32()`|`int main(void)`|
 |`void()`|`void() main(void)`|
 
@@ -525,6 +525,7 @@ You can also specify an instance method, but the first argument of the method si
 Naturally, a reference to `this` must be pushed onto the evaluation stack.
 
 A list of parameter types is used to identify overloads.
+If no signature is specified and there are multiple overload methods, the wrong method may be selected.
 Generally, the return type is not verified,
 but the return type is also verified to match when using only for the `op_Implicit` and `op_Explicit` methods.
 
@@ -548,8 +549,8 @@ If this does not work, please use tools such as ILDAsm or ILSpy to check target 
 
 ### Function signature syntax
 
-The function signature is must be indicated by the `calli` opcode.
-Sometimes referred to as "Call sites."
+Function signature is a syntax that indicates the parameter set and return type of the method being called.
+Sometimes referred to as "Call sites" in .NET.
 In the case of chibias, they are specified with a syntax similar to function pointer types.
 
 These are used in function directives, to identify method overloads in the `call` and `ldftn` opcodes,
@@ -650,7 +651,7 @@ The value array type plays a very important role in the realization of the C lan
 To use a value array type, declare the type as follows:
 
 ```
-.function public int8[5] bar   ; <-- Value array requres element length
+.function public int8[5]() bar   ; <-- Value array requres element length
     ldsfld foo
     ret
 .global internal int8[5] foo 0x10 0x32 0x54 0x76 0x98
