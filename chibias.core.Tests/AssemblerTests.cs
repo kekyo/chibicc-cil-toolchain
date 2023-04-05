@@ -920,6 +920,28 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task PinnedLocalVariable()
+    {
+        var actual = Run(@"
+            .function public foo*() bar
+                .local foo& fv
+                .local foo* p
+                ldsflda f
+                stloc fv
+                ldloc fv
+                conv.u
+                stloc p
+                ldloc p
+                ret
+            .global public foo f
+            .structure public foo
+                public int32 a
+                public int8 b
+                public int32 c");
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]

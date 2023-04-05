@@ -333,7 +333,7 @@ It can also represent variadic function pointer types marked `...`:
 string(int8,int32,...)*
 ```
 
-You can combine array/pointer/refernces.
+You can combine array/pointer/refernces(managed pointer).
 
 * `int32[]`
 * `int32[][]`
@@ -376,6 +376,24 @@ We can refer with variable name in operand:
     ldc.i4 1
     stloc abc
     ret
+```
+
+If the local variable is a reference (managed pointer), it is automatically marked as `pinned`.
+This allows the use of a scratch buffer when dealing with raw pointer to a value type:
+
+```
+.function public int32() foo
+    .local int32& buf    ; <-- pinned
+    .local int32* p
+    ldsflda gv
+    stloc.0
+    ldloc.0
+    conv.u
+    stloc.1
+    ldloc.1
+    ldind.i4
+    ret
+.global int32 gv
 ```
 
 ### Call another function

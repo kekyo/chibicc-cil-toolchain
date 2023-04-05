@@ -339,7 +339,20 @@ partial class Parser
             localTypeNameToken,
             localTypeNameToken,
             LookupTargets.All,
-            type => variable.VariableType = type);
+            type =>
+            {
+                if (type.IsByReference)
+                {
+                    var resolved = type.Resolve();
+                    var elementType = resolved.GetElementType();
+                    if (elementType.IsValueType)
+                    {
+                        variable.VariableType = type.MakePinnedType();
+                        return;
+                    }
+                }
+                variable.VariableType = type;
+            });
 
         this.body!.Variables.Add(variable);
 

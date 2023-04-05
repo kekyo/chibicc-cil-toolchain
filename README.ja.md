@@ -332,7 +332,7 @@ unsafe delegate*<sbyte, int, string>
 string(int8,int32,...)*
 ```
 
-配列・ポインタ・参照の組み合わせが可能です。
+配列・ポインタ・参照（マネージポインタ）の組み合わせが可能です。
 
 * `int32[]`
 * `int32[][]`
@@ -373,6 +373,24 @@ string(int8,int32,...)*
     ldc.i4 1
     stloc abc
     ret
+```
+
+ローカル変数の型が、参照（マネージポインタ）である場合は、自動的に `pinned` とマークされます。
+これにより、値型へのポインタを扱う際の、スクラッチバッファとして使用できます:
+
+```
+.function public int32() foo
+    .local int32& buf    ; <-- pinned
+    .local int32* p
+    ldsflda gv
+    stloc.0
+    ldloc.0
+    conv.u
+    stloc.1
+    ldloc.1
+    ldind.i4
+    ret
+.global int32 gv
 ```
 
 ### 別の関数を呼び出す
