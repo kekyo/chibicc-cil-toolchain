@@ -358,13 +358,28 @@ partial class Parser
             constantTypeNameToken,
             constantTypeNameToken,
             LookupTargets.All,
-            type => CecilUtilities.SetFieldType(field, type));
+            type =>
+            {
+                var fieldType = type;
+                if (this.TryGetType("System.Runtime.CompilerServices.IsConst", out var isConstModifierType))
+                {
+                    fieldType = type.MakeOptionalModifierType(isConstModifierType);
+                }
+                else
+                {
+                    this.OutputWarning(
+                        constantTypeNameToken,
+                        $"IsConst was not found, so not applied. Because maybe did not reference core library.");
+                }
+
+                CecilUtilities.SetFieldType(field, fieldType);
+            });
 
         switch (scopeDescriptor)
         {
             case ScopeDescriptors.Public:
             case ScopeDescriptors.Internal:
-                this.cabiDataType.Fields.Add(field);
+                this.cabiRDataType.Fields.Add(field);
                 break;
             default:
                 this.fileScopedType.Fields.Add(field);

@@ -368,6 +368,14 @@ partial class Parser
                 field = f3;
                 return true;
             }
+            
+            if (lookupTargets.HasFlag(LookupTargets.Assembly) && 
+                this.cabiRDataType.Fields.
+                FirstOrDefault(field => field.Name == fieldName) is { } f4)
+            {
+                field = f4;
+                return true;
+            }
 
             if (lookupTargets.HasFlag(LookupTargets.CAbiSpecific) &&
                 this.cabiSpecificSymbols.TryGetMember<FieldReference>(name, out var f))
@@ -390,9 +398,9 @@ partial class Parser
 
         // Take only public field at imported.
         if (type.Fields.FirstOrDefault(field =>
-            field.IsPublic && field.Name == fieldName) is { } f4)
+            field.IsPublic && field.Name == fieldName) is { } f5)
         {
-            field = this.Import(f4);
+            field = this.Import(f5);
             return true;
         }
 

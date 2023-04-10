@@ -152,7 +152,7 @@ public sealed class Assembler
         var fields = referenceTypes.
             Where(type =>
                 type.IsPublic && type.IsClass && type.IsAbstract && type.IsSealed &&
-                type.Namespace == "C" && type.Name == "data").
+                type.Namespace == "C" && (type.Name == "data" || type.Name == "rdata")).
             SelectMany(type => type.Fields.
                 Where(field => field.IsPublic && field.IsStatic));
 

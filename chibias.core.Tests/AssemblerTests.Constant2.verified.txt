@@ -108,17 +108,17 @@
   {
     // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  ldsfld     valuetype System.Byte_len6 C.data::bar
+    IL_0000:  ldsfld     valuetype System.Byte_len6 modopt([mscorlib]System.Runtime.CompilerServices.IsConst) C.rdata::bar
     IL_0005:  ret
   } // end of method text::foo
 
 } // end of class C.text
 
-.class public abstract auto ansi sealed beforefieldinit C.data
+.class public abstract auto ansi sealed beforefieldinit C.rdata
        extends [mscorlib]System.Object
 {
-  .field public static initonly valuetype System.Byte_len6 bar at I_00002090
-} // end of class C.data
+  .field public static initonly valuetype System.Byte_len6 modopt([mscorlib]System.Runtime.CompilerServices.IsConst) bar at I_00002090
+} // end of class C.rdata
 
 
 // =============================================================
