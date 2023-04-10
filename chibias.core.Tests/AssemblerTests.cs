@@ -1523,6 +1523,30 @@ public sealed partial class AssemblerTests
         return Verify(actual);
     }
 
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
+    public Task Constant1()
+    {
+        var actual = Run(@"
+            .function public int32() foo
+                ldsfld bar
+                ret
+            .constant public int32 bar 0x10 0x32 0x54 0x76");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Constant2()
+    {
+        var actual = Run(@"
+            .function public uint8[6]() foo
+                ldsfld bar
+                ret
+            .constant public uint8[6] bar 0x01 0x02 0x31 0x32 0xb1 0xb2");
+        return Verify(actual);
+    }
     /////////////////////////////////////////////////////////
 
     [Test]

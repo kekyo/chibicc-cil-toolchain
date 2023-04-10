@@ -303,6 +303,77 @@ partial class Parser
 
     /////////////////////////////////////////////////////////////////////
 
+    private void ParseConstantDirective(
+        Token directive, Token[] tokens)
+    {
+        this.FinishCurrentState();
+
+        if (tokens.Length < 5)
+        {
+            this.OutputError(directive, $"Missing constant variable operand.");
+            return;
+        }
+
+        if (!CecilUtilities.TryLookupScopeDescriptorName(
+            tokens[1].Text,
+            out var scopeDescriptor))
+        {
+            this.OutputError(
+                tokens[1],
+                $"Invalid scope descriptor: {tokens[1].Text}");
+            return;
+        }
+
+        var data = tokens.Skip(4).
+            Select(token =>
+            {
+                if (Utilities.TryParseUInt8(token.Text, out var value))
+                {
+                    return value;
+                }
+                else
+                {
+                    this.OutputError(token, $"Invalid data operand.");
+                    return (byte)0;
+                }
+            }).
+            ToArray();
+
+        var constantTypeNameToken = tokens[2];
+        var constantName = tokens[3].Text;
+
+        var field = new FieldDefinition(
+            constantName,
+            scopeDescriptor switch
+            {
+                ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
+                ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
+                _ => FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly,
+            },
+            this.CreateDummyType());
+
+        field.InitialValue = data;
+
+        this.DelayLookingUpType(
+            constantTypeNameToken,
+            constantTypeNameToken,
+            LookupTargets.All,
+            type => CecilUtilities.SetFieldType(field, type));
+
+        switch (scopeDescriptor)
+        {
+            case ScopeDescriptors.Public:
+            case ScopeDescriptors.Internal:
+                this.cabiDataType.Fields.Add(field);
+                break;
+            default:
+                this.fileScopedType.Fields.Add(field);
+                break;
+        }
+    }
+
+    /////////////////////////////////////////////////////////////////////
+
     private void ParseLocalDirective(
         Token directive, Token[] tokens)
     {
@@ -839,6 +910,10 @@ partial class Parser
             // Global variable directive:
             case "global":
                 this.ParseGlobalDirective(directive, tokens);
+                break;
+            // Constant directive:
+            case "constant":
+                this.ParseConstantDirective(directive, tokens);
                 break;
             // Local variable directive:
             case "local":
