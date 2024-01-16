@@ -234,9 +234,9 @@ The signature of the `main` function accepts the following variations:
 |Function signature|Example signature in the C language|
 |:----|:----|
 |`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32,argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`void(argc:int32,argv:sbyte**)`|`void main(int argc, char** argv)`|
 |`int32()`|`int main(void)`|
-|`void()`|`void() main(void)`|
+|`void()`|`void main(void)`|
 
 It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
 And the destination is a non-Unicode, 8-bit string containing the terminating character.

@@ -234,9 +234,9 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 |関数シグネチャ|対応するC言語でのシグネチャ例|
 |:----|:----|
 |`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32,argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`void(argc:int32,argv:sbyte**)`|`void main(int argc, char** argv)`|
 |`int32()`|`int main(void)`|
-|`void()`|`void() main(void)`|
+|`void()`|`void main(void)`|
 
 奇妙に思えるかもしれませんが、引数の`argv`は、現実にポインタへのポインタです。
 そしてその先は、Unicodeではない、終端文字を含む8ビット文字列を示します。
