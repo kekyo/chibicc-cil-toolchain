@@ -34,7 +34,7 @@ internal sealed class Options
         var referenceAssemblyPaths = new List<string>();
 
         options.AssemblerOptions.TargetFrameworkMoniker =
-            ThisAssembly.AssemblyMetadata.TargetFramework;
+            ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker;
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -284,7 +284,7 @@ internal sealed class Options
 
     public static void WriteUsage(TextWriter tw)
     {
-        tw.WriteLine($"chibias [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFramework}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
+        tw.WriteLine($"chibias [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
         tw.WriteLine("This is the CIL assembler, part of chibicc-cil project.");
         tw.WriteLine("https://github.com/kekyo/chibias-cil");
         tw.WriteLine("Copyright (c) Kouji Matsui");
@@ -305,7 +305,7 @@ internal sealed class Options
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
         tw.WriteLine("  -s                Suppress runtime configuration file");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
-        tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFramework})");
+        tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
         tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent]");
         tw.WriteLine("  -h, --help        Show this help");

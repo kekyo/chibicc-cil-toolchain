@@ -57,6 +57,6 @@ public sealed class AssemblerOptions
     public DebugSymbolTypes DebugSymbolType = DebugSymbolTypes.Embedded;
     public AssembleOptions Options = AssembleOptions.Deterministic | AssembleOptions.DisableJITOptimization;
     public Version Version = new Version(1, 0, 0, 0);
-    public string TargetFrameworkMoniker = ThisAssembly.AssemblyMetadata.TargetFramework;
+    public string TargetFrameworkMoniker = ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker;
     public bool ProduceRuntimeConfigurationIfRequired = true;
 }
