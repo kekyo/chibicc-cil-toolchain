@@ -8,6 +8,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>chibias-cli</PackageId>
     <PackAsTool>true</PackAsTool>
+    <RollForward>LatestMajor</RollForward>
   </PropertyGroup>
 
   <ItemGroup>
