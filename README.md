@@ -919,7 +919,7 @@ If you specify a `.location` directive that specifies a valid ID, sequence point
 
 ## Building from source code
 
-Builds can be done in .NET 7 SDK environment.
+Builds can be done in .NET 8 SDK environment.
 There are no prerequisites required for the build.
 For example:
 
@@ -927,11 +927,11 @@ For example:
 $ dotnet build chibias.sln
 ```
 
-The test currently relies on the Windows version ILDAsm, so it can only be run in a Windows environment.
+The test currently relies on the native binary ILDAsm, so they can only be run on Windows x64 or Linux x64.
 In my environment, it takes about 30 seconds.
 
-```cmd
-C:\> dotnet test chibias.sln
+```bash
+$ dotnet test chibias.sln
 ```
 
 The `build-nupkg.bat` or `build-nupkg.sh` will generate NuGet packages in the `artifacts` directory.

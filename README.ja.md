@@ -900,18 +900,18 @@ public struct foo
 
 ## ソースコードのビルド
 
-ビルドは.NET 7 SDK環境で可能です。ビルドに必要な前提条件はありません。
+ビルドは.NET 8 SDK環境で可能です。ビルドに必要な前提条件はありません。
 例えば:
 
 ```bash
 $ dotnet build chibias.sln
 ```
 
-テストは現在のところ、WindowsバイナリのILDAsmに依存しているため、Windows環境でのみ実行できます。
+テストは現在のところ、ネイティブバイナリのILDAsmに依存しているため、Windows x64環境またはLinux x64でのみ実行できます。
 手元の環境で、30秒ほどかかりました。
 
-```cmd
-C:\> dotnet test chibias.sln
+```bash
+$ dotnet test chibias.sln
 ```
 
 `build-nupkg.bat`又は`build-nupkg.sh`を使用すると、NuGetパッケージを`artifacts`ディレクトリに生成します。
