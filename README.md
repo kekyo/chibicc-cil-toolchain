@@ -234,9 +234,9 @@ The signature of the `main` function accepts the following variations:
 |Function signature|Example signature in the C language|
 |:----|:----|
 |`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32,argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`void(argc:int32,argv:sbyte**)`|`void main(int argc, char** argv)`|
 |`int32()`|`int main(void)`|
-|`void()`|`void() main(void)`|
+|`void()`|`void main(void)`|
 
 It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
 And the destination is a non-Unicode, 8-bit string containing the terminating character.
@@ -333,7 +333,7 @@ It can also represent variadic function pointer types marked `...`:
 string(int8,int32,...)*
 ```
 
-You can combine array/pointer/refernces.
+You can combine array/pointer/refernces(managed pointer).
 
 * `int32[]`
 * `int32[][]`
@@ -376,6 +376,24 @@ We can refer with variable name in operand:
     ldc.i4 1
     stloc abc
     ret
+```
+
+If the local variable is a reference (managed pointer), it is automatically marked as `pinned`.
+This allows the use of a scratch buffer when dealing with raw pointer to a value type:
+
+```
+.function public int32() foo
+    .local int32& buf    ; <-- pinned
+    .local int32* p
+    ldsflda gv
+    stloc.0
+    ldloc.0
+    conv.u
+    stloc.1
+    ldloc.1
+    ldind.i4
+    ret
+.global int32 gv
 ```
 
 ### Call another function
@@ -901,7 +919,7 @@ If you specify a `.location` directive that specifies a valid ID, sequence point
 
 ## Building from source code
 
-Builds can be done in .NET 7 SDK environment.
+Builds can be done in .NET 8 SDK environment.
 There are no prerequisites required for the build.
 For example:
 
@@ -909,11 +927,11 @@ For example:
 $ dotnet build chibias.sln
 ```
 
-The test currently relies on the Windows version ILDAsm, so it can only be run in a Windows environment.
+The test currently relies on the native binary ILDAsm, so they can only be run on Windows x64 or Linux x64.
 In my environment, it takes about 30 seconds.
 
-```cmd
-C:\> dotnet test chibias.sln
+```bash
+$ dotnet test chibias.sln
 ```
 
 The `build-nupkg.bat` or `build-nupkg.sh` will generate NuGet packages in the `artifacts` directory.

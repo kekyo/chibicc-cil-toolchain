@@ -234,9 +234,9 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 |関数シグネチャ|対応するC言語でのシグネチャ例|
 |:----|:----|
 |`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32,argv:sbyte**)`|`void() main(int argc, char** argv)`|
+|`void(argc:int32,argv:sbyte**)`|`void main(int argc, char** argv)`|
 |`int32()`|`int main(void)`|
-|`void()`|`void() main(void)`|
+|`void()`|`void main(void)`|
 
 奇妙に思えるかもしれませんが、引数の`argv`は、現実にポインタへのポインタです。
 そしてその先は、Unicodeではない、終端文字を含む8ビット文字列を示します。
@@ -332,7 +332,7 @@ unsafe delegate*<sbyte, int, string>
 string(int8,int32,...)*
 ```
 
-配列・ポインタ・参照の組み合わせが可能です。
+配列・ポインタ・参照（マネージポインタ）の組み合わせが可能です。
 
 * `int32[]`
 * `int32[][]`
@@ -373,6 +373,24 @@ string(int8,int32,...)*
     ldc.i4 1
     stloc abc
     ret
+```
+
+ローカル変数の型が、参照（マネージポインタ）である場合は、自動的に `pinned` とマークされます。
+これにより、値型へのポインタを扱う際の、スクラッチバッファとして使用できます:
+
+```
+.function public int32() foo
+    .local int32& buf    ; <-- pinned
+    .local int32* p
+    ldsflda gv
+    stloc.0
+    ldloc.0
+    conv.u
+    stloc.1
+    ldloc.1
+    ldind.i4
+    ret
+.global int32 gv
 ```
 
 ### 別の関数を呼び出す
@@ -882,18 +900,18 @@ public struct foo
 
 ## ソースコードのビルド
 
-ビルドは.NET 7 SDK環境で可能です。ビルドに必要な前提条件はありません。
+ビルドは.NET 8 SDK環境で可能です。ビルドに必要な前提条件はありません。
 例えば:
 
 ```bash
 $ dotnet build chibias.sln
 ```
 
-テストは現在のところ、WindowsバイナリのILDAsmに依存しているため、Windows環境でのみ実行できます。
+テストは現在のところ、ネイティブバイナリのILDAsmに依存しているため、Windows x64環境またはLinux x64でのみ実行できます。
 手元の環境で、30秒ほどかかりました。
 
-```cmd
-C:\> dotnet test chibias.sln
+```bash
+$ dotnet test chibias.sln
 ```
 
 `build-nupkg.bat`又は`build-nupkg.sh`を使用すると、NuGetパッケージを`artifacts`ディレクトリに生成します。

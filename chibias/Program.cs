@@ -32,7 +32,7 @@ public static class Program
                 options.LogLevel,
                 Console.Out);
 
-            logger.Information($"Started. [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFramework}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
+            logger.Information($"Started. [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
 
             options.Write(logger);
 

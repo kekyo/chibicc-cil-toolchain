@@ -30,6 +30,7 @@ internal sealed partial class Parser
     private readonly TargetFramework targetFramework;
     private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiDataType;
+    private readonly TypeDefinition cabiRDataType;
     private readonly MethodDefinition cabiDataTypeInitializer;
     private readonly MemberDictionary<MemberReference> cabiSpecificSymbols;
     private readonly MemberDictionary<TypeDefinition> referenceTypes;
@@ -127,6 +128,12 @@ internal sealed partial class Parser
         this.cabiDataType = new TypeDefinition(
             "C",
             "data",
+            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+            this.module.TypeSystem.Object);
+        this.cabiRDataType = new TypeDefinition(
+            "C",
+            "rdata",
             TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
             TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
             this.module.TypeSystem.Object);
@@ -234,8 +241,11 @@ internal sealed partial class Parser
         this.logger.Error($"{location.File.RelativePath}({location.StartLine + 1},{location.StartColumn + 1}): {message}");
     }
 
-    private void OutputTrace(string message) =>
-        this.logger.Trace($"{message}");
+    private void OutputWarning(Token token, string message)
+    {
+        this.caughtError = true;
+        this.logger.Warning($"{this.currentCilFile.RelativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
+    }
 
     /////////////////////////////////////////////////////////////////////
 
@@ -652,10 +662,16 @@ internal sealed partial class Parser
                 this.module.Types.Add(this.cabiTextType);
             }
 
-            // Add data type when exist methods.
+            // Add data type when exist fields.
             if (this.cabiDataType.Fields.Count >= 1)
             {
                 this.module.Types.Add(this.cabiDataType);
+            }
+
+            // Add rdata type when exist fields.
+            if (this.cabiRDataType.Fields.Count >= 1)
+            {
+                this.module.Types.Add(this.cabiRDataType);
             }
 
             // Fire delayed actions.

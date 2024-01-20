@@ -25,16 +25,16 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public sequential ansi sealed System.Byte_ref_len6
+.class public sequential ansi sealed System.Byte_len6
        extends [mscorlib]System.ValueType
 {
   .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
-  .field private uint8& item0
-  .field private uint8& item1
-  .field private uint8& item2
-  .field private uint8& item3
-  .field private uint8& item4
-  .field private uint8& item5
+  .field private uint8 item0
+  .field private uint8 item1
+  .field private uint8 item2
+  .field private uint8 item3
+  .field private uint8 item4
+  .field private uint8 item5
   .method public hidebysig specialname instance int32 
           get_Length() cil managed
   {
@@ -42,12 +42,12 @@
     .maxstack  8
     IL_0000:  ldc.i4     0x6
     IL_0005:  ret
-  } // end of method Byte_ref_len6::get_Length
+  } // end of method Byte_len6::get_Length
 
-  .method public hidebysig specialname instance uint8& 
+  .method public hidebysig specialname instance uint8 
           get_Item(int32 index) cil managed
   {
-    // Code size       29 (0x1d)
+    // Code size       22 (0x16)
     .maxstack  8
     IL_0000:  ldarg.1
     IL_0001:  ldc.i4     0x6
@@ -58,20 +58,18 @@
     IL_000f:  throw
 
     IL_0010:  ldarg.1
-    IL_0011:  sizeof     uint8&
-    IL_0017:  mul
-    IL_0018:  ldarg.0
-    IL_0019:  conv.u
-    IL_001a:  add
-    IL_001b:  ldind.ref
-    IL_001c:  ret
-  } // end of method Byte_ref_len6::get_Item
+    IL_0011:  ldarg.0
+    IL_0012:  conv.u
+    IL_0013:  add
+    IL_0014:  ldind.u1
+    IL_0015:  ret
+  } // end of method Byte_len6::get_Item
 
   .method public hidebysig specialname instance void 
           set_Item(int32 index,
-                   uint8& 'value') cil managed
+                   uint8 'value') cil managed
   {
-    // Code size       30 (0x1e)
+    // Code size       23 (0x17)
     .maxstack  8
     IL_0000:  ldarg.1
     IL_0001:  ldc.i4     0x6
@@ -82,49 +80,49 @@
     IL_000f:  throw
 
     IL_0010:  ldarg.1
-    IL_0011:  sizeof     uint8&
-    IL_0017:  mul
-    IL_0018:  ldarg.0
-    IL_0019:  conv.u
-    IL_001a:  add
-    IL_001b:  ldarg.2
-    IL_001c:  stind.ref
-    IL_001d:  ret
-  } // end of method Byte_ref_len6::set_Item
+    IL_0011:  ldarg.0
+    IL_0012:  conv.u
+    IL_0013:  add
+    IL_0014:  ldarg.2
+    IL_0015:  stind.i1
+    IL_0016:  ret
+  } // end of method Byte_len6::set_Item
 
   .property instance callconv(8) int32 Length()
   {
-    .get instance int32 System.Byte_ref_len6::get_Length()
-  } // end of property Byte_ref_len6::Length
-  .property instance callconv(8) uint8& Item(int32)
+    .get instance int32 System.Byte_len6::get_Length()
+  } // end of property Byte_len6::Length
+  .property instance callconv(8) uint8 Item(int32)
   {
-    .get instance uint8& System.Byte_ref_len6::get_Item(int32)
-    .set instance void System.Byte_ref_len6::set_Item(int32,
-                                                      uint8&)
-  } // end of property Byte_ref_len6::Item
-} // end of class System.Byte_ref_len6
+    .get instance uint8 System.Byte_len6::get_Item(int32)
+    .set instance void System.Byte_len6::set_Item(int32,
+                                                  uint8)
+  } // end of property Byte_len6::Item
+} // end of class System.Byte_len6
 
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static valuetype System.Byte_ref_len6 
+  .method public static valuetype System.Byte_len6 
           foo() cil managed
   {
     // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  ldsfld     valuetype System.Byte_ref_len6 C.data::bar
+    IL_0000:  ldsfld     valuetype System.Byte_len6 modopt([mscorlib]System.Runtime.CompilerServices.IsConst) C.rdata::bar
     IL_0005:  ret
   } // end of method text::foo
 
 } // end of class C.text
 
-.class public abstract auto ansi sealed beforefieldinit C.data
+.class public abstract auto ansi sealed beforefieldinit C.rdata
        extends [mscorlib]System.Object
 {
-  .field public static valuetype System.Byte_ref_len6 bar
-} // end of class C.data
+  .field public static initonly valuetype System.Byte_len6 modopt([mscorlib]System.Runtime.CompilerServices.IsConst) bar at I_00002090
+} // end of class C.rdata
 
 
 // =============================================================
 
+.data cil I_00002090 = bytearray (
+                 01 02 31 32 B1 B2)                               // ..12..
 // *********** DISASSEMBLY COMPLETE ***********************

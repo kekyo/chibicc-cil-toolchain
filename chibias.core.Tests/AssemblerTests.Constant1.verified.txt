@@ -28,19 +28,25 @@
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static int32  main() cil managed
+  .method public static int32  foo() cil managed
   {
-    // Code size       8 (0x8)
+    // Code size       6 (0x6)
     .maxstack  8
-    IL_0000:  ldc.r4     -3.4028235e+38
-    IL_0005:  pop
-    IL_0006:  ldc.i4.1
-    IL_0007:  ret
-  } // end of method text::main
+    IL_0000:  ldsfld     int32 modopt([mscorlib]System.Runtime.CompilerServices.IsConst) C.rdata::bar
+    IL_0005:  ret
+  } // end of method text::foo
 
 } // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.rdata
+       extends [mscorlib]System.Object
+{
+  .field public static initonly int32 modopt([mscorlib]System.Runtime.CompilerServices.IsConst) bar at I_00002058
+} // end of class C.rdata
 
 
 // =============================================================
 
+.data cil I_00002058 = bytearray (
+                 10 32 54 76)                                     // .2Tv
 // *********** DISASSEMBLY COMPLETE ***********************

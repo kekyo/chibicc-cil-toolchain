@@ -19,6 +19,9 @@ namespace chibias.core.Tests;
 
 partial class AssemblerTests
 {
+    private static readonly bool isWindows =
+        Environment.OSVersion.Platform == PlatformID.Win32NT;
+    
     private readonly string id =
         $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{new Random().Next()}";
 
@@ -92,9 +95,8 @@ partial class AssemblerTests
 
                 var psi = new ProcessStartInfo()
                 {
-                    // Testing expected content is required MS's ILDAsm format,
-                    // so unfortunately runs on Windows...
-                    FileName = Path.GetFullPath("ildasm.exe"),
+                    FileName = Path.GetFullPath(
+                        isWindows ? "ildasm.exe" : "ildasm.linux-x64"),
                     Arguments = $"-utf8 -out={disassembledPath} {outputAssemblyPath}"
                 };
 
@@ -121,6 +123,7 @@ partial class AssemblerTests
                     {
                         break;
                     }
+
                     if (!line.StartsWith("// Image base:") &&
                         !line.StartsWith("// MVID:"))
                     {

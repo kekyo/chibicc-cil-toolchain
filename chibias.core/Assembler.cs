@@ -152,7 +152,7 @@ public sealed class Assembler
         var fields = referenceTypes.
             Where(type =>
                 type.IsPublic && type.IsClass && type.IsAbstract && type.IsSealed &&
-                type.Namespace == "C" && type.Name == "data").
+                type.Namespace == "C" && (type.Name == "data" || type.Name == "rdata")).
             SelectMany(type => type.Fields.
                 Where(field => field.IsPublic && field.IsStatic));
 
@@ -209,6 +209,20 @@ public sealed class Assembler
         this.logger.Trace($"Stat: {sourcePathDebuggerHint}: Tokenize: Total={tokenizeTotal}, Average={tokenizeAverage}, Count={tokenizeLap.Count}");
         this.logger.Trace($"Stat: {sourcePathDebuggerHint}: Parse: Total={parseTotal}, Average={parseAverage}, Count={parseLap.Count}");
     }
+
+    private static string GetRollForwardValue(RuntimeConfigurationOptions option) =>
+        option switch
+        {
+            RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward => "major",
+            RuntimeConfigurationOptions.ProduceCoreCLRMinorRollForward => "minor",
+            RuntimeConfigurationOptions.ProduceCoreCLRFeatureRollForward => "feature",
+            RuntimeConfigurationOptions.ProduceCoreCLRPatchRollForward => "patch",
+            RuntimeConfigurationOptions.ProduceCoreCLRLatestMajorRollForward => "latestMajor",
+            RuntimeConfigurationOptions.ProduceCoreCLRLatestMinorRollForward => "latestMinor",
+            RuntimeConfigurationOptions.ProduceCoreCLRLatestFeatureRollForward => "latestFeature",
+            RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward => "disable",
+            _ => throw new ArgumentException(),
+        };
 
     private bool Run(
         string outputAssemblyPath,
@@ -356,7 +370,7 @@ public sealed class Assembler
                     },
                 });
 
-            if (options.ProduceRuntimeConfigurationIfRequired &&
+            if (options.RuntimeConfiguration != RuntimeConfigurationOptions.Omit &&
                 produceExecutable &&
                 targetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
             {
@@ -371,6 +385,17 @@ public sealed class Assembler
 
                 var sb = new StringBuilder(runtimeConfigJsonTemplate);
                 sb.Replace("{tfm}", options.TargetFrameworkMoniker);
+                if (options.RuntimeConfiguration ==
+                    RuntimeConfigurationOptions.ProduceCoreCLR)
+                {
+                    sb.Replace("{rollForward}", "");
+                }
+                else
+                {
+                    sb.Replace(
+                        "{rollForward}",
+                        $"\"rollForward\": \"{GetRollForwardValue(options.RuntimeConfiguration)}\",{Environment.NewLine}    ");
+                }
                 if (targetFramework.Version.Build >= 0)
                 {
                     sb.Replace("{tfv}", targetFramework.Version.ToString(3));
