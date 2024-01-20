@@ -756,25 +756,47 @@ public sealed partial class AssemblerTests
     [Test]
     public Task LdcR4Varies1()
     {
-        var actual = Run($@"
+        // HACK: ILDasm on Windows, R4 constant value format is suppressed leading zero.
+        // Linux: "3.4028235e+038"
+        // Windows: "3.4028235e+38"
+        // So will fail the test.
+        if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+        {
+            var actual = Run($@"
             .function public int32() main
                 ldc.r4 {float.MaxValue}
                 pop
                 ldc.i4.1
                 ret");
-        return Verify(actual);
+            return Verify(actual);
+        }
+        else
+        {
+            return Task.CompletedTask;
+        }
     }
 
     [Test]
     public Task LdcR4Varies2()
     {
-        var actual = Run($@"
-            .function public int32() main
-                ldc.r4 {float.MinValue}
-                pop
-                ldc.i4.1
-                ret");
-        return Verify(actual);
+        // HACK: ILDasm on Windows, R4 constant value format is suppressed leading zero.
+        // Linux: "-3.4028235e+038"
+        // Windows: "-3.4028235e+38"
+        // So will fail the test.
+        if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+        {
+            var actual = Run($@"
+                .function public int32() main
+                    ldc.r4 {float.MinValue}
+                    pop
+                    ldc.i4.1
+                    ret");
+            return Verify(actual);
+        }
+        else
+        {
+            return Task.CompletedTask;
+        }
     }
 
     /////////////////////////////////////////////////////////
