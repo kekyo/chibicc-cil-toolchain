@@ -49,14 +49,36 @@ public enum AssembleOptions
     DisableJITOptimization = 0x04,
 }
 
+public enum RuntimeConfigurationOptions
+{
+    Omit,
+    ProduceCoreCLR,
+    ProduceCoreCLRMajorRollForward,
+    ProduceCoreCLRMinorRollForward,
+    ProduceCoreCLRFeatureRollForward,
+    ProduceCoreCLRPatchRollForward,
+    ProduceCoreCLRLatestMajorRollForward,
+    ProduceCoreCLRLatestMinorRollForward,
+    ProduceCoreCLRLatestFeatureRollForward,
+    ProduceCoreCLRLatestPatchRollForward,
+    ProduceCoreCLRDisableRollForward,
+}
+
 public sealed class AssemblerOptions
 {
-    public string[] ReferenceAssemblyPaths = Utilities.Empty<string>();
-    public AssemblyTypes AssemblyType = AssemblyTypes.Exe;
-    public TargetWindowsArchitectures TargetWindowsArchitecture = TargetWindowsArchitectures.AnyCPU;
-    public DebugSymbolTypes DebugSymbolType = DebugSymbolTypes.Embedded;
-    public AssembleOptions Options = AssembleOptions.Deterministic | AssembleOptions.DisableJITOptimization;
-    public Version Version = new Version(1, 0, 0, 0);
-    public string TargetFrameworkMoniker = ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker;
-    public bool ProduceRuntimeConfigurationIfRequired = true;
+    public string[] ReferenceAssemblyPaths =
+        Utilities.Empty<string>();
+    public AssemblyTypes AssemblyType =
+        AssemblyTypes.Exe;
+    public TargetWindowsArchitectures TargetWindowsArchitecture =
+        TargetWindowsArchitectures.AnyCPU;
+    public DebugSymbolTypes DebugSymbolType =
+        DebugSymbolTypes.Embedded;
+    public AssembleOptions Options =
+        AssembleOptions.Deterministic | AssembleOptions.DisableJITOptimization;
+    public Version Version = new(1, 0, 0, 0);
+    public string TargetFrameworkMoniker =
+        ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker;
+    public RuntimeConfigurationOptions RuntimeConfiguration =
+        RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
 }
