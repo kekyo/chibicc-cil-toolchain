@@ -13,7 +13,7 @@ jobs:
     #-----------------------------------------------------------------------
     # Checkout
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     #   lfs: true
@@ -31,7 +31,7 @@ jobs:
     # Setup environments
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
           2.2.x
@@ -60,7 +60,7 @@ jobs:
 
     - name: Test
       run: |
-        dotnet clean -p:Configuration=Release -p:Platform="Any CPU" |
+        dotnet clean -p:Configuration=Release -p:Platform="Any CPU"
         dotnet test -p:Configuration=Release -p:Platform="Any CPU" -p:CITest=True chibias.sln
       timeout-minutes: 10
 
@@ -87,7 +87,7 @@ jobs:
     #-----------------------------------------------------------------------
     # Checkout
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     #   lfs: true
@@ -105,7 +105,7 @@ jobs:
     # Setup environments
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
           2.2.x
@@ -134,7 +134,7 @@ jobs:
 
     - name: Test
       run: |
-        dotnet clean -p:Configuration=Release -p:Platform="Any CPU" |
+        dotnet clean -p:Configuration=Release -p:Platform="Any CPU"
         dotnet test -p:Configuration=Release -p:Platform="Any CPU" -p:CITest=True chibias.sln
       timeout-minutes: 10
 
