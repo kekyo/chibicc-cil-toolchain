@@ -77,8 +77,8 @@ public sealed class AssemblerOptions
     public AssembleOptions Options =
         AssembleOptions.Deterministic | AssembleOptions.DisableJITOptimization;
     public Version Version = new(1, 0, 0, 0);
-    public string TargetFrameworkMoniker =
-        ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker;
+    public TargetFramework TargetFramework = TargetFramework.Default;
     public RuntimeConfigurationOptions RuntimeConfiguration =
         RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
+    public string? AppHostTemplatePath = default;
 }

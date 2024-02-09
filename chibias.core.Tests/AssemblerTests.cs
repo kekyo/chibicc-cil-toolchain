@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 using static VerifyNUnit.Verifier;
 
-namespace chibias.core.Tests;
+namespace chibias;
 
 [TestFixture]
 public sealed partial class AssemblerTests
@@ -756,25 +756,47 @@ public sealed partial class AssemblerTests
     [Test]
     public Task LdcR4Varies1()
     {
-        var actual = Run($@"
+        // HACK: ILDasm on Windows, R4 constant value format is suppressed leading zero.
+        // Linux: "3.4028235e+038"
+        // Windows: "3.4028235e+38"
+        // So will fail the test.
+        if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+        {
+            var actual = Run($@"
             .function public int32() main
                 ldc.r4 {float.MaxValue}
                 pop
                 ldc.i4.1
                 ret");
-        return Verify(actual);
+            return Verify(actual);
+        }
+        else
+        {
+            return Task.CompletedTask;
+        }
     }
 
     [Test]
     public Task LdcR4Varies2()
     {
-        var actual = Run($@"
-            .function public int32() main
-                ldc.r4 {float.MinValue}
-                pop
-                ldc.i4.1
-                ret");
-        return Verify(actual);
+        // HACK: ILDasm on Windows, R4 constant value format is suppressed leading zero.
+        // Linux: "-3.4028235e+038"
+        // Windows: "-3.4028235e+38"
+        // So will fail the test.
+        if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+        {
+            var actual = Run($@"
+                .function public int32() main
+                    ldc.r4 {float.MinValue}
+                    pop
+                    ldc.i4.1
+                    ret");
+            return Verify(actual);
+        }
+        else
+        {
+            return Task.CompletedTask;
+        }
     }
 
     /////////////////////////////////////////////////////////
@@ -2665,6 +2687,30 @@ public sealed partial class AssemblerTests
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net7.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp70InExe()
+    {
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.1
+                ret",
+            AssemblyTypes.Exe,
+            targetFrameworkMoniker: "net7.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp70InWinExe()
+    {
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.1
+                ret",
+            AssemblyTypes.WinExe,
+            targetFrameworkMoniker: "net7.0");
         return Verify(actual);
     }
 }

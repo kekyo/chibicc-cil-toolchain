@@ -21,7 +21,7 @@ public static class AssemblerExtension
         DebugSymbolTypes debugSymbolType,
         AssembleOptions options,
         Version version,
-        string targetFrameworkMoniker,
+        TargetFramework targetFramework,
         params string[] sourcePaths) =>
         assembler.Assemble(
             outputAssemblyPath,
@@ -32,7 +32,7 @@ public static class AssemblerExtension
                 DebugSymbolType = debugSymbolType,
                 Options = options,
                 Version = version,
-                TargetFrameworkMoniker = targetFrameworkMoniker,
+                TargetFramework = targetFramework,
             },
             sourcePaths);
 }

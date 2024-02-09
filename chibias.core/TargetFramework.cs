@@ -7,14 +7,14 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using Mono.Cecil;
 using System;
 using System.Globalization;
 using System.Linq;
+using Mono.Cecil;
 
-namespace chibias.Internal;
+namespace chibias;
 
-internal enum TargetFrameworkIdentifiers
+public enum TargetFrameworkIdentifiers
 {
     NETFramework,
     NETStandard,
@@ -22,7 +22,7 @@ internal enum TargetFrameworkIdentifiers
     //NETPortable,
 }
 
-internal readonly struct TargetFramework
+public readonly struct TargetFramework
 {
     private static readonly byte[] netFrameworkCoreLibraryToken = 
         new byte[] { 0xb7, 0x7a, 0x5c, 0x56, 0x19, 0x34, 0xe0, 0x89 };
@@ -32,6 +32,9 @@ internal readonly struct TargetFramework
     private static readonly char[] versionSeparators = { '.' };
     private static readonly char[] postfixSeparators = { '-' };
 
+    public static readonly TargetFramework Default =
+        new(TargetFrameworkIdentifiers.NETStandard, new(2, 0));
+    
     public readonly TargetFrameworkIdentifiers Identifier;
     public readonly Version Version;
     public readonly string? Profile;
@@ -58,6 +61,18 @@ internal readonly struct TargetFramework
                     _ => TargetRuntime.Net_2_0,
                 },
             _ => TargetRuntime.Net_4_0,
+        };
+
+    public string Moniker =>
+        this.Identifier switch
+        {
+            TargetFrameworkIdentifiers.NETFramework =>
+                $"net{this.Version.Major}{this.Version.Minor}{(this.Version.Build >= 1 ? this.Version.Build.ToString() : "")}",
+            TargetFrameworkIdentifiers.NETStandard =>
+                $"netstandard{this.Version.Major}.{this.Version.Minor}",
+            _ => (this.Version.Major >= 5) ?
+                $"net{this.Version.Major}.{this.Version.Minor}" :
+                $"netcoreapp{this.Version.Major}.{this.Version.Minor}",
         };
 
     public AssemblyNameReference CoreLibraryName

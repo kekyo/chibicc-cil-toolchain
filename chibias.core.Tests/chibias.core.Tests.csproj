@@ -25,6 +25,14 @@
     <Content Include="ildasm.linux-x64">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Remove="apphost.exe" />
+    <Content Include="apphost.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Remove="apphost.linux-x64" />
+    <Content Include="apphost.linux-x64">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Remove="tmp2.dll" />
     <Content Include="tmp2.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

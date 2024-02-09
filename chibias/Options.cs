@@ -33,8 +33,9 @@ internal sealed class Options
         var options = new Options();
         var referenceAssemblyPaths = new List<string>();
 
-        options.AssemblerOptions.TargetFrameworkMoniker =
-            ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker;
+        options.AssemblerOptions.TargetFramework =
+            TargetFramework.TryParse(ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker, out var tf) ?
+                tf : TargetFramework.Default;
 
         for (var index = 0; index < args.Length; index++)
         {
@@ -80,6 +81,14 @@ internal sealed class Options
                         case 'c':
                             options.AssemblerOptions.AssemblyType = AssemblyTypes.Dll;
                             continue;
+                        case 'a':
+                            if (args.Length >= index)
+                            {
+                                options.AssemblerOptions.AppHostTemplatePath = args[index + 1];
+                                index++;
+                                continue;
+                            }
+                            break;
                         case 'g':
                             if (arg.Length == 3)
                             {
@@ -183,7 +192,7 @@ internal sealed class Options
                                         options.AssemblerOptions.RuntimeConfiguration =
                                             RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward;
                                         continue;
-                                    case 'n':
+                                    case 's':
                                         options.AssemblerOptions.RuntimeConfiguration =
                                             RuntimeConfigurationOptions.ProduceCoreCLR;
                                         continue;
@@ -210,9 +219,11 @@ internal sealed class Options
                             }
                             break;
                         case 'f':
-                            if (arg.Length >= 2)
+                            if (arg.Length >= 2 &&
+                                TargetFramework.TryParse(args[index + 1], out var tf2))
                             {
-                                options.AssemblerOptions.TargetFrameworkMoniker = args[++index];
+                                index++;
+                                options.AssemblerOptions.TargetFramework = tf2;
                                 continue;
                             }
                             break;
@@ -279,7 +290,8 @@ internal sealed class Options
             {
                 case AssemblyTypes.Exe:
                 case AssemblyTypes.WinExe:
-                    options.OutputAssemblyPath = Path.GetFullPath("a.out.exe");
+                    options.OutputAssemblyPath = options.AssemblerOptions.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETFramework ?
+                        Path.GetFullPath("a.out.exe") : Path.GetFullPath("a.out.dll");
                     break;
                 default:
                     switch (options.SourceCodePaths.FirstOrDefault())
@@ -334,7 +346,8 @@ internal sealed class Options
         logger.Information($"Options={this.AssemblerOptions.Options}");
         logger.Information($"RuntimeConfiguration={this.AssemblerOptions.RuntimeConfiguration}");
         logger.Information($"Version={this.AssemblerOptions.Version}");
-        logger.Information($"TargetFrameworkMoniker={this.AssemblerOptions.TargetFrameworkMoniker}");
+        logger.Information($"TargetFrameworkMoniker={this.AssemblerOptions.TargetFramework}");
+        logger.Information($"AppHostTemplatePath={(this.AssemblerOptions.AppHostTemplatePath ?? "(null)")}");
     }
 
     public static void WriteUsage(TextWriter tw)
@@ -350,6 +363,7 @@ internal sealed class Options
         tw.WriteLine("  -c, --dll         Produce dll assembly");
         tw.WriteLine("      --exe         Produce executable assembly (defaulted)");
         tw.WriteLine("      --winexe      Produce Windows executable assembly");
+        tw.WriteLine("  -a <path>         AppHost template path");
         tw.WriteLine("  -r <path>         Reference assembly path");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
@@ -367,7 +381,7 @@ internal sealed class Options
         tw.WriteLine("      -p6           Produce CoreCLR runtime configuration (rollForward: latest feature)");
         tw.WriteLine("      -p7           Produce CoreCLR runtime configuration (rollForward: latest patch)");
         tw.WriteLine("      -p8           Produce CoreCLR runtime configuration (rollForward: disable)");
-        tw.WriteLine("      -pn           Produce CoreCLR runtime configuration");
+        tw.WriteLine("      -ps           Produce CoreCLR runtime configuration");
         tw.WriteLine("      -po           Omit CoreCLR runtime configuration");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
