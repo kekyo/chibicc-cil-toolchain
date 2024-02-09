@@ -6,6 +6,7 @@
     <AssemblyName>chibias.core</AssemblyName>
     <IsPackable>true</IsPackable>
     <PackageId>chibias.core</PackageId>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

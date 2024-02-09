@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace chibias;
@@ -44,6 +45,8 @@ public sealed class Assembler
         new StreamReader(typeof(Assembler).Assembly.GetManifestResourceStream(
             "chibias.Internal.runtimeconfig.json")!).
         ReadToEnd();
+    private static readonly byte[] appBinaryPathPlaceholderSearchValue =
+        Encoding.UTF8.GetBytes("c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2");
 
     private readonly ILogger logger;
     private readonly DefaultAssemblyResolver assemblyResolver;
@@ -223,35 +226,144 @@ public sealed class Assembler
             RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward => "disable",
             _ => throw new ArgumentException(),
         };
+    
+    private void WriteRuntimeConfiguration(
+        string outputAssemblyCandidateFullPath, AssemblerOptions options)
+    {
+        var runtimeConfigJsonPath = Path.Combine(
+            Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath),
+            Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath) + ".runtimeconfig.json");
+
+        this.logger.Information(
+            $"Writing: {Path.GetFileName(runtimeConfigJsonPath)}");
+
+        using var tw = File.CreateText(runtimeConfigJsonPath);
+
+        var sb = new StringBuilder(runtimeConfigJsonTemplate);
+        sb.Replace("{tfm}", options.TargetFramework.Moniker);
+        if (options.RuntimeConfiguration ==
+            RuntimeConfigurationOptions.ProduceCoreCLR)
+        {
+            sb.Replace("{rollForward}", "");
+        }
+        else
+        {
+            sb.Replace(
+                "{rollForward}",
+                $"\"rollForward\": \"{GetRollForwardValue(options.RuntimeConfiguration)}\",{Environment.NewLine}    ");
+        }
+        if (options.TargetFramework.Version.Build >= 0)
+        {
+            sb.Replace("{tfv}", options.TargetFramework.Version.ToString(3));
+        }
+        else
+        {
+            sb.Replace("{tfv}", options.TargetFramework.Version.ToString(2) + ".0");
+        }
+
+        tw.Write(sb.ToString());
+        tw.Flush();
+    }
+
+    private void WriteAppHost(
+        string outputAssemblyFullPath,
+        string outputAssemblyPath,
+        string appHostTemplateFullPath,
+        AssemblerOptions options)
+    {
+        using var ms = new MemoryStream();
+        using (var fs = new FileStream(
+            appHostTemplateFullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            fs.CopyTo(ms);
+        }
+        ms.Position = 0;
+
+        var outputAssemblyName = Path.GetFileName(outputAssemblyPath);
+        var outputAssemblyNameBytes = Encoding.UTF8.GetBytes(outputAssemblyName);
+
+        var isPEImage = PEUtils.IsPEImage(ms);
+        var outputFullPath = Path.Combine(
+            Utilities.GetDirectoryPath(outputAssemblyFullPath),
+            Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + (isPEImage ? ".exe" : ""));
+        
+        this.logger.Information(
+            $"Writing AppHost: {Path.GetFileName(outputFullPath)}{(isPEImage ? " (PE format)" : "")}");
+
+        if (Utilities.UpdateBytes(
+            ms,
+            appBinaryPathPlaceholderSearchValue,
+            outputAssemblyNameBytes))
+        {
+            if (isPEImage && options.AssemblyType == AssemblyTypes.WinExe)
+            {
+                PEUtils.SetWindowsGraphicalUserInterfaceBit(ms);
+            }
+
+            using (var fs = new FileStream(
+                       outputFullPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
+            {
+                ms.CopyTo(fs);
+                fs.Flush();
+            }
+
+            if (!Utilities.IsInWindows)
+            {
+                while (true)
+                {
+                    var r = Utilities.chmod(outputFullPath,
+                        chmodFlags.S_IXOTH | chmodFlags.S_IROTH |
+                        chmodFlags.S_IXGRP | chmodFlags.S_IRGRP |
+                        chmodFlags.S_IXUSR | chmodFlags.S_IWUSR | chmodFlags.S_IRUSR);
+                    if (r != -1)
+                    {
+                        break;
+                    }
+                    var errno = Marshal.GetLastWin32Error();
+                    if (errno != Utilities.EINTR)
+                    {
+                        Marshal.ThrowExceptionForHR(errno);
+                    }
+                }
+            }
+        }
+        else
+        {
+            this.logger.Error(
+                $"Invalid AppHost template file: {appHostTemplateFullPath}");
+        }
+    }
 
     private bool Run(
         string outputAssemblyPath,
         AssemblerOptions options,
         Func<Parser, bool> runner)
     {
-        if (!TargetFramework.TryParse(
-            options.TargetFrameworkMoniker,
-            out var targetFramework))
-        {
-            this.logger.Error(
-                $"Unknown target framework moniker: {options.TargetFrameworkMoniker}");
-            return false;
-        }
-
-        this.logger.Information(
-            $"Detected target framework: {targetFramework} [{options.TargetFrameworkMoniker}]");
-
+        var produceExecutable =
+            options.AssemblyType != AssemblyTypes.Dll;
+        
+        var requireAppHost =
+            produceExecutable &&
+            options.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp &&
+            options.AppHostTemplatePath is { } appHostTemplatePath &&
+            !string.IsNullOrWhiteSpace(appHostTemplatePath);
+        
         var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
+        var outputAssemblyCandidateFullPath = requireAppHost?
+            Path.Combine(
+                Utilities.GetDirectoryPath(outputAssemblyFullPath),
+                Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + ".dll") :
+            outputAssemblyFullPath;
 
         //////////////////////////////////////////////////////////////
 
         var assemblyName = new AssemblyNameDefinition(
-            Path.GetFileNameWithoutExtension(outputAssemblyFullPath),
+            Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath),
             options.Version);
 
         using var assembly = AssemblyDefinition.CreateAssembly(
             assemblyName,
-            Path.GetFileName(outputAssemblyFullPath),
+            Path.GetFileName(outputAssemblyCandidateFullPath),
             new ModuleParameters
             {
                 Kind = options.AssemblyType switch
@@ -260,7 +372,7 @@ public sealed class Assembler
                     AssemblyTypes.WinExe => ModuleKind.Windows,
                     _ => ModuleKind.Console
                 },
-                Runtime = targetFramework.Runtime,
+                Runtime = options.TargetFramework.Runtime,
                 AssemblyResolver = this.assemblyResolver,
                 Architecture = options.TargetWindowsArchitecture switch
                 {
@@ -286,7 +398,7 @@ public sealed class Assembler
 
         // https://github.com/jbevain/cecil/issues/646
         var coreLibraryReference = this.assemblyResolver.Resolve(
-            targetFramework.CoreLibraryName,
+            options.TargetFramework.CoreLibraryName,
             this.readerParameters);
         module.AssemblyReferences.Add(coreLibraryReference.Name);
 
@@ -294,7 +406,7 @@ public sealed class Assembler
         Debug.Assert(module.TypeSystem.CoreLibrary == coreLibraryReference.Name);
 
         // Attention when different core library from target framework.
-        if (coreLibraryReference.Name.FullName != targetFramework.CoreLibraryName.FullName)
+        if (coreLibraryReference.Name.FullName != options.TargetFramework.CoreLibraryName.FullName)
         {
             this.logger.Warning(
                 $"Core library mismatched: {coreLibraryReference.FullName}");
@@ -310,13 +422,10 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        var produceExecutable =
-            options.AssemblyType != AssemblyTypes.Dll;
-
         var parser = new Parser(
             this.logger,
             module,
-            targetFramework,
+            options.TargetFramework,
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,
@@ -337,10 +446,10 @@ public sealed class Assembler
         if (allFinished)
         {
             this.logger.Information(
-                $"Writing: {Path.GetFileName(outputAssemblyFullPath)}");
+                $"Writing: {Path.GetFileName(outputAssemblyCandidateFullPath)}");
 
             var outputAssemblyBasePath =
-                Utilities.GetDirectoryPath(outputAssemblyFullPath);
+                Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath);
             try
             {
                 if (!Directory.Exists(outputAssemblyBasePath))
@@ -353,7 +462,7 @@ public sealed class Assembler
             }
 
             module.Write(
-                outputAssemblyFullPath,
+                outputAssemblyCandidateFullPath,
                 new()
                 {
                     DeterministicMvid =
@@ -370,43 +479,25 @@ public sealed class Assembler
                     },
                 });
 
-            if (options.RuntimeConfiguration != RuntimeConfigurationOptions.Omit &&
-                produceExecutable &&
-                targetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
+            if (produceExecutable &&
+                options.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
             {
-                var runtimeConfigJsonPath = Path.Combine(
-                    Utilities.GetDirectoryPath(outputAssemblyFullPath),
-                    Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + ".runtimeconfig.json");
-
-                this.logger.Information(
-                    $"Writing: {Path.GetFileName(runtimeConfigJsonPath)}");
-
-                using var tw = File.CreateText(runtimeConfigJsonPath);
-
-                var sb = new StringBuilder(runtimeConfigJsonTemplate);
-                sb.Replace("{tfm}", options.TargetFrameworkMoniker);
-                if (options.RuntimeConfiguration ==
-                    RuntimeConfigurationOptions.ProduceCoreCLR)
+                if (options.RuntimeConfiguration != RuntimeConfigurationOptions.Omit)
                 {
-                    sb.Replace("{rollForward}", "");
+                    this.WriteRuntimeConfiguration(
+                        outputAssemblyCandidateFullPath,
+                        options);
                 }
-                else
+            
+                if (options.AppHostTemplatePath is { } appHostTemplatePath3 &&
+                    !string.IsNullOrWhiteSpace(appHostTemplatePath3))
                 {
-                    sb.Replace(
-                        "{rollForward}",
-                        $"\"rollForward\": \"{GetRollForwardValue(options.RuntimeConfiguration)}\",{Environment.NewLine}    ");
+                    this.WriteAppHost(
+                        outputAssemblyFullPath,
+                        outputAssemblyCandidateFullPath,
+                        Path.GetFullPath(appHostTemplatePath3),
+                        options);
                 }
-                if (targetFramework.Version.Build >= 0)
-                {
-                    sb.Replace("{tfv}", targetFramework.Version.ToString(3));
-                }
-                else
-                {
-                    sb.Replace("{tfv}", targetFramework.Version.ToString(2) + ".0");
-                }
-
-                tw.Write(sb.ToString());
-                tw.Flush();
             }
         }
 

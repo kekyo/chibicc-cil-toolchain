@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 using static VerifyNUnit.Verifier;
 
-namespace chibias.core.Tests;
+namespace chibias;
 
 [TestFixture]
 public sealed partial class AssemblerTests
@@ -2687,6 +2687,30 @@ public sealed partial class AssemblerTests
                 ldc.i4.1
                 ret",
                 targetFrameworkMoniker: "net7.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp70InExe()
+    {
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.1
+                ret",
+            AssemblyTypes.Exe,
+            targetFrameworkMoniker: "net7.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task TfmSpecificCoreApp70InWinExe()
+    {
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.1
+                ret",
+            AssemblyTypes.WinExe,
+            targetFrameworkMoniker: "net7.0");
         return Verify(actual);
     }
 }

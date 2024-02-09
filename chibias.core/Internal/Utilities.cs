@@ -11,12 +11,35 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace chibias.Internal;
 
+[Flags]
+internal enum chmodFlags
+{
+    S_IRUSR = 0x100,
+    S_IWUSR = 0x80,
+    S_IXUSR = 0x40,
+    S_IRGRP = 0x20,
+    S_IWGRP = 0x10,
+    S_IXGRP = 0x8,
+    S_IROTH = 0x4,
+    S_IWOTH = 0x2,
+    S_IXOTH = 0x1,
+}
+
 internal static class Utilities
 {
+    public static readonly bool IsInWindows =
+        Environment.OSVersion.Platform == PlatformID.Win32NT;
+
+    public const int EINTR = 4;
+    
+    [DllImport("libc", SetLastError = true)]
+    public static extern int chmod(string path, chmodFlags mode);
+
 #if NET40 || NET45
     private static class ArrayEmpty<T>
     {
@@ -211,4 +234,35 @@ internal static class Utilities
     public static bool TryParseEnum<TEnum>(string word, out TEnum value)
         where TEnum : struct, Enum =>
         Enum.TryParse(word, true, out value);
+    
+    public static bool UpdateBytes(
+        MemoryStream ms,
+        byte[] targetBytes, byte[] replaceBytes)
+    {
+        var data = ms.GetBuffer();
+        var index = 0;
+        while (index < ms.Length)
+        {
+            var targetIndex = 0;
+            while (targetIndex < targetBytes.Length)
+            {
+                if (data[index + targetIndex] != targetBytes[targetIndex])
+                {
+                    break;
+                }
+                targetIndex++;
+            }
+            if (targetIndex >= targetBytes.Length)
+            {
+                Array.Copy(replaceBytes, 0, data, index, replaceBytes.Length);
+                for (var index2 = replaceBytes.Length; index2 < targetBytes.Length; index2++)
+                {
+                    data[index + index2] = 0x00;
+                }
+                return true;
+            }
+            index++;
+        }
+        return false;
+    }
 }
