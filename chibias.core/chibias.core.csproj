@@ -20,6 +20,8 @@
     <None Remove="Parsing\_startup_i_v.s" />
     <None Remove="Parsing\_startup_v.s" />
     <None Remove="Parsing\_startup_v_v.s" />
+    <Compile Remove="Parsing\Embedding\_start.cs" />
+    <None Include="Parsing\Embedding\_start.cs" />
     <EmbeddedResource Include="Internal\runtimeconfig.json" />
     <EmbeddedResource Include="Parsing\Embedding\_start_i_v.s" />
     <EmbeddedResource Include="Parsing\Embedding\_start_v_v.s" />
