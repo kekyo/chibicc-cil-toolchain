@@ -17,6 +17,21 @@ namespace chibias;
 
 internal sealed class Options
 {
+    private static readonly Dictionary<string, RuntimeConfigurationOptions> rollforwards = new()
+    {
+        { "major", RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward },
+        { "minor", RuntimeConfigurationOptions.ProduceCoreCLRMinorRollForward },
+        { "feature", RuntimeConfigurationOptions.ProduceCoreCLRFeatureRollForward },
+        { "patch", RuntimeConfigurationOptions.ProduceCoreCLRPatchRollForward },
+        { "latestmajor", RuntimeConfigurationOptions.ProduceCoreCLRLatestMajorRollForward },
+        { "latestminor", RuntimeConfigurationOptions.ProduceCoreCLRLatestMinorRollForward },
+        { "latestfeature", RuntimeConfigurationOptions.ProduceCoreCLRLatestFeatureRollForward },
+        { "latestpatch", RuntimeConfigurationOptions.ProduceCoreCLRLatestPatchRollForward },
+        { "disable", RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward },
+        { "default", RuntimeConfigurationOptions.ProduceCoreCLR },
+        { "omit", RuntimeConfigurationOptions.Omit },
+    };
+
     public string OutputAssemblyPath = null!;
     public readonly List<string> ReferenceAssemblyBasePaths = new();
     public readonly AssemblerOptions AssemblerOptions = new();
@@ -152,60 +167,11 @@ internal sealed class Options
                             }
                             break;
                         case 'p':
-                            if (arg.Length == 3)
+                            if (args.Length >= index &&
+                                rollforwards.TryGetValue(args[index + 1], out var rollforward))
                             {
-                                switch (arg[2])
-                                {
-                                    case '0':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
-                                        continue;
-                                    case '1':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRMinorRollForward;
-                                        continue;
-                                    case '2':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRFeatureRollForward;
-                                        continue;
-                                    case '3':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRPatchRollForward;
-                                        continue;
-                                    case '4':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestMajorRollForward;
-                                        continue;
-                                    case '5':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestMinorRollForward;
-                                        continue;
-                                    case '6':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestFeatureRollForward;
-                                        continue;
-                                    case '7':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestPatchRollForward;
-                                        continue;
-                                    case '8':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward;
-                                        continue;
-                                    case 's':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLR;
-                                        continue;
-                                    case 'o':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.Omit;
-                                        continue;
-                                }
-                            }
-                            else if (arg.Length == 2)
-                            {
-                                options.AssemblerOptions.RuntimeConfiguration =
-                                    RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
+                                index++;
+                                options.AssemblerOptions.RuntimeConfiguration = rollforward;
                                 continue;
                             }
                             break;
@@ -372,17 +338,7 @@ internal sealed class Options
         tw.WriteLine("      -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
-        tw.WriteLine("  -p, -p0           Produce CoreCLR runtime configuration (rollForward: major) (defaulted)");
-        tw.WriteLine("      -p1           Produce CoreCLR runtime configuration (rollForward: minor)");
-        tw.WriteLine("      -p2           Produce CoreCLR runtime configuration (rollForward: feature)");
-        tw.WriteLine("      -p3           Produce CoreCLR runtime configuration (rollForward: patch)");
-        tw.WriteLine("      -p4           Produce CoreCLR runtime configuration (rollForward: latest major)");
-        tw.WriteLine("      -p5           Produce CoreCLR runtime configuration (rollForward: latest minor)");
-        tw.WriteLine("      -p6           Produce CoreCLR runtime configuration (rollForward: latest feature)");
-        tw.WriteLine("      -p7           Produce CoreCLR runtime configuration (rollForward: latest patch)");
-        tw.WriteLine("      -p8           Produce CoreCLR runtime configuration (rollForward: disable)");
-        tw.WriteLine("      -ps           Produce CoreCLR runtime configuration");
-        tw.WriteLine("      -po           Omit CoreCLR runtime configuration");
+        tw.WriteLine("  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
         tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]");
