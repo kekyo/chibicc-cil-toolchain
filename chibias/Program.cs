@@ -36,9 +36,7 @@ public static class Program
 
             options.Write(logger);
 
-            var assembler = new Assembler(
-                logger,
-                options.ReferenceAssemblyBasePaths.ToArray());
+            var assembler = new Assembler(logger);
 
             if (assembler.Assemble(
                 options.OutputAssemblyPath,

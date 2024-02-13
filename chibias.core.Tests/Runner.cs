@@ -62,16 +62,16 @@ partial class AssemblerTests
                     Select(Utilities.GetDirectoryPath).
                     Distinct().
                     ToArray();
-                var referenceAssemblyPaths = new[]
+                var referenceAssemblyNames = new[]
                     {
                         coreLibPath, tmp2Path,
                     }.
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
+                    Select(Path.GetFileNameWithoutExtension).
+                    Distinct().
                     ToArray();
 
-                var assember = new Assembler(
-                    logger,
-                    referenceAssemblyBasePaths);
+                var assember = new Assembler(logger);
 
                 var outputAssemblyPath =
                     Path.Combine(basePath, "output.dll");
@@ -81,7 +81,8 @@ partial class AssemblerTests
                     outputAssemblyPath,
                     new()
                     {
-                        ReferenceAssemblyPaths = referenceAssemblyPaths,
+                        ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
+                        ReferenceAssemblyNames = referenceAssemblyNames!,
                         AssemblyType = assemblyType,
                         TargetFramework = tf,
                         DebugSymbolType = DebugSymbolTypes.Embedded,

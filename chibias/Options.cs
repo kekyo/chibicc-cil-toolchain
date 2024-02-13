@@ -33,7 +33,6 @@ internal sealed class Options
     };
 
     public string OutputAssemblyPath = null!;
-    public readonly List<string> ReferenceAssemblyBasePaths = new();
     public readonly AssemblerOptions AssemblerOptions = new();
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
@@ -46,7 +45,8 @@ internal sealed class Options
     public static Options Parse(string[] args)
     {
         var options = new Options();
-        var referenceAssemblyPaths = new List<string>();
+        var referenceAssemblyBasePaths = new List<string>();
+        var referenceAssemblyNames = new List<string>();
 
         options.AssemblerOptions.TargetFramework =
             TargetFramework.TryParse(ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker, out var tf) ?
@@ -77,19 +77,33 @@ internal sealed class Options
                                 continue;
                             }
                             break;
-                        case 'r':
+                        case 'L':
                             if (arg.Length >= 3)
                             {
-                                var referenceAssemblyPath =
+                                var referenceAssemblyBasePath =
                                     Path.GetFullPath(arg.Substring(2));
-                                referenceAssemblyPaths.Add(referenceAssemblyPath);
+                                referenceAssemblyBasePaths.Add(referenceAssemblyBasePath);
                                 continue;
                             }
                             else if (args.Length >= index)
                             {
-                                var referenceAssemblyPath =
+                                var referenceAssemblyBasePath =
                                     Path.GetFullPath(args[++index]);
-                                referenceAssemblyPaths.Add(referenceAssemblyPath);
+                                referenceAssemblyBasePaths.Add(referenceAssemblyBasePath);
+                                continue;
+                            }
+                            break;
+                        case 'l':
+                            if (arg.Length >= 3)
+                            {
+                                var referenceAssemblyName = arg.Substring(2);
+                                referenceAssemblyNames.Add(referenceAssemblyName);
+                                continue;
+                            }
+                            else if (args.Length >= index)
+                            {
+                                var referenceAssemblyName = args[++index];
+                                referenceAssemblyNames.Add(referenceAssemblyName);
                                 continue;
                             }
                             break;
@@ -276,13 +290,12 @@ internal sealed class Options
             }
         }
 
-        options.AssemblerOptions.ReferenceAssemblyPaths =
-            referenceAssemblyPaths.ToArray();
-
-        options.ReferenceAssemblyBasePaths.AddRange(
-            options.AssemblerOptions.ReferenceAssemblyPaths.
-                Select(Utilities.GetDirectoryPath).
-                Distinct());
+        options.AssemblerOptions.ReferenceAssemblyBasePaths = referenceAssemblyBasePaths.
+            Distinct().
+            ToArray();
+        options.AssemblerOptions.ReferenceAssemblyNames = referenceAssemblyNames.
+            Distinct().
+            ToArray();
 
         return options;
     }
@@ -296,14 +309,14 @@ internal sealed class Options
 
         logger.Information($"OutputAssemblyPath={this.OutputAssemblyPath}");
 
-        foreach (var path in this.AssemblerOptions.ReferenceAssemblyPaths)
-        {
-            logger.Information($"ReferenceAssemblyPath={path}");
-        }
-
-        foreach (var path in this.ReferenceAssemblyBasePaths)
+        foreach (var path in this.AssemblerOptions.ReferenceAssemblyBasePaths)
         {
             logger.Information($"ReferenceAssemblyBasePath={path}");
+        }
+
+        foreach (var name in this.AssemblerOptions.ReferenceAssemblyNames)
+        {
+            logger.Information($"ReferenceAssemblyName={name}");
         }
 
         logger.Information($"AssemblyType={this.AssemblerOptions.AssemblyType}");
@@ -330,7 +343,8 @@ internal sealed class Options
         tw.WriteLine("      --exe         Produce executable assembly (defaulted)");
         tw.WriteLine("      --winexe      Produce Windows executable assembly");
         tw.WriteLine("  -a <path>         AppHost template path");
-        tw.WriteLine("  -r <path>         Reference assembly path");
+        tw.WriteLine("  -L <path>         Reference assembly base path");
+        tw.WriteLine("  -l <name>         Reference assembly name");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");

@@ -49,7 +49,7 @@ $ dotnet tool install -g chibias-cli
 ```bash
 $ chibias
 
-chibias [0.26.0,net6.0] [...]
+chibias [0.41.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -60,7 +60,9 @@ usage: chibias [options] <source path> [<source path> ...]
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
       --winexe      Produce Windows executable assembly
-  -r <path>         Reference assembly path
+  -a <path>         AppHost template path
+  -L <path>         Reference assembly base path
+  -l <name>         Reference assembly name
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
@@ -68,7 +70,7 @@ usage: chibias [options] <source path> [<source path> ...]
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
-  -s                Suppress runtime configuration file
+  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
   -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
@@ -77,7 +79,7 @@ usage: chibias [options] <source path> [<source path> ...]
 ```
 
 * chibiasは、コマンドラインで指摘された複数のソースコードをアセンブルして、1つの.NETアセンブリにまとめます。
-* 参照アセンブリパスは、`ld` のライブラリルックアップと同じように最後から順に評価されます。
+* 参照アセンブリパス `-l` は、`ld` のライブラリルックアップと同じように最後から順に評価されます。
   この機能は、重複するシンボル(関数/グローバル変数)にも適用されます。
 * ターゲットフレームワークのデフォルト(上記の例では`net6.0`)は、chibiasの動作環境に依存します。
 * ターゲットフレームワークの指定は、コアライブラリのバリエーションを仮定するだけで、
@@ -104,7 +106,7 @@ chibiasを使って "Hello world" を実行してみましょう。
 出来たら、chibiasを呼び出します:
 
 ```bash
-$ chibias -f net45 -r /mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/mscorlib.dll -o hello.exe hello.s
+$ chibias -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 実行します:
@@ -144,7 +146,7 @@ $ echo $?
 ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
 
 ```bash
-$ chibias -f net6.0 -r ~/.dotnet/shared/Microsoft.NETCore.App/6.0.13/System.Private.CoreLib.dll -o hello.exe hello.s
+$ chibias -f net6.0 -L~/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 ターゲットフレームワークと、対応するコアライブラリのバージョンは一致する必要があります。
@@ -480,7 +482,7 @@ $ chibias -c test.s
 ```
 
 ```bash
-$ chibias -r test.dll main.s
+$ chibias -ltest main.s
 ```
 
 関数（.NET CILメソッド）は、`C.text`という名前のクラス内に配置されます。
@@ -538,7 +540,7 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 シグネチャを指定せず、オーバーロードメソッドが複数存在する場合は、誤ったメソッドを選択する可能性があります。
 通常、戻り値の型は検証されませんが、 `op_Implicit` 及び `op_Explicit` メソッドの場合のみ、戻り値の型も一致する事が確認されます。
 
-.NETメソッドを参照するために、コマンドラインオプション `-r` で、メソッド定義を含むアセンブリを指定する必要があります。これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
+.NETメソッドを参照するために、コマンドラインオプション `-l` で、メソッド定義を含むアセンブリを指定する必要があります。これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
 
 補足: プロパティやインデクサを呼び出す必要がある場合は、それらを実装するメソッドのシグネチャを特定しておく必要があります。例えば:
 

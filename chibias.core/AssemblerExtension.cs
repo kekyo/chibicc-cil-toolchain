@@ -16,7 +16,8 @@ public static class AssemblerExtension
     public static bool Assemble(
         this Assembler assembler,
         string outputAssemblyPath,
-        string[] referenceAssemblyPaths,
+        string[] referenceAssemblyBasePaths,
+        string[] referenceAssemblyNames,
         AssemblyTypes assemblyType,
         DebugSymbolTypes debugSymbolType,
         AssembleOptions options,
@@ -27,7 +28,8 @@ public static class AssemblerExtension
             outputAssemblyPath,
             new()
             {
-                ReferenceAssemblyPaths = referenceAssemblyPaths,
+                ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
+                ReferenceAssemblyNames = referenceAssemblyNames,
                 AssemblyType = assemblyType,
                 DebugSymbolType = debugSymbolType,
                 Options = options,

@@ -2,7 +2,7 @@
   "profiles": {
     "chibias": {
       "commandName": "Project",
-      "commandLineArgs": "--log trace -f net6.0 -a /home/kouji/.dotnet/sdk/6.0.418/AppHostTemplate/apphost -r /home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.26/System.Private.CoreLib.dll -r stage2/libc-bootstrap.dll -o stage2/chibicc stage2/./codegen.o stage2/./main.o stage2/./parse.o stage2/./strings.o stage2/./tokenize.o stage2/./type.o stage2/./utils.o",
+      "commandLineArgs": "--log trace -f net6.0 -a /home/kouji/.dotnet/sdk/6.0.418/AppHostTemplate/apphost -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.26 -lSystem.Private.CoreLib -L. -lc-bootstrap -o test/alignof test/alignof.o test/common.o",
       "workingDirectory": "/home/kouji/Projects/chibicc-cil"
     }
   }
