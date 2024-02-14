@@ -66,7 +66,9 @@ public enum RuntimeConfigurationOptions
 
 public sealed class AssemblerOptions
 {
-    public string[] ReferenceAssemblyPaths =
+    public string[] ReferenceAssemblyBasePaths =
+        Utilities.Empty<string>();
+    public string[] ReferenceAssemblyNames =
         Utilities.Empty<string>();
     public AssemblyTypes AssemblyType =
         AssemblyTypes.Exe;

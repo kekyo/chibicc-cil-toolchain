@@ -17,8 +17,22 @@ namespace chibias;
 
 internal sealed class Options
 {
+    private static readonly Dictionary<string, RuntimeConfigurationOptions> rollforwards = new()
+    {
+        { "major", RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward },
+        { "minor", RuntimeConfigurationOptions.ProduceCoreCLRMinorRollForward },
+        { "feature", RuntimeConfigurationOptions.ProduceCoreCLRFeatureRollForward },
+        { "patch", RuntimeConfigurationOptions.ProduceCoreCLRPatchRollForward },
+        { "latestmajor", RuntimeConfigurationOptions.ProduceCoreCLRLatestMajorRollForward },
+        { "latestminor", RuntimeConfigurationOptions.ProduceCoreCLRLatestMinorRollForward },
+        { "latestfeature", RuntimeConfigurationOptions.ProduceCoreCLRLatestFeatureRollForward },
+        { "latestpatch", RuntimeConfigurationOptions.ProduceCoreCLRLatestPatchRollForward },
+        { "disable", RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward },
+        { "default", RuntimeConfigurationOptions.ProduceCoreCLR },
+        { "omit", RuntimeConfigurationOptions.Omit },
+    };
+
     public string OutputAssemblyPath = null!;
-    public readonly List<string> ReferenceAssemblyBasePaths = new();
     public readonly AssemblerOptions AssemblerOptions = new();
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
@@ -31,7 +45,8 @@ internal sealed class Options
     public static Options Parse(string[] args)
     {
         var options = new Options();
-        var referenceAssemblyPaths = new List<string>();
+        var referenceAssemblyBasePaths = new List<string>();
+        var referenceAssemblyNames = new List<string>();
 
         options.AssemblerOptions.TargetFramework =
             TargetFramework.TryParse(ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker, out var tf) ?
@@ -62,19 +77,33 @@ internal sealed class Options
                                 continue;
                             }
                             break;
-                        case 'r':
+                        case 'L':
                             if (arg.Length >= 3)
                             {
-                                var referenceAssemblyPath =
+                                var referenceAssemblyBasePath =
                                     Path.GetFullPath(arg.Substring(2));
-                                referenceAssemblyPaths.Add(referenceAssemblyPath);
+                                referenceAssemblyBasePaths.Add(referenceAssemblyBasePath);
                                 continue;
                             }
                             else if (args.Length >= index)
                             {
-                                var referenceAssemblyPath =
+                                var referenceAssemblyBasePath =
                                     Path.GetFullPath(args[++index]);
-                                referenceAssemblyPaths.Add(referenceAssemblyPath);
+                                referenceAssemblyBasePaths.Add(referenceAssemblyBasePath);
+                                continue;
+                            }
+                            break;
+                        case 'l':
+                            if (arg.Length >= 3)
+                            {
+                                var referenceAssemblyName = arg.Substring(2);
+                                referenceAssemblyNames.Add(referenceAssemblyName);
+                                continue;
+                            }
+                            else if (args.Length >= index)
+                            {
+                                var referenceAssemblyName = args[++index];
+                                referenceAssemblyNames.Add(referenceAssemblyName);
                                 continue;
                             }
                             break;
@@ -152,60 +181,11 @@ internal sealed class Options
                             }
                             break;
                         case 'p':
-                            if (arg.Length == 3)
+                            if (args.Length >= index &&
+                                rollforwards.TryGetValue(args[index + 1], out var rollforward))
                             {
-                                switch (arg[2])
-                                {
-                                    case '0':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
-                                        continue;
-                                    case '1':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRMinorRollForward;
-                                        continue;
-                                    case '2':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRFeatureRollForward;
-                                        continue;
-                                    case '3':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRPatchRollForward;
-                                        continue;
-                                    case '4':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestMajorRollForward;
-                                        continue;
-                                    case '5':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestMinorRollForward;
-                                        continue;
-                                    case '6':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestFeatureRollForward;
-                                        continue;
-                                    case '7':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRLatestPatchRollForward;
-                                        continue;
-                                    case '8':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward;
-                                        continue;
-                                    case 's':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.ProduceCoreCLR;
-                                        continue;
-                                    case 'o':
-                                        options.AssemblerOptions.RuntimeConfiguration =
-                                            RuntimeConfigurationOptions.Omit;
-                                        continue;
-                                }
-                            }
-                            else if (arg.Length == 2)
-                            {
-                                options.AssemblerOptions.RuntimeConfiguration =
-                                    RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
+                                index++;
+                                options.AssemblerOptions.RuntimeConfiguration = rollforward;
                                 continue;
                             }
                             break;
@@ -310,13 +290,12 @@ internal sealed class Options
             }
         }
 
-        options.AssemblerOptions.ReferenceAssemblyPaths =
-            referenceAssemblyPaths.ToArray();
-
-        options.ReferenceAssemblyBasePaths.AddRange(
-            options.AssemblerOptions.ReferenceAssemblyPaths.
-                Select(Utilities.GetDirectoryPath).
-                Distinct());
+        options.AssemblerOptions.ReferenceAssemblyBasePaths = referenceAssemblyBasePaths.
+            Distinct().
+            ToArray();
+        options.AssemblerOptions.ReferenceAssemblyNames = referenceAssemblyNames.
+            Distinct().
+            ToArray();
 
         return options;
     }
@@ -330,14 +309,14 @@ internal sealed class Options
 
         logger.Information($"OutputAssemblyPath={this.OutputAssemblyPath}");
 
-        foreach (var path in this.AssemblerOptions.ReferenceAssemblyPaths)
-        {
-            logger.Information($"ReferenceAssemblyPath={path}");
-        }
-
-        foreach (var path in this.ReferenceAssemblyBasePaths)
+        foreach (var path in this.AssemblerOptions.ReferenceAssemblyBasePaths)
         {
             logger.Information($"ReferenceAssemblyBasePath={path}");
+        }
+
+        foreach (var name in this.AssemblerOptions.ReferenceAssemblyNames)
+        {
+            logger.Information($"ReferenceAssemblyName={name}");
         }
 
         logger.Information($"AssemblyType={this.AssemblerOptions.AssemblyType}");
@@ -364,7 +343,8 @@ internal sealed class Options
         tw.WriteLine("      --exe         Produce executable assembly (defaulted)");
         tw.WriteLine("      --winexe      Produce Windows executable assembly");
         tw.WriteLine("  -a <path>         AppHost template path");
-        tw.WriteLine("  -r <path>         Reference assembly path");
+        tw.WriteLine("  -L <path>         Reference assembly base path");
+        tw.WriteLine("  -l <name>         Reference assembly name");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");
@@ -372,17 +352,7 @@ internal sealed class Options
         tw.WriteLine("      -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
-        tw.WriteLine("  -p, -p0           Produce CoreCLR runtime configuration (rollForward: major) (defaulted)");
-        tw.WriteLine("      -p1           Produce CoreCLR runtime configuration (rollForward: minor)");
-        tw.WriteLine("      -p2           Produce CoreCLR runtime configuration (rollForward: feature)");
-        tw.WriteLine("      -p3           Produce CoreCLR runtime configuration (rollForward: patch)");
-        tw.WriteLine("      -p4           Produce CoreCLR runtime configuration (rollForward: latest major)");
-        tw.WriteLine("      -p5           Produce CoreCLR runtime configuration (rollForward: latest minor)");
-        tw.WriteLine("      -p6           Produce CoreCLR runtime configuration (rollForward: latest feature)");
-        tw.WriteLine("      -p7           Produce CoreCLR runtime configuration (rollForward: latest patch)");
-        tw.WriteLine("      -p8           Produce CoreCLR runtime configuration (rollForward: disable)");
-        tw.WriteLine("      -ps           Produce CoreCLR runtime configuration");
-        tw.WriteLine("      -po           Omit CoreCLR runtime configuration");
+        tw.WriteLine("  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
         tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]");

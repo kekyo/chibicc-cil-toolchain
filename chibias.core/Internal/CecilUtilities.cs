@@ -143,7 +143,7 @@ internal static class CecilUtilities
                 sb[index] = '_';
             }
         }
-        if (fileName.EndsWith(".s"))
+        if (fileName.EndsWith(".s") || fileName.EndsWith(".o"))
         {
             sb.Remove(sb.Length - 2, 2);
         }

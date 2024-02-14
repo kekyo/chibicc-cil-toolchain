@@ -2,7 +2,8 @@
   "profiles": {
     "chibias": {
       "commandName": "Project",
-      "commandLineArgs": "--log trace -f net45 -r ..\\..\\..\\..\\..\\chibicc-cil\\mscorlib.dll ..\\..\\..\\..\\..\\chibicc-cil\\test\\struct.s ..\\..\\..\\..\\..\\chibicc-cil\\test\\common_s"
+      "commandLineArgs": "--log trace -f net6.0 -a /home/kouji/.dotnet/sdk/6.0.418/AppHostTemplate/apphost -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.26 -lSystem.Private.CoreLib -L. -lc-bootstrap -o test/alignof test/alignof.o test/common.o",
+      "workingDirectory": "/home/kouji/Projects/chibicc-cil"
     }
   }
 }

@@ -50,7 +50,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.26.0,net6.0] [...]
+chibias [0.41.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -61,7 +61,9 @@ usage: chibias [options] <source path> [<source path> ...]
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
       --winexe      Produce Windows executable assembly
-  -r <path>         Reference assembly path
+  -a <path>         AppHost template path
+  -L <path>         Reference assembly base path
+  -l <name>         Reference assembly name
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
@@ -69,7 +71,7 @@ usage: chibias [options] <source path> [<source path> ...]
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
-  -s                Suppress runtime configuration file
+  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
   -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
@@ -78,7 +80,7 @@ usage: chibias [options] <source path> [<source path> ...]
 ```
 
 * chibias will combine multiple source code in command line pointed into one assembly.
-* Reference assembly paths evaluates last-to-first order, same as `ld` looking up.
+* Reference assembly paths `-l` evaluates last-to-first order, same as `ld` looking up.
   This feature applies to duplicated symbols (function/global variables).
 * The default target framework moniker (`net6.0` in the above example) depends on the operating environment of chibias.
 * Specifying a target framework moniker only assumes a variation of the core library.
@@ -105,7 +107,7 @@ You should create a new source code file `hello.s` with the contents only need 4
 Then invoke chibias with:
 
 ```bash
-$ chibias -f net45 -r /mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319/mscorlib.dll -o hello.exe hello.s
+$ chibias -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 Run it:
@@ -144,7 +146,7 @@ $ echo $?
 Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
 
 ```bash
-$ chibias -f net6.0 -r ~/.dotnet/shared/Microsoft.NETCore.App/6.0.13/System.Private.CoreLib.dll -o hello.exe hello.s
+$ chibias -f net6.0 -L~/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 The version of the target framework moniker and the corresponding core library must match.
@@ -487,7 +489,7 @@ Then:
 ```
 
 ```bash
-$ chibias -r test.dll main.s
+$ chibias -ltest main.s
 ```
 
 The functions (.NET CIL methods) are placed into single class named `C.text`.
@@ -547,7 +549,7 @@ If no signature is specified and there are multiple overload methods, the wrong 
 Generally, the return type is not verified,
 but the return type is also verified to match when using only for the `op_Implicit` and `op_Explicit` methods.
 
-You have to give it containing assembly on command line option `-r`.
+You have to give it containing assembly on command line option `-l`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
 
 Tip: If you need to call properties or indexers,

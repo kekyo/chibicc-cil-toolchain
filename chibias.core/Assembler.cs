@@ -49,47 +49,33 @@ public sealed class Assembler
         Encoding.UTF8.GetBytes("c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2");
 
     private readonly ILogger logger;
-    private readonly DefaultAssemblyResolver assemblyResolver;
-    private readonly ReaderParameters readerParameters;
 
-    public Assembler(
-        ILogger logger,
-        params string[] referenceAssemblyBasePaths)
-    {
+    public Assembler(ILogger logger) =>
         this.logger = logger;
-        this.assemblyResolver = new DefaultAssemblyResolver();
-        this.readerParameters = new(ReadingMode.Immediate)
-        {
-            InMemory = true,
-            ReadSymbols = false,
-            ReadWrite = false,
-            ThrowIfSymbolsAreNotMatching = false,
-            AssemblyResolver = this.assemblyResolver,
-        };
-
-        foreach (var basePath in referenceAssemblyBasePaths)
-        {
-            this.assemblyResolver.AddSearchDirectory(basePath);
-        }
-    }
 
     private TypeDefinitionCache LoadPublicTypesFrom(
-        string[] referenceAssemblyPaths)
+        string[] referenceAssemblyBasePaths,
+        string[] referenceAssemblyNames,
+        ReaderParameters readerParameters)
     {
-        var assemblies = referenceAssemblyPaths.
+        var assemblies = referenceAssemblyNames.
             Distinct().
-            Collect(path =>
+            Collect(name =>
             {
                 try
                 {
-                    if (!File.Exists(path))
+                    if (referenceAssemblyBasePaths.
+                        SelectMany(basePath => new[] { $"{name}.dll", $"lib{name}.dll" }.
+                            Select(n => Path.Combine(basePath, n))).
+                        Where(File.Exists).
+                        FirstOrDefault() is not { } path)
                     {
                         this.logger.Warning(
-                            $"Unable to find reference assembly: {path}");
+                            $"Unable to find reference assembly: {name}");
                         return null;
                     }
 
-                    var assembly = AssemblyDefinition.ReadAssembly(path, this.readerParameters);
+                    var assembly = AssemblyDefinition.ReadAssembly(path, readerParameters);
                     this.logger.Information(
                         $"Read reference assembly: {path}");
                     return assembly;
@@ -97,7 +83,7 @@ public sealed class Assembler
                 catch (Exception ex)
                 {
                     this.logger.Warning(
-                        $"Unable to read reference assembly: {path}, {ex.GetType().FullName}: {ex.Message}");
+                        $"Unable to read reference assembly: {name}, {ex.GetType().FullName}: {ex.Message}");
                     return null;
                 }
             })
@@ -339,6 +325,21 @@ public sealed class Assembler
         AssemblerOptions options,
         Func<Parser, bool> runner)
     {
+        using var assemblyResolver = new DefaultAssemblyResolver();
+        foreach (var basePath in options.ReferenceAssemblyBasePaths)
+        {
+            assemblyResolver.AddSearchDirectory(basePath);
+        }
+
+        var readerParameters = new ReaderParameters(ReadingMode.Immediate)
+        {
+            InMemory = true,
+            ReadSymbols = false,
+            ReadWrite = false,
+            ThrowIfSymbolsAreNotMatching = false,
+            AssemblyResolver = assemblyResolver,
+        };
+
         var produceExecutable =
             options.AssemblyType != AssemblyTypes.Dll;
         
@@ -373,7 +374,7 @@ public sealed class Assembler
                     _ => ModuleKind.Console
                 },
                 Runtime = options.TargetFramework.Runtime,
-                AssemblyResolver = this.assemblyResolver,
+                AssemblyResolver = assemblyResolver,
                 Architecture = options.TargetWindowsArchitecture switch
                 {
                     TargetWindowsArchitectures.X64 => TargetArchitecture.AMD64,
@@ -397,9 +398,9 @@ public sealed class Assembler
         };
 
         // https://github.com/jbevain/cecil/issues/646
-        var coreLibraryReference = this.assemblyResolver.Resolve(
+        var coreLibraryReference = assemblyResolver.Resolve(
             options.TargetFramework.CoreLibraryName,
-            this.readerParameters);
+            readerParameters);
         module.AssemblyReferences.Add(coreLibraryReference.Name);
 
         // The type system will be bring with explicitly assigned core library.
@@ -415,7 +416,9 @@ public sealed class Assembler
         //////////////////////////////////////////////////////////////
 
         var referenceTypes = this.LoadPublicTypesFrom(
-            options.ReferenceAssemblyPaths);
+            options.ReferenceAssemblyBasePaths,
+            options.ReferenceAssemblyNames,
+            readerParameters);
 
         var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
             referenceTypes);
