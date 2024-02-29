@@ -743,7 +743,11 @@ partial class Parser
             }
 
             this.structureType = st;
-            this.checkingMemberIndex = 0;
+
+            if (st.Fields.Count >= 1)
+            {
+                this.checkingMemberIndex = 0;
+            }
 
             return;
         }
