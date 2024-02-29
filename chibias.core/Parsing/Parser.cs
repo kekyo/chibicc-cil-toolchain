@@ -385,7 +385,7 @@ internal sealed partial class Parser
             Debug.Assert(this.labelTargets.Count == 0);
             Debug.Assert(this.willApplyLabelingNames.Count == 0);
 
-            if (this.checkingMemberIndex >= 0 &&
+            if (this.checkingMemberIndex >= 1 &&
                 this.checkingMemberIndex < this.structureType.Fields.Count)
             {
                 this.caughtError = true;
