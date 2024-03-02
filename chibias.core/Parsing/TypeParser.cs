@@ -172,11 +172,29 @@ public static class TypeParser
         }
     }
 
+    private readonly struct FunctionDescriptor
+    {
+        public readonly OuterNode Node;
+        public readonly List<FunctionParameter> Parameters;
+
+        public FunctionDescriptor(OuterNode node, List<FunctionParameter> parameters)
+        {
+            this.Node = node;
+            this.Parameters = parameters;
+        }
+
+        public void Deconstruct(out OuterNode node, out List<FunctionParameter> parameters)
+        {
+            node = this.Node;
+            parameters = this.Parameters;
+        }
+    }
+
     ///////////////////////////////////////////////////////////////////////////
 
     public static bool TryParse(string typeName, out TypeNode typeNode)
     {
-        var nodeStack = new Stack<OuterNode>();
+        var nodeStack = new Stack<FunctionDescriptor>();
         var parameters = new List<FunctionParameter>();
         var sb = new StringBuilder();
         TypeNode? currentNode = null;
@@ -274,9 +292,10 @@ public static class TypeParser
                 }
 
                 index++;
-                nodeStack.Push(new(currentNode, currentName));
+                nodeStack.Push(new(new(currentNode, currentName), parameters));
                 currentNode = null;
                 currentName = null;
+                parameters = new();
             }
             else if (inch == ',')
             {
@@ -308,7 +327,7 @@ public static class TypeParser
                     parameters.Add(new(currentNode, currentName));
                 }
 
-                var (returnNode, name) = nodeStack.Pop();
+                var ((returnNode, name), lastParameters) = nodeStack.Pop();
                 if (parameters.LastOrDefault() is FunctionParameter(TypeIdentityNode("..."), _))
                 {
                     currentNode = new FunctionSignatureNode(
@@ -324,7 +343,7 @@ public static class TypeParser
                         MethodCallingConvention.Default);
                 }
                 currentName = name;
-                parameters.Clear();
+                parameters = lastParameters;
             }
             else if (inch == ':')
             {
