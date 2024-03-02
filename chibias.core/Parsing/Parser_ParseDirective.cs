@@ -810,9 +810,10 @@ partial class Parser
             if (this.produceDebuggingInformation)
             {
                 // NOT Utilities.GetDirectoryPath()
+                var fullPath = Path.GetFullPath(tokens[2].Text);
                 var file = new FileDescriptor(
-                    Path.GetDirectoryName(tokens[2].Text),
-                    Path.GetFileName(tokens[2].Text),
+                    Path.GetDirectoryName(fullPath),
+                    Path.GetFileName(fullPath),
                     language,
                     true);
                 this.files[tokens[1].Text] = file;

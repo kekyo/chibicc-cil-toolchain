@@ -216,7 +216,7 @@ internal sealed partial class Parser
         this.BeginNewFileScope(sourcePathDebuggerHint);
 
         this.currentCilFile = new(
-            basePath,
+            basePath != null ? Path.GetFullPath(basePath) : null,
             sourcePathDebuggerHint,
             DocumentLanguage.Cil,
             isVisible);
