@@ -54,39 +54,43 @@ public sealed class Assembler
         this.logger = logger;
 
     private TypeDefinitionCache LoadPublicTypesFrom(
+        AssemblyDefinition? mergeOriginAssembly,
         string[] referenceAssemblyBasePaths,
         string[] referenceAssemblyNames,
         ReaderParameters readerParameters)
     {
-        var assemblies = referenceAssemblyNames.
-            Distinct().
-            Collect(name =>
-            {
-                try
+        var assemblies = (mergeOriginAssembly != null ?
+            new[] { mergeOriginAssembly! } : new AssemblyDefinition[0]).
+            Concat(
+                referenceAssemblyNames.
+                Distinct().
+                Collect(name =>
                 {
-                    if (referenceAssemblyBasePaths.
-                        SelectMany(basePath => new[] { $"{name}.dll", $"lib{name}.dll" }.
-                            Select(n => Path.Combine(basePath, n))).
-                        Where(File.Exists).
-                        FirstOrDefault() is not { } path)
+                    try
+                    {
+                        if (referenceAssemblyBasePaths.
+                            SelectMany(basePath => new[] { $"{name}.dll", $"lib{name}.dll" }.
+                                Select(n => Path.Combine(basePath, n))).
+                            Where(File.Exists).
+                            FirstOrDefault() is not { } path)
+                        {
+                            this.logger.Warning(
+                                $"Unable to find reference assembly: {name}");
+                            return null;
+                        }
+
+                        var assembly = AssemblyDefinition.ReadAssembly(path, readerParameters);
+                        this.logger.Information(
+                            $"Read reference assembly: {path}");
+                        return assembly;
+                    }
+                    catch (Exception ex)
                     {
                         this.logger.Warning(
-                            $"Unable to find reference assembly: {name}");
+                            $"Unable to read reference assembly: {name}, {ex.GetType().FullName}: {ex.Message}");
                         return null;
                     }
-
-                    var assembly = AssemblyDefinition.ReadAssembly(path, readerParameters);
-                    this.logger.Information(
-                        $"Read reference assembly: {path}");
-                    return assembly;
-                }
-                catch (Exception ex)
-                {
-                    this.logger.Warning(
-                        $"Unable to read reference assembly: {name}, {ex.GetType().FullName}: {ex.Message}");
-                    return null;
-                }
-            })
+                }))
 #if DEBUG
             .ToArray()
 #endif
@@ -216,6 +220,10 @@ public sealed class Assembler
     private void WriteRuntimeConfiguration(
         string outputAssemblyCandidateFullPath, AssemblerOptions options)
     {
+        var co = options.CreationOptions;
+
+        Debug.Assert(co != null);
+
         var runtimeConfigJsonPath = Path.Combine(
             Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath),
             Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath) + ".runtimeconfig.json");
@@ -226,8 +234,8 @@ public sealed class Assembler
         using var tw = File.CreateText(runtimeConfigJsonPath);
 
         var sb = new StringBuilder(runtimeConfigJsonTemplate);
-        sb.Replace("{tfm}", options.TargetFramework.Moniker);
-        if (options.RuntimeConfiguration ==
+        sb.Replace("{tfm}", co!.TargetFramework.Moniker);
+        if (co.RuntimeConfiguration ==
             RuntimeConfigurationOptions.ProduceCoreCLR)
         {
             sb.Replace("{rollForward}", "");
@@ -236,15 +244,15 @@ public sealed class Assembler
         {
             sb.Replace(
                 "{rollForward}",
-                $"\"rollForward\": \"{GetRollForwardValue(options.RuntimeConfiguration)}\",{Environment.NewLine}    ");
+                $"\"rollForward\": \"{GetRollForwardValue(co.RuntimeConfiguration)}\",{Environment.NewLine}    ");
         }
-        if (options.TargetFramework.Version.Build >= 0)
+        if (co.TargetFramework.Version.Build >= 0)
         {
-            sb.Replace("{tfv}", options.TargetFramework.Version.ToString(3));
+            sb.Replace("{tfv}", co.TargetFramework.Version.ToString(3));
         }
         else
         {
-            sb.Replace("{tfv}", options.TargetFramework.Version.ToString(2) + ".0");
+            sb.Replace("{tfv}", co.TargetFramework.Version.ToString(2) + ".0");
         }
 
         tw.Write(sb.ToString());
@@ -281,7 +289,7 @@ public sealed class Assembler
             appBinaryPathPlaceholderSearchValue,
             outputAssemblyNameBytes))
         {
-            if (isPEImage && options.AssemblyType == AssemblyTypes.WinExe)
+            if (isPEImage && options.CreationOptions?.AssemblyType == AssemblyTypes.WinExe)
             {
                 PEUtils.SetWindowsGraphicalUserInterfaceBit(ms);
             }
@@ -341,12 +349,12 @@ public sealed class Assembler
         };
 
         var produceExecutable =
-            options.AssemblyType != AssemblyTypes.Dll;
+            options.CreationOptions?.AssemblyType != AssemblyTypes.Dll;
         
         var requireAppHost =
             produceExecutable &&
-            options.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp &&
-            options.AppHostTemplatePath is { } appHostTemplatePath &&
+            options.CreationOptions?.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp &&
+            options.CreationOptions?.AppHostTemplatePath is { } appHostTemplatePath &&
             !string.IsNullOrWhiteSpace(appHostTemplatePath);
         
         var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
@@ -358,64 +366,97 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
-        var assemblyName = new AssemblyNameDefinition(
-            Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath),
-            options.Version);
+        AssemblyDefinition assembly;
+        ModuleDefinition module;
+        AssemblyDefinition? mergeOriginAssembly = null;
 
-        using var assembly = AssemblyDefinition.CreateAssembly(
-            assemblyName,
-            Path.GetFileName(outputAssemblyCandidateFullPath),
-            new ModuleParameters
+        if (options.CreationOptions is { } co1)
+        {
+            var assemblyName = new AssemblyNameDefinition(
+                Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath),
+                options.CreationOptions?.Version);
+
+            assembly = AssemblyDefinition.CreateAssembly(
+                assemblyName,
+                Path.GetFileName(outputAssemblyCandidateFullPath),
+                new ModuleParameters
+                {
+                    Kind = co1.AssemblyType switch
+                    {
+                        AssemblyTypes.Dll => ModuleKind.Dll,
+                        AssemblyTypes.WinExe => ModuleKind.Windows,
+                        _ => ModuleKind.Console
+                    },
+                    Runtime = co1.TargetFramework.Runtime,
+                    AssemblyResolver = assemblyResolver,
+                    Architecture = co1.TargetWindowsArchitecture switch
+                    {
+                        TargetWindowsArchitectures.X64 => TargetArchitecture.AMD64,
+                        TargetWindowsArchitectures.IA64 => TargetArchitecture.IA64,
+                        TargetWindowsArchitectures.ARM => TargetArchitecture.ARM,
+                        TargetWindowsArchitectures.ARMv7 => TargetArchitecture.ARMv7,
+                        TargetWindowsArchitectures.ARM64 => TargetArchitecture.ARM64,
+                        _ => TargetArchitecture.I386,
+                    },
+                });
+
+            module = assembly.MainModule;
+            module.Attributes = co1.TargetWindowsArchitecture switch
             {
-                Kind = options.AssemblyType switch
-                {
-                    AssemblyTypes.Dll => ModuleKind.Dll,
-                    AssemblyTypes.WinExe => ModuleKind.Windows,
-                    _ => ModuleKind.Console
-                },
-                Runtime = options.TargetFramework.Runtime,
-                AssemblyResolver = assemblyResolver,
-                Architecture = options.TargetWindowsArchitecture switch
-                {
-                    TargetWindowsArchitectures.X64 => TargetArchitecture.AMD64,
-                    TargetWindowsArchitectures.IA64 => TargetArchitecture.IA64,
-                    TargetWindowsArchitectures.ARM => TargetArchitecture.ARM,
-                    TargetWindowsArchitectures.ARMv7 => TargetArchitecture.ARMv7,
-                    TargetWindowsArchitectures.ARM64 => TargetArchitecture.ARM64,
-                    _ => TargetArchitecture.I386,
-                },
-            });
+                TargetWindowsArchitectures.Preferred32Bit => ModuleAttributes.ILOnly | ModuleAttributes.Preferred32Bit,
+                TargetWindowsArchitectures.X86 => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
+                TargetWindowsArchitectures.ARM => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
+                TargetWindowsArchitectures.ARMv7 => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
+                _ => ModuleAttributes.ILOnly,
+            };
 
-        var module = assembly.MainModule;
+            // https://github.com/jbevain/cecil/issues/646
+            var coreLibraryReference = assemblyResolver.Resolve(
+                co1.TargetFramework.CoreLibraryName,
+                readerParameters);
+            module.AssemblyReferences.Add(coreLibraryReference.Name);
 
-        module.Attributes = options.TargetWindowsArchitecture switch
+            // Attention when different core library from target framework.
+            if (coreLibraryReference.Name.FullName != co1.TargetFramework.CoreLibraryName.FullName)
+            {
+                this.logger.Warning(
+                    $"Core library mismatched: {coreLibraryReference.FullName}");
+            }
+
+            // The type system will be bring with explicitly assigned core library.
+            Debug.Assert(module.TypeSystem.CoreLibrary == coreLibraryReference.Name);
+        }
+        else
         {
-            TargetWindowsArchitectures.Preferred32Bit => ModuleAttributes.ILOnly | ModuleAttributes.Preferred32Bit,
-            TargetWindowsArchitectures.X86 => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
-            TargetWindowsArchitectures.ARM => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
-            TargetWindowsArchitectures.ARMv7 => ModuleAttributes.ILOnly | ModuleAttributes.Required32Bit,
-            _ => ModuleAttributes.ILOnly,
-        };
+            // HACK: Avoid file locking.
+            var ms = new MemoryStream();
+            using (var fs = new FileStream(
+                outputAssemblyCandidateFullPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read))
+            {
+                fs.CopyTo(ms);
+            }
+            ms.Position = 0;
 
-        // https://github.com/jbevain/cecil/issues/646
-        var coreLibraryReference = assemblyResolver.Resolve(
-            options.TargetFramework.CoreLibraryName,
-            readerParameters);
-        module.AssemblyReferences.Add(coreLibraryReference.Name);
+            mergeOriginAssembly = assembly = AssemblyDefinition.ReadAssembly(
+                ms,
+                new(ReadingMode.Immediate)
+                {
+                    InMemory = true,
+                    AssemblyResolver = assemblyResolver,
+                    ReadSymbols = true,
+                    ReadWrite = true,
+                });
 
-        // The type system will be bring with explicitly assigned core library.
-        Debug.Assert(module.TypeSystem.CoreLibrary == coreLibraryReference.Name);
-
-        // Attention when different core library from target framework.
-        if (coreLibraryReference.Name.FullName != options.TargetFramework.CoreLibraryName.FullName)
-        {
-            this.logger.Warning(
-                $"Core library mismatched: {coreLibraryReference.FullName}");
+            module = assembly.MainModule;
         }
 
         //////////////////////////////////////////////////////////////
 
         var referenceTypes = this.LoadPublicTypesFrom(
+            mergeOriginAssembly,
             options.ReferenceAssemblyBasePaths,
             options.ReferenceAssemblyNames,
             readerParameters);
@@ -428,7 +469,6 @@ public sealed class Assembler
         var parser = new Parser(
             this.logger,
             module,
-            options.TargetFramework,
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,
@@ -438,8 +478,9 @@ public sealed class Assembler
         if (allFinished)
         {
             allFinished = parser.Finish(
-                options.Options.HasFlag(AssembleOptions.ApplyOptimization),
-                options.Options.HasFlag(AssembleOptions.DisableJITOptimization));
+                options.CreationOptions?.TargetFramework,
+                options.CreationOptions?.Options.HasFlag(AssembleOptions.DisableJITOptimization),
+                options.ApplyOptimization);
         }
 
         cabiSpecificSymbols.Finish();
@@ -464,42 +505,75 @@ public sealed class Assembler
             {
             }
 
-            module.Write(
-                outputAssemblyCandidateFullPath,
-                new()
-                {
-                    DeterministicMvid =
-                        options.Options.HasFlag(AssembleOptions.Deterministic),
-                    WriteSymbols =
-                        options.DebugSymbolType != DebugSymbolTypes.None,
-                    SymbolWriterProvider = options.DebugSymbolType switch
-                    {
-                        DebugSymbolTypes.None => null!,
-                        DebugSymbolTypes.Embedded => new EmbeddedPortablePdbWriterProvider(),
-                        DebugSymbolTypes.Mono => new MdbWriterProvider(),
-                        DebugSymbolTypes.WindowsProprietary => new NativePdbWriterProvider(),
-                        _ => new PortablePdbWriterProvider(),
-                    },
-                });
-
-            if (produceExecutable &&
-                options.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
+            string? backupFilePath = null;
+            if (File.Exists(outputAssemblyCandidateFullPath))
             {
-                if (options.RuntimeConfiguration != RuntimeConfigurationOptions.Omit)
+                backupFilePath = outputAssemblyCandidateFullPath + ".bak";
+                File.Move(outputAssemblyCandidateFullPath, backupFilePath);
+            }
+
+            try
+            {
+                module.Write(
+                    outputAssemblyCandidateFullPath,
+                    new()
+                    {
+                        DeterministicMvid =
+                            options.IsDeterministic,
+                        WriteSymbols =
+                            options.DebugSymbolType != DebugSymbolTypes.None,
+                        SymbolWriterProvider = options.DebugSymbolType switch
+                        {
+                            DebugSymbolTypes.None => null!,
+                            DebugSymbolTypes.Embedded => new EmbeddedPortablePdbWriterProvider(),
+                            DebugSymbolTypes.Mono => new MdbWriterProvider(),
+                            DebugSymbolTypes.WindowsProprietary => new NativePdbWriterProvider(),
+                            _ => new PortablePdbWriterProvider(),
+                        },
+                    });
+            }
+            catch
+            {
+                try
                 {
-                    this.WriteRuntimeConfiguration(
-                        outputAssemblyCandidateFullPath,
-                        options);
+                    if (File.Exists(outputAssemblyCandidateFullPath))
+                    {
+                        File.Delete(outputAssemblyCandidateFullPath);
+                    }
+                    if (backupFilePath != null)
+                    {
+                        File.Move(backupFilePath, outputAssemblyCandidateFullPath);
+                    }
                 }
-            
-                if (options.AppHostTemplatePath is { } appHostTemplatePath3 &&
-                    !string.IsNullOrWhiteSpace(appHostTemplatePath3))
+                catch
                 {
-                    this.WriteAppHost(
-                        outputAssemblyFullPath,
-                        outputAssemblyCandidateFullPath,
-                        Path.GetFullPath(appHostTemplatePath3),
-                        options);
+                }
+                throw;
+            }
+
+            File.Delete(outputAssemblyCandidateFullPath + ".bak");
+
+            if (options.CreationOptions is { } co2)
+            {
+                if (produceExecutable &&
+                    co2.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
+                {
+                    if (co2.RuntimeConfiguration != RuntimeConfigurationOptions.Omit)
+                    {
+                        this.WriteRuntimeConfiguration(
+                            outputAssemblyCandidateFullPath,
+                            options);
+                    }
+
+                    if (co2.AppHostTemplatePath is { } appHostTemplatePath3 &&
+                        !string.IsNullOrWhiteSpace(appHostTemplatePath3))
+                    {
+                        this.WriteAppHost(
+                            outputAssemblyFullPath,
+                            outputAssemblyCandidateFullPath,
+                            Path.GetFullPath(appHostTemplatePath3),
+                            options);
+                    }
                 }
             }
         }

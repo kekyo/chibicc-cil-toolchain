@@ -30,11 +30,14 @@ public static class AssemblerExtension
             {
                 ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
                 ReferenceAssemblyNames = referenceAssemblyNames,
-                AssemblyType = assemblyType,
+                CreationOptions = new()
+                {
+                    Options = options,
+                    AssemblyType = assemblyType,
+                    Version = version,
+                    TargetFramework = targetFramework,
+                },
                 DebugSymbolType = debugSymbolType,
-                Options = options,
-                Version = version,
-                TargetFramework = targetFramework,
             },
             sourcePaths);
 }

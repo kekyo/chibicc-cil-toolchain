@@ -17,7 +17,7 @@ namespace chibias;
 
 internal sealed class Options
 {
-    private static readonly Dictionary<string, RuntimeConfigurationOptions> rollforwards = new()
+    private static readonly Dictionary<string, RuntimeConfigurationOptions> rollforwards = new(StringComparer.OrdinalIgnoreCase)
     {
         { "major", RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward },
         { "minor", RuntimeConfigurationOptions.ProduceCoreCLRMinorRollForward },
@@ -48,7 +48,7 @@ internal sealed class Options
         var referenceAssemblyBasePaths = new List<string>();
         var referenceAssemblyNames = new List<string>();
 
-        options.AssemblerOptions.TargetFramework =
+        options.AssemblerOptions.CreationOptions!.TargetFramework =
             TargetFramework.TryParse(ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker, out var tf) ?
                 tf : TargetFramework.Default;
 
@@ -108,12 +108,21 @@ internal sealed class Options
                             }
                             break;
                         case 'c':
-                            options.AssemblerOptions.AssemblyType = AssemblyTypes.Dll;
+                            if (options.AssemblerOptions.CreationOptions is { } co1)
+                            {
+                                co1.AssemblyType = AssemblyTypes.Dll;
+                            }
+                            continue;
+                        case 'm':
+                            options.AssemblerOptions.CreationOptions = null;
                             continue;
                         case 'a':
                             if (args.Length >= index)
                             {
-                                options.AssemblerOptions.AppHostTemplatePath = args[index + 1];
+                                if (options.AssemblerOptions.CreationOptions is { } co2)
+                                {
+                                    co2.AppHostTemplatePath = args[index + 1];
+                                }
                                 index++;
                                 continue;
                             }
@@ -147,8 +156,7 @@ internal sealed class Options
                             }
                             else if (arg.Length == 2)
                             {
-                                options.AssemblerOptions.DebugSymbolType =
-                                    DebugSymbolTypes.Embedded;
+                                options.AssemblerOptions.DebugSymbolType = DebugSymbolTypes.Embedded;
                                 continue;
                             }
                             break;
@@ -158,25 +166,31 @@ internal sealed class Options
                                 switch (arg[2])
                                 {
                                     case '0':
-                                        options.AssemblerOptions.Options &=
-                                            ~AssembleOptions.ApplyOptimization;
-                                        options.AssemblerOptions.Options |=
-                                            AssembleOptions.DisableJITOptimization;
+                                        options.AssemblerOptions.ApplyOptimization = false;
+                                        if (options.AssemblerOptions.CreationOptions is { } co2)
+                                        {
+                                            co2.Options |=
+                                                AssembleOptions.DisableJITOptimization;
+                                        }
                                         continue;
                                     case '1':
-                                        options.AssemblerOptions.Options |=
-                                            AssembleOptions.ApplyOptimization;
-                                        options.AssemblerOptions.Options &=
-                                            ~AssembleOptions.DisableJITOptimization;
+                                        options.AssemblerOptions.ApplyOptimization = true;
+                                        if (options.AssemblerOptions.CreationOptions is { } co3)
+                                        {
+                                            co3.Options &=
+                                                ~AssembleOptions.DisableJITOptimization;
+                                        }
                                         continue;
                                 }
                             }
                             else if (arg.Length == 2)
                             {
-                                options.AssemblerOptions.Options |=
-                                    AssembleOptions.ApplyOptimization;
-                                options.AssemblerOptions.Options &=
-                                    ~AssembleOptions.DisableJITOptimization;
+                                options.AssemblerOptions.ApplyOptimization = true;
+                                if (options.AssemblerOptions.CreationOptions is { } co4)
+                                {
+                                    co4.Options &=
+                                        ~AssembleOptions.DisableJITOptimization;
+                                }
                                 continue;
                             }
                             break;
@@ -185,7 +199,10 @@ internal sealed class Options
                                 rollforwards.TryGetValue(args[index + 1], out var rollforward))
                             {
                                 index++;
-                                options.AssemblerOptions.RuntimeConfiguration = rollforward;
+                                if (options.AssemblerOptions.CreationOptions is { } co5)
+                                {
+                                    co5.RuntimeConfiguration = rollforward;
+                                }
                                 continue;
                             }
                             break;
@@ -194,7 +211,10 @@ internal sealed class Options
                                 Version.TryParse(args[index + 1], out var version))
                             {
                                 index++;
-                                options.AssemblerOptions.Version = version;
+                                if (options.AssemblerOptions.CreationOptions is { } co6)
+                                {
+                                    co6.Version = version;
+                                }
                                 continue;
                             }
                             break;
@@ -203,7 +223,10 @@ internal sealed class Options
                                 TargetFramework.TryParse(args[index + 1], out var tf2))
                             {
                                 index++;
-                                options.AssemblerOptions.TargetFramework = tf2;
+                                if (options.AssemblerOptions.CreationOptions is { } co7)
+                                {
+                                    co7.TargetFramework = tf2;
+                                }
                                 continue;
                             }
                             break;
@@ -212,7 +235,10 @@ internal sealed class Options
                                 Enum.TryParse<TargetWindowsArchitectures>(args[index + 1], true, out var arch))
                             {
                                 index++;
-                                options.AssemblerOptions.TargetWindowsArchitecture = arch;
+                                if (options.AssemblerOptions.CreationOptions is { } co8)
+                                {
+                                    co8.TargetWindowsArchitecture = arch;
+                                }
                                 continue;
                             }
                             break;
@@ -223,13 +249,22 @@ internal sealed class Options
                             switch (arg.Substring(2).ToLowerInvariant())
                             {
                                 case "dll":
-                                    options.AssemblerOptions.AssemblyType = AssemblyTypes.Dll;
+                                    if (options.AssemblerOptions.CreationOptions is { } co9)
+                                    {
+                                        co9.AssemblyType = AssemblyTypes.Dll;
+                                    }
                                     continue;
                                 case "exe":
-                                    options.AssemblerOptions.AssemblyType = AssemblyTypes.Exe;
+                                    if (options.AssemblerOptions.CreationOptions is { } co10)
+                                    {
+                                        co10.AssemblyType = AssemblyTypes.Exe;
+                                    }
                                     continue;
                                 case "winexe":
-                                    options.AssemblerOptions.AssemblyType = AssemblyTypes.WinExe;
+                                    if (options.AssemblerOptions.CreationOptions is { } co11)
+                                    {
+                                        co11.AssemblyType = AssemblyTypes.WinExe;
+                                    }
                                     continue;
                                 case "log":
                                     if (args.Length >= index &&
@@ -266,12 +301,13 @@ internal sealed class Options
 
         if (options.OutputAssemblyPath == null)
         {
-            switch (options.AssemblerOptions.AssemblyType)
+            switch (options.AssemblerOptions.CreationOptions?.AssemblyType)
             {
                 case AssemblyTypes.Exe:
                 case AssemblyTypes.WinExe:
-                    options.OutputAssemblyPath = options.AssemblerOptions.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETFramework ?
-                        Path.GetFullPath("a.out.exe") : Path.GetFullPath("a.out.dll");
+                    options.OutputAssemblyPath =
+                        options.AssemblerOptions.CreationOptions.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETFramework ?
+                            Path.GetFullPath("a.out.exe") : Path.GetFullPath("a.out.dll");
                     break;
                 default:
                     switch (options.SourceCodePaths.FirstOrDefault())
@@ -319,14 +355,23 @@ internal sealed class Options
             logger.Information($"ReferenceAssemblyName={name}");
         }
 
-        logger.Information($"AssemblyType={this.AssemblerOptions.AssemblyType}");
-        logger.Information($"TargetWindowsArchitecture={this.AssemblerOptions.TargetWindowsArchitecture}");
         logger.Information($"DebugSymbolType={this.AssemblerOptions.DebugSymbolType}");
-        logger.Information($"Options={this.AssemblerOptions.Options}");
-        logger.Information($"RuntimeConfiguration={this.AssemblerOptions.RuntimeConfiguration}");
-        logger.Information($"Version={this.AssemblerOptions.Version}");
-        logger.Information($"TargetFrameworkMoniker={this.AssemblerOptions.TargetFramework}");
-        logger.Information($"AppHostTemplatePath={(this.AssemblerOptions.AppHostTemplatePath ?? "(null)")}");
+        logger.Information($"ApplyOptimization={this.AssemblerOptions.ApplyOptimization}");
+
+        if (this.AssemblerOptions.CreationOptions is { } co)
+        {
+            logger.Information($"Options={co.Options}");
+            logger.Information($"AssemblyType={co.AssemblyType}");
+            logger.Information($"TargetWindowsArchitecture={co.TargetWindowsArchitecture}");
+            logger.Information($"RuntimeConfiguration={co.RuntimeConfiguration}");
+            logger.Information($"Version={co.Version}");
+            logger.Information($"TargetFrameworkMoniker={co.TargetFramework}");
+            logger.Information($"AppHostTemplatePath={(co.AppHostTemplatePath ?? "(null)")}");
+        }
+        else
+        {
+            logger.Information($"WillMerge={this.OutputAssemblyPath}");
+        }
     }
 
     public static void WriteUsage(TextWriter tw)
@@ -345,6 +390,7 @@ internal sealed class Options
         tw.WriteLine("  -a <path>         AppHost template path");
         tw.WriteLine("  -L <path>         Reference assembly base path");
         tw.WriteLine("  -l <name>         Reference assembly name");
+        tw.WriteLine("  -m                Will merge into the assembly file");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");

@@ -27,7 +27,6 @@ internal sealed partial class Parser
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
-    private readonly TargetFramework targetFramework;
     private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiDataType;
     private readonly TypeDefinition cabiRDataType;
@@ -74,7 +73,6 @@ internal sealed partial class Parser
     public Parser(
         ILogger logger,
         ModuleDefinition module,
-        TargetFramework targetFramework,
         MemberDictionary<MemberReference> cabiSpecificSymbols,
         TypeDefinitionCache referenceTypes,
         bool produceExecutable,
@@ -83,7 +81,6 @@ internal sealed partial class Parser
         this.logger = logger;
         
         this.module = module;
-        this.targetFramework = targetFramework;
         this.cabiSpecificSymbols = cabiSpecificSymbols;
         this.referenceTypes = new(
             this.logger,
@@ -426,7 +423,9 @@ internal sealed partial class Parser
         }
     }
 
-    private void AddFundamentalAttributes(bool disableJITOptimization)
+    private void AddFundamentalAttributes(
+        TargetFramework targetFramework,
+        bool disableJITOptimization)
     {
         // Apply TFA if could be imported.
         if (this.TryGetMethod(
@@ -437,7 +436,7 @@ internal sealed partial class Parser
             var tfa = new CustomAttribute(tfactor);
             tfa.ConstructorArguments.Add(new(
                 this.UnsafeGetType("System.String"),
-                this.targetFramework.ToString()));
+                targetFramework.ToString()));
             this.module.Assembly.CustomAttributes.Add(tfa);
 
             this.logger.Trace(
@@ -647,7 +646,9 @@ internal sealed partial class Parser
     /////////////////////////////////////////////////////////////////////
 
     public bool Finish(
-        bool applyOptimization, bool disableJITOptimization)
+        TargetFramework? targetFramework,
+        bool? disableJITOptimization,
+        bool applyOptimization)
     {
         this.FinishCurrentState();
 
@@ -703,8 +704,11 @@ internal sealed partial class Parser
 
             ///////////////////////////////////////////////
 
-            // Try add fundamental attributes.
-            this.AddFundamentalAttributes(disableJITOptimization);
+            if (targetFramework is { } tf && disableJITOptimization is { } djo)
+            {
+                // Try add fundamental attributes.
+                this.AddFundamentalAttributes(tf, djo);
+            }
 
             // Apply final adjustments.
             this.ApplyFinalAdjustments(applyOptimization);

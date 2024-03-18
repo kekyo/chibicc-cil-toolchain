@@ -83,11 +83,15 @@ partial class AssemblerTests
                     {
                         ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
                         ReferenceAssemblyNames = referenceAssemblyNames!,
-                        AssemblyType = assemblyType,
-                        TargetFramework = tf,
                         DebugSymbolType = DebugSymbolTypes.Embedded,
-                        Options = AssembleOptions.Deterministic,
-                        AppHostTemplatePath = appHostTemplatePath,
+                        IsDeterministic = true,
+                        CreationOptions = new()
+                        {
+                            Options = AssembleOptions.None,
+                            AssemblyType = assemblyType,
+                            TargetFramework = tf,
+                            AppHostTemplatePath = appHostTemplatePath,
+                        },
                     },
                     chibiasSourceCodes.Select((sc, index) =>
                         new SourceCodeItem(new StringReader(sc), index >= 1 ? $"source{index}.s" : "source.s")).
