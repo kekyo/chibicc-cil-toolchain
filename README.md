@@ -50,7 +50,7 @@ Then:
 ```bash
 $ chibias
 
-chibias [0.41.0,net6.0] [...]
+chibias [0.45.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -61,9 +61,9 @@ usage: chibias [options] <source path> [<source path> ...]
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
       --winexe      Produce Windows executable assembly
-  -a <path>         AppHost template path
   -L <path>         Reference assembly base path
   -l <name>         Reference assembly name
+  -i                Will inject to output assembly file
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
@@ -71,10 +71,11 @@ usage: chibias [options] <source path> [<source path> ...]
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
-  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
   -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
+  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]
+  -a <path>         CoreCLR AppHost template path
       --log <level> Log level [debug|trace|information|warning|error|silent]
   -h, --help        Show this help
 ```
@@ -82,6 +83,8 @@ usage: chibias [options] <source path> [<source path> ...]
 * chibias will combine multiple source code in command line pointed into one assembly.
 * Reference assembly paths `-l` evaluates last-to-first order, same as `ld` looking up.
   This feature applies to duplicated symbols (function/global variables).
+  Library file names are assumed to be prefixed with `lib` as in the native toolchain,
+  and also assumes the filename as specified in fallbacks.
 * The default target framework moniker (`net6.0` in the above example) depends on the operating environment of chibias.
 * Specifying a target framework moniker only assumes a variation of the core library.
   And it does NOT automatically detect the `mscorlib.dll` or `System.Private.CoreLib.dll` assembly files (see below).
@@ -89,6 +92,7 @@ usage: chibias [options] <source path> [<source path> ...]
   This value only sets the mark on the assembly. Specifying a different value will not affect generated your opcodes.
   It may always operate as `AnyCPU` except in Windows CLR environment.
 * Log level is `warning` by default. These values ignore case.
+* When using the `-i` injection mode, the `-a`, `-p`, `-v`, `-f`, and `-w` specifications are ignored.
 
 ----
 
@@ -146,7 +150,7 @@ $ echo $?
 Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
 
 ```bash
-$ chibias -f net6.0 -L~/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ chibias -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 The version of the target framework moniker and the corresponding core library must match.
@@ -241,7 +245,7 @@ The signature of the `main` function accepts the following variations:
 |`void()`|`void main(void)`|
 
 It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
-And the destination is a non-Unicode, 8-bit string containing the terminating character.
+And beyond that, it indicates a UTF-8 string containing the terminating character.
 
 chibias does not support entry points containing UTF-16LE wide-length strings by `wmain`.
 
@@ -915,6 +919,51 @@ Use the `.hidden` directive to prevent subsequent code from generating sequence 
 ```
 
 If you specify a `.location` directive that specifies a valid ID, sequence points will be emit.
+
+
+----
+
+## Injection mode
+
+The injection mode is one of the distinctive features of chibias,
+to embed CIL code directly in a pre-prepared .NET assembly file.
+This mode is enabled by specifying `-i` command line option.
+
+For example, if you have a .NET assembly `merged.dll` compiled in C#.
+Using the injection mode, you can embed the resulting .NET assembly CIL code directly in `merged.dll`.
+
+Suppose there is a `merged.dll` assembly generated from the following C# source:
+
+```csharp
+namespace C;
+
+// Place methods in the C.text class so that they can be recognized from the CIL code side
+public static class text
+{
+    public static long add_int64(long a, long b) =>
+        a + b;
+}
+```
+
+Using injection mode, you can "inject" the following CIL code directly into `merged.dll` and link it correctly with `add_int64` method:
+
+```
+.function public int32() main
+    ldc.i4.1
+    conv.i8
+    ldc.i4.2
+    conv.i8
+    call add_int64    ; Calling methods on the C# side
+    conv.i4
+    ret
+```
+
+This means that generated from C code by chibicc,
+can be directly merged with C# source code to generate a single .NET interoperable assembly file.
+
+In the current version, it is possible to reference symbols in the injected .NET assembly from the CIL source code.
+
+* In a future version, it will be possible to reference CIL function symbols from .NET assemblies.
 
 
 ----

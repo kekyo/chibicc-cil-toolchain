@@ -387,7 +387,6 @@ internal sealed class Options
         tw.WriteLine("  -c, --dll         Produce dll assembly");
         tw.WriteLine("      --exe         Produce executable assembly (defaulted)");
         tw.WriteLine("      --winexe      Produce Windows executable assembly");
-        tw.WriteLine("  -a <path>         AppHost template path");
         tw.WriteLine("  -L <path>         Reference assembly base path");
         tw.WriteLine("  -l <name>         Reference assembly name");
         tw.WriteLine("  -i                Will inject to output assembly file");
@@ -398,10 +397,11 @@ internal sealed class Options
         tw.WriteLine("      -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
-        tw.WriteLine("  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
         tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]");
+        tw.WriteLine("  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]");
+        tw.WriteLine("  -a <path>         .NET Core AppHost template path");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent]");
         tw.WriteLine("  -h, --help        Show this help");
     }
