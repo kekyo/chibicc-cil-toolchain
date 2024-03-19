@@ -25,7 +25,7 @@ internal static class AssemblerTestRunner
     public static string RunCore(
         string[] chibiasSourceCodes,
         string[]? additionalReferencePaths,
-        string? mergeAssemblyPath,
+        string? injectToAssemblyPath,
         Func<AssemblerCreationOptions?> creationOptions,
         string memberName)
     {
@@ -74,9 +74,9 @@ internal static class AssemblerTestRunner
                 var outputAssemblyPath =
                     Path.Combine(basePath, "output.dll");
 
-                if (mergeAssemblyPath != null)
+                if (injectToAssemblyPath != null)
                 {
-                    File.Copy(mergeAssemblyPath, outputAssemblyPath, true);
+                    File.Copy(injectToAssemblyPath, outputAssemblyPath, true);
                 }
 
                 var succeeded = assember.Assemble(

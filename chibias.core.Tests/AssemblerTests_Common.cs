@@ -55,15 +55,15 @@ partial class AssemblerTests
             targetFrameworkMoniker,
             memberName);
 
-    private string RunInMerged(
+    private string RunInjection(
         string chibiasSourceCode,
-        string mergeAssemblyPath,
+        string injectToAssemblyPath,
         string[]? additionalReferencePaths = null,
         [CallerMemberName] string memberName = null!) =>
         AssemblerTestRunner.RunCore(
             new[] { chibiasSourceCode },
             additionalReferencePaths,
-            mergeAssemblyPath,
+            injectToAssemblyPath,
             () => null,
             memberName);
 }

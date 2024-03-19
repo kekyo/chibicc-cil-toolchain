@@ -18,8 +18,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace chibias;
 
@@ -41,26 +39,19 @@ public readonly struct SourceCodeItem
 
 public sealed class Assembler
 {
-    private static readonly string runtimeConfigJsonTemplate =
-        new StreamReader(typeof(Assembler).Assembly.GetManifestResourceStream(
-            "chibias.Internal.runtimeconfig.json")!).
-        ReadToEnd();
-    private static readonly byte[] appBinaryPathPlaceholderSearchValue =
-        Encoding.UTF8.GetBytes("c3ab8ff13720e8ad9047dd39466b3c8974e592c2fa383d4a3960714caef0c4f2");
-
     private readonly ILogger logger;
 
     public Assembler(ILogger logger) =>
         this.logger = logger;
 
     private TypeDefinitionCache LoadPublicTypesFrom(
-        AssemblyDefinition? mergeOriginAssembly,
+        AssemblyDefinition? injectTargetAssembly,
         string[] referenceAssemblyBasePaths,
         string[] referenceAssemblyNames,
         ReaderParameters readerParameters)
     {
-        var assemblies = (mergeOriginAssembly != null ?
-            new[] { mergeOriginAssembly! } : new AssemblyDefinition[0]).
+        var assemblies = (injectTargetAssembly != null ?
+            new[] { injectTargetAssembly! } : new AssemblyDefinition[0]).
             Concat(
                 referenceAssemblyNames.
                 Distinct().
@@ -203,131 +194,6 @@ public sealed class Assembler
         this.logger.Trace($"Stat: {sourcePathDebuggerHint}: Parse: Total={parseTotal}, Average={parseAverage}, Count={parseLap.Count}");
     }
 
-    private static string GetRollForwardValue(RuntimeConfigurationOptions option) =>
-        option switch
-        {
-            RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward => "major",
-            RuntimeConfigurationOptions.ProduceCoreCLRMinorRollForward => "minor",
-            RuntimeConfigurationOptions.ProduceCoreCLRFeatureRollForward => "feature",
-            RuntimeConfigurationOptions.ProduceCoreCLRPatchRollForward => "patch",
-            RuntimeConfigurationOptions.ProduceCoreCLRLatestMajorRollForward => "latestMajor",
-            RuntimeConfigurationOptions.ProduceCoreCLRLatestMinorRollForward => "latestMinor",
-            RuntimeConfigurationOptions.ProduceCoreCLRLatestFeatureRollForward => "latestFeature",
-            RuntimeConfigurationOptions.ProduceCoreCLRDisableRollForward => "disable",
-            _ => throw new ArgumentException(),
-        };
-    
-    private void WriteRuntimeConfiguration(
-        string outputAssemblyCandidateFullPath, AssemblerOptions options)
-    {
-        var co = options.CreationOptions;
-
-        Debug.Assert(co != null);
-
-        var runtimeConfigJsonPath = Path.Combine(
-            Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath),
-            Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath) + ".runtimeconfig.json");
-
-        this.logger.Information(
-            $"Writing: {Path.GetFileName(runtimeConfigJsonPath)}");
-
-        using var tw = File.CreateText(runtimeConfigJsonPath);
-
-        var sb = new StringBuilder(runtimeConfigJsonTemplate);
-        sb.Replace("{tfm}", co!.TargetFramework.Moniker);
-        if (co.RuntimeConfiguration ==
-            RuntimeConfigurationOptions.ProduceCoreCLR)
-        {
-            sb.Replace("{rollForward}", "");
-        }
-        else
-        {
-            sb.Replace(
-                "{rollForward}",
-                $"\"rollForward\": \"{GetRollForwardValue(co.RuntimeConfiguration)}\",{Environment.NewLine}    ");
-        }
-        if (co.TargetFramework.Version.Build >= 0)
-        {
-            sb.Replace("{tfv}", co.TargetFramework.Version.ToString(3));
-        }
-        else
-        {
-            sb.Replace("{tfv}", co.TargetFramework.Version.ToString(2) + ".0");
-        }
-
-        tw.Write(sb.ToString());
-        tw.Flush();
-    }
-
-    private void WriteAppHost(
-        string outputAssemblyFullPath,
-        string outputAssemblyPath,
-        string appHostTemplateFullPath,
-        AssemblerOptions options)
-    {
-        using var ms = new MemoryStream();
-        using (var fs = new FileStream(
-            appHostTemplateFullPath, FileMode.Open, FileAccess.Read, FileShare.Read))
-        {
-            fs.CopyTo(ms);
-        }
-        ms.Position = 0;
-
-        var outputAssemblyName = Path.GetFileName(outputAssemblyPath);
-        var outputAssemblyNameBytes = Encoding.UTF8.GetBytes(outputAssemblyName);
-
-        var isPEImage = PEUtils.IsPEImage(ms);
-        var outputFullPath = Path.Combine(
-            Utilities.GetDirectoryPath(outputAssemblyFullPath),
-            Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + (isPEImage ? ".exe" : ""));
-        
-        this.logger.Information(
-            $"Writing AppHost: {Path.GetFileName(outputFullPath)}{(isPEImage ? " (PE format)" : "")}");
-
-        if (Utilities.UpdateBytes(
-            ms,
-            appBinaryPathPlaceholderSearchValue,
-            outputAssemblyNameBytes))
-        {
-            if (isPEImage && options.CreationOptions?.AssemblyType == AssemblyTypes.WinExe)
-            {
-                PEUtils.SetWindowsGraphicalUserInterfaceBit(ms);
-            }
-
-            using (var fs = new FileStream(
-                       outputFullPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
-            {
-                ms.CopyTo(fs);
-                fs.Flush();
-            }
-
-            if (!Utilities.IsInWindows)
-            {
-                while (true)
-                {
-                    var r = Utilities.chmod(outputFullPath,
-                        chmodFlags.S_IXOTH | chmodFlags.S_IROTH |
-                        chmodFlags.S_IXGRP | chmodFlags.S_IRGRP |
-                        chmodFlags.S_IXUSR | chmodFlags.S_IWUSR | chmodFlags.S_IRUSR);
-                    if (r != -1)
-                    {
-                        break;
-                    }
-                    var errno = Marshal.GetLastWin32Error();
-                    if (errno != Utilities.EINTR)
-                    {
-                        Marshal.ThrowExceptionForHR(errno);
-                    }
-                }
-            }
-        }
-        else
-        {
-            this.logger.Error(
-                $"Invalid AppHost template file: {appHostTemplateFullPath}");
-        }
-    }
-
     private bool Run(
         string outputAssemblyPath,
         AssemblerOptions options,
@@ -365,9 +231,10 @@ public sealed class Assembler
 
         AssemblyDefinition assembly;
         ModuleDefinition module;
-        AssemblyDefinition? mergeOriginAssembly = null;
-        ModuleDefinition? mergeOriginModule = null;
+        AssemblyDefinition? injectTargetAssembly = null;
+        ModuleDefinition? injectTargetModule = null;
 
+        // Will be create a new assembly.
         if (options.CreationOptions is { } co1)
         {
             var assemblyName = new AssemblyNameDefinition(
@@ -424,38 +291,30 @@ public sealed class Assembler
             // The type system will be bring with explicitly assigned core library.
             Debug.Assert(module.TypeSystem.CoreLibrary == coreLibraryReference.Name);
         }
+        // Will be injected exist assembly.
         else
         {
-            // HACK: Avoid file locking.
-            var ms = new MemoryStream();
-            using (var fs = new FileStream(
-                outputAssemblyCandidateFullPath,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read))
-            {
-                fs.CopyTo(ms);
-            }
-            ms.Position = 0;
-
-            mergeOriginAssembly = assembly = assemblyResolver.ReadAssemblyFrom(
+            injectTargetAssembly = assembly = assemblyResolver.ReadAssemblyFrom(
                 outputAssemblyCandidateFullPath);
-            mergeOriginModule = module = assembly.MainModule;
+            injectTargetModule = module = assembly.MainModule;
         }
 
         //////////////////////////////////////////////////////////////
 
+        // Load all public CABI symbols from reference assemblies.
         var referenceTypes = this.LoadPublicTypesFrom(
-            mergeOriginAssembly,
+            injectTargetAssembly,
             options.ReferenceAssemblyBasePaths,
             options.ReferenceAssemblyNames,
             readerParameters);
 
+        // Aggregates CABI symbols.
         var cabiSpecificSymbols = this.AggregateCAbiSpecificSymbols(
             referenceTypes);
 
         //////////////////////////////////////////////////////////////
 
+        // Parse CIL source files.
         var parser = new Parser(
             this.logger,
             module,
@@ -463,9 +322,11 @@ public sealed class Assembler
             referenceTypes,
             produceExecutable,
             options.DebugSymbolType != DebugSymbolTypes.None,
-            mergeOriginModule);
+            injectTargetModule);
 
         var allFinished = runner(parser);
+
+        // Finalize parser.
         if (allFinished)
         {
             allFinished = parser.Finish(
@@ -478,6 +339,7 @@ public sealed class Assembler
 
         //////////////////////////////////////////////////////////////
 
+        // When finishes:
         if (allFinished)
         {
             this.logger.Information(
@@ -496,6 +358,7 @@ public sealed class Assembler
             {
             }
 
+            // Backup original assembly.
             string? backupFilePath = null;
             if (File.Exists(outputAssemblyCandidateFullPath))
             {
@@ -505,6 +368,7 @@ public sealed class Assembler
 
             try
             {
+                // Write a new assembly (derived metadatas when give injection target assembly)
                 module.Write(
                     outputAssemblyCandidateFullPath,
                     new()
@@ -525,6 +389,7 @@ public sealed class Assembler
             }
             catch
             {
+                // Recover backup assembly.
                 try
                 {
                     if (File.Exists(outputAssemblyCandidateFullPath))
@@ -542,24 +407,31 @@ public sealed class Assembler
                 throw;
             }
 
+            // Completion deletes backup assembly.
             File.Delete(outputAssemblyCandidateFullPath + ".bak");
 
+            // When creates a new assembly:
             if (options.CreationOptions is { } co2)
             {
+                // .NET Core specialization:
                 if (produceExecutable &&
                     co2.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp)
                 {
+                    // Writes runtime configuration file.
                     if (co2.RuntimeConfiguration != RuntimeConfigurationOptions.Omit)
                     {
-                        this.WriteRuntimeConfiguration(
+                        NetCoreWriter.WriteRuntimeConfiguration(
+                            this.logger,
                             outputAssemblyCandidateFullPath,
                             options);
                     }
 
+                    // Writes AppHost bootstrapper.
                     if (co2.AppHostTemplatePath is { } appHostTemplatePath3 &&
                         !string.IsNullOrWhiteSpace(appHostTemplatePath3))
                     {
-                        this.WriteAppHost(
+                        NetCoreWriter.WriteAppHost(
+                            this.logger,
                             outputAssemblyFullPath,
                             outputAssemblyCandidateFullPath,
                             Path.GetFullPath(appHostTemplatePath3),

@@ -113,7 +113,7 @@ internal sealed class Options
                                 co1.AssemblyType = AssemblyTypes.Dll;
                             }
                             continue;
-                        case 'm':
+                        case 'i':
                             options.AssemblerOptions.CreationOptions = null;
                             continue;
                         case 'a':
@@ -370,7 +370,7 @@ internal sealed class Options
         }
         else
         {
-            logger.Information($"WillMerge={this.OutputAssemblyPath}");
+            logger.Information($"WillInjectTo={this.OutputAssemblyPath}");
         }
     }
 
@@ -390,7 +390,7 @@ internal sealed class Options
         tw.WriteLine("  -a <path>         AppHost template path");
         tw.WriteLine("  -L <path>         Reference assembly base path");
         tw.WriteLine("  -l <name>         Reference assembly name");
-        tw.WriteLine("  -m                Will merge into the assembly file");
+        tw.WriteLine("  -i                Will inject to output assembly file");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");

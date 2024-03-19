@@ -2718,26 +2718,26 @@ public sealed partial class AssemblerTests
     [Test]
     public Task InMerged1()
     {
-        var mergeAssemblyPath = Path.GetFullPath(Path.Combine(
+        var injectToAssemblyPath = Path.GetFullPath(Path.Combine(
             Path.GetDirectoryName(this.GetType().Assembly.Location)!,
             "..", "..", "..", "..",
             "misc", "mergetestbed", "bin", "Debug", "net45", "mergetestbed.dll"));
-        var actual = RunInMerged(@"
+        var actual = RunInjection(@"
             .function public int32() main
                 ldc.i4.1
                 ret",
-            mergeAssemblyPath);
+            injectToAssemblyPath);
         return Verify(actual);
     }
 
     [Test]
     public Task InMerged2()
     {
-        var mergeAssemblyPath = Path.GetFullPath(Path.Combine(
+        var injectToAssemblyPath = Path.GetFullPath(Path.Combine(
             Path.GetDirectoryName(this.GetType().Assembly.Location)!,
             "..", "..", "..", "..",
             "misc", "mergetestbed", "bin", "Debug", "net45", "mergetestbed.dll"));
-        var actual = RunInMerged(@"
+        var actual = RunInjection(@"
             .function public int32() main
                 ldc.i4.1
                 conv.i8
@@ -2746,7 +2746,7 @@ public sealed partial class AssemblerTests
                 call int64_add
                 conv.i4
                 ret",
-            mergeAssemblyPath);
+            injectToAssemblyPath);
         return Verify(actual);
     }
 }
