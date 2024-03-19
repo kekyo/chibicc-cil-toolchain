@@ -13,9 +13,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace chibias;
+namespace chibias.cli;
 
-internal sealed class Options
+public sealed class Options
 {
     private static readonly Dictionary<string, RuntimeConfigurationOptions> rollforwards = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -42,14 +42,14 @@ internal sealed class Options
     {
     }
 
-    public static Options Parse(string[] args)
+    public static Options Parse(string[] args, string defaultTargetFrameworkMoniker)
     {
         var options = new Options();
         var referenceAssemblyBasePaths = new List<string>();
         var referenceAssemblyNames = new List<string>();
 
         options.AssemblerOptions.CreationOptions!.TargetFramework =
-            TargetFramework.TryParse(ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker, out var tf) ?
+            TargetFramework.TryParse(defaultTargetFrameworkMoniker, out var tf) ?
                 tf : TargetFramework.Default;
 
         for (var index = 0; index < args.Length; index++)
@@ -407,7 +407,7 @@ internal sealed class Options
     }
 }
 
-internal sealed class InvalidOptionException : Exception
+public sealed class InvalidOptionException : Exception
 {
     public InvalidOptionException(string message) :
         base(message)
