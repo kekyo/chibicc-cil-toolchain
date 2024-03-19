@@ -333,11 +333,8 @@ public sealed class Assembler
         AssemblerOptions options,
         Func<Parser, bool> runner)
     {
-        using var assemblyResolver = new DefaultAssemblyResolver();
-        foreach (var basePath in options.ReferenceAssemblyBasePaths)
-        {
-            assemblyResolver.AddSearchDirectory(basePath);
-        }
+        using var assemblyResolver = new AssemblyResolver(
+            this.logger, options.ReferenceAssemblyBasePaths);
 
         var readerParameters = new ReaderParameters(ReadingMode.Immediate)
         {
@@ -369,6 +366,7 @@ public sealed class Assembler
         AssemblyDefinition assembly;
         ModuleDefinition module;
         AssemblyDefinition? mergeOriginAssembly = null;
+        ModuleDefinition? mergeOriginModule = null;
 
         if (options.CreationOptions is { } co1)
         {
@@ -440,17 +438,9 @@ public sealed class Assembler
             }
             ms.Position = 0;
 
-            mergeOriginAssembly = assembly = AssemblyDefinition.ReadAssembly(
-                ms,
-                new(ReadingMode.Immediate)
-                {
-                    InMemory = true,
-                    AssemblyResolver = assemblyResolver,
-                    ReadSymbols = true,
-                    ReadWrite = true,
-                });
-
-            module = assembly.MainModule;
+            mergeOriginAssembly = assembly = assemblyResolver.ReadAssemblyFrom(
+                outputAssemblyCandidateFullPath);
+            mergeOriginModule = module = assembly.MainModule;
         }
 
         //////////////////////////////////////////////////////////////
@@ -472,7 +462,8 @@ public sealed class Assembler
             cabiSpecificSymbols,
             referenceTypes,
             produceExecutable,
-            options.DebugSymbolType != DebugSymbolTypes.None);
+            options.DebugSymbolType != DebugSymbolTypes.None,
+            mergeOriginModule);
 
         var allFinished = runner(parser);
         if (allFinished)

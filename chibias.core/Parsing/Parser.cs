@@ -76,7 +76,8 @@ internal sealed partial class Parser
         MemberDictionary<MemberReference> cabiSpecificSymbols,
         TypeDefinitionCache referenceTypes,
         bool produceExecutable,
-        bool produceDebuggingInformation)
+        bool produceDebuggingInformation,
+        ModuleDefinition? mergeOriginModule)
     {
         this.logger = logger;
         
@@ -116,25 +117,29 @@ internal sealed partial class Parser
                 "System.IndexOutOfRangeException..ctor",
                 TypeParser.UnsafeParse<FunctionSignatureNode>("void()")));
 
-        this.cabiTextType = new TypeDefinition(
-            "C",
-            "text",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class,
-            this.module.TypeSystem.Object);
-        this.cabiDataType = new TypeDefinition(
-            "C",
-            "data",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
-            this.module.TypeSystem.Object);
-        this.cabiRDataType = new TypeDefinition(
-            "C",
-            "rdata",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
-            this.module.TypeSystem.Object);
-        this.cabiDataTypeInitializer = CreateTypeInitializer();
+        this.cabiTextType = mergeOriginModule?.GetType("C", "text") ??
+            new TypeDefinition(
+                "C",
+                "text",
+                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+                TypeAttributes.Class,
+                this.module.TypeSystem.Object);
+        this.cabiDataType = mergeOriginModule?.GetType("C", "data") ??
+            new TypeDefinition(
+                "C",
+                "data",
+                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+                TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+                this.module.TypeSystem.Object);
+        this.cabiRDataType = mergeOriginModule?.GetType("C", "rdata") ??
+            new TypeDefinition(
+                "C",
+                "rdata",
+                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+                TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+                this.module.TypeSystem.Object);
+
+        this.cabiDataTypeInitializer = this.CreateTypeInitializer();
 
         this.currentCilFile = unknown;
         this.currentFile = unknown;
@@ -658,19 +663,22 @@ internal sealed partial class Parser
             this.BeginNewFileScope(unknown.RelativePath);
 
             // Add text type when exist methods.
-            if (this.cabiTextType.Methods.Count >= 1)
+            if (this.cabiTextType.Methods.Count >= 1 &&
+                !this.module.Types.Any(t => object.ReferenceEquals(t, this.cabiTextType)))
             {
                 this.module.Types.Add(this.cabiTextType);
             }
 
             // Add data type when exist fields.
-            if (this.cabiDataType.Fields.Count >= 1)
+            if (this.cabiDataType.Fields.Count >= 1 &&
+                !this.module.Types.Any(t => object.ReferenceEquals(t, this.cabiDataType)))
             {
                 this.module.Types.Add(this.cabiDataType);
             }
 
             // Add rdata type when exist fields.
-            if (this.cabiRDataType.Fields.Count >= 1)
+            if (this.cabiRDataType.Fields.Count >= 1 &&
+                !this.module.Types.Any(t => object.ReferenceEquals(t, this.cabiRDataType)))
             {
                 this.module.Types.Add(this.cabiRDataType);
             }
