@@ -9,6 +9,7 @@
 
 using NUnit.Framework;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 using static VerifyNUnit.Verifier;
@@ -98,7 +99,7 @@ public sealed partial class AssemblerTests
             .function public int32() main
                 ldc.i4.1
                 ret",
-            AssemblyTypes.Exe);
+            assemblyType: AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -109,7 +110,7 @@ public sealed partial class AssemblerTests
             .function public int32() main
                 ldc.i4.1
                 ret",
-            AssemblyTypes.WinExe);
+            assemblyType: AssemblyTypes.WinExe);
         return Verify(actual);
     }
 
@@ -125,7 +126,7 @@ public sealed partial class AssemblerTests
                 ret", @"
             .function public int32(int32) foo
                 ldarg.0
-                ret"});
+                ret" });
         return Verify(actual);
     }
 
@@ -453,7 +454,7 @@ public sealed partial class AssemblerTests
             .function internal int32() main
                 ldc.i4.1
                 ret",
-                AssemblyTypes.Exe);
+                assemblyType: AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -479,7 +480,7 @@ public sealed partial class AssemblerTests
         var actual = Run(@"
             .function internal void() main
                 ret",
-                AssemblyTypes.Exe);
+                assemblyType: AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -490,7 +491,7 @@ public sealed partial class AssemblerTests
             .function internal int32(argc:int32,argv:int8**) main
                 ldc.i4.1
                 ret",
-                AssemblyTypes.Exe);
+                assemblyType: AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -500,7 +501,7 @@ public sealed partial class AssemblerTests
         var actual = Run(@"
             .function internal void(argc:int32,argv:int8**) main
                 ret",
-                AssemblyTypes.Exe);
+                assemblyType: AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -1488,8 +1489,8 @@ public sealed partial class AssemblerTests
                 ldstr ""Hello world""
                 call void(string) System.Console.WriteLine
                 ret",
-            AssemblyTypes.Exe,
-            new[] { typeof(System.Console).Assembly.Location });
+            new[] { typeof(System.Console).Assembly.Location },
+            AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -1504,8 +1505,8 @@ public sealed partial class AssemblerTests
                 call System.Runtime.InteropServices.GCHandle(object,System.Runtime.InteropServices.GCHandleType) System.Runtime.InteropServices.GCHandle.Alloc
                 pop
                 ret",
-            AssemblyTypes.Exe,
-            new[] { typeof(System.Console).Assembly.Location });
+            new[] { typeof(System.Console).Assembly.Location },
+            AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -2697,7 +2698,7 @@ public sealed partial class AssemblerTests
             .function public int32() main
                 ldc.i4.1
                 ret",
-            AssemblyTypes.Exe,
+            assemblyType: AssemblyTypes.Exe,
             targetFrameworkMoniker: "net7.0");
         return Verify(actual);
     }
@@ -2709,8 +2710,43 @@ public sealed partial class AssemblerTests
             .function public int32() main
                 ldc.i4.1
                 ret",
-            AssemblyTypes.WinExe,
+            assemblyType: AssemblyTypes.WinExe,
             targetFrameworkMoniker: "net7.0");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InMerged1()
+    {
+        var injectToAssemblyPath = Path.GetFullPath(Path.Combine(
+            Path.GetDirectoryName(this.GetType().Assembly.Location)!,
+            "..", "..", "..", "..",
+            "misc", "mergetestbed", "bin", "Debug", "net45", "mergetestbed.dll"));
+        var actual = RunInjection(@"
+            .function public int32() main
+                ldc.i4.1
+                ret",
+            injectToAssemblyPath);
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InMerged2()
+    {
+        var injectToAssemblyPath = Path.GetFullPath(Path.Combine(
+            Path.GetDirectoryName(this.GetType().Assembly.Location)!,
+            "..", "..", "..", "..",
+            "misc", "mergetestbed", "bin", "Debug", "net45", "mergetestbed.dll"));
+        var actual = RunInjection(@"
+            .function public int32() main
+                ldc.i4.1
+                conv.i8
+                ldc.i4.2
+                conv.i8
+                call int64_add
+                conv.i4
+                ret",
+            injectToAssemblyPath);
         return Verify(actual);
     }
 }

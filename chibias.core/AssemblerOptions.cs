@@ -44,9 +44,7 @@ public enum DebugSymbolTypes
 public enum AssembleOptions
 {
     None = 0x00,
-    ApplyOptimization = 0x01,
-    Deterministic = 0x02,
-    DisableJITOptimization = 0x04,
+    DisableJITOptimization = 0x01,
 }
 
 public enum RuntimeConfigurationOptions
@@ -64,23 +62,31 @@ public enum RuntimeConfigurationOptions
     ProduceCoreCLRDisableRollForward,
 }
 
+public sealed class AssemblerCreationOptions
+{
+    public AssemblyTypes AssemblyType =
+        AssemblyTypes.Exe;
+    public TargetWindowsArchitectures TargetWindowsArchitecture =
+        TargetWindowsArchitectures.AnyCPU;
+    public AssembleOptions Options =
+        AssembleOptions.DisableJITOptimization;
+    public Version Version = new(1, 0, 0, 0);
+    public TargetFramework TargetFramework = TargetFramework.Default;
+    public RuntimeConfigurationOptions RuntimeConfiguration =
+        RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
+    public string? AppHostTemplatePath = default;
+}
+
 public sealed class AssemblerOptions
 {
     public string[] ReferenceAssemblyBasePaths =
         Utilities.Empty<string>();
     public string[] ReferenceAssemblyNames =
         Utilities.Empty<string>();
-    public AssemblyTypes AssemblyType =
-        AssemblyTypes.Exe;
-    public TargetWindowsArchitectures TargetWindowsArchitecture =
-        TargetWindowsArchitectures.AnyCPU;
     public DebugSymbolTypes DebugSymbolType =
         DebugSymbolTypes.Embedded;
-    public AssembleOptions Options =
-        AssembleOptions.Deterministic | AssembleOptions.DisableJITOptimization;
-    public Version Version = new(1, 0, 0, 0);
-    public TargetFramework TargetFramework = TargetFramework.Default;
-    public RuntimeConfigurationOptions RuntimeConfiguration =
-        RuntimeConfigurationOptions.ProduceCoreCLRMajorRollForward;
-    public string? AppHostTemplatePath = default;
+    public bool IsDeterministic = true;
+    public bool ApplyOptimization = false;
+    public AssemblerCreationOptions? CreationOptions =
+        new();
 }

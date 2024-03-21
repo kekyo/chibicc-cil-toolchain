@@ -27,7 +27,6 @@ internal sealed partial class Parser
 
     private readonly ILogger logger;
     private readonly ModuleDefinition module;
-    private readonly TargetFramework targetFramework;
     private readonly TypeDefinition cabiTextType;
     private readonly TypeDefinition cabiDataType;
     private readonly TypeDefinition cabiRDataType;
@@ -74,16 +73,15 @@ internal sealed partial class Parser
     public Parser(
         ILogger logger,
         ModuleDefinition module,
-        TargetFramework targetFramework,
         MemberDictionary<MemberReference> cabiSpecificSymbols,
         TypeDefinitionCache referenceTypes,
         bool produceExecutable,
-        bool produceDebuggingInformation)
+        bool produceDebuggingInformation,
+        ModuleDefinition? mergeOriginModule)
     {
         this.logger = logger;
         
         this.module = module;
-        this.targetFramework = targetFramework;
         this.cabiSpecificSymbols = cabiSpecificSymbols;
         this.referenceTypes = new(
             this.logger,
@@ -119,25 +117,29 @@ internal sealed partial class Parser
                 "System.IndexOutOfRangeException..ctor",
                 TypeParser.UnsafeParse<FunctionSignatureNode>("void()")));
 
-        this.cabiTextType = new TypeDefinition(
-            "C",
-            "text",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class,
-            this.module.TypeSystem.Object);
-        this.cabiDataType = new TypeDefinition(
-            "C",
-            "data",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
-            this.module.TypeSystem.Object);
-        this.cabiRDataType = new TypeDefinition(
-            "C",
-            "rdata",
-            TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
-            TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
-            this.module.TypeSystem.Object);
-        this.cabiDataTypeInitializer = CreateTypeInitializer();
+        this.cabiTextType = mergeOriginModule?.GetType("C", "text") ??
+            new TypeDefinition(
+                "C",
+                "text",
+                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+                TypeAttributes.Class,
+                this.module.TypeSystem.Object);
+        this.cabiDataType = mergeOriginModule?.GetType("C", "data") ??
+            new TypeDefinition(
+                "C",
+                "data",
+                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+                TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+                this.module.TypeSystem.Object);
+        this.cabiRDataType = mergeOriginModule?.GetType("C", "rdata") ??
+            new TypeDefinition(
+                "C",
+                "rdata",
+                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed |
+                TypeAttributes.Class | TypeAttributes.BeforeFieldInit,
+                this.module.TypeSystem.Object);
+
+        this.cabiDataTypeInitializer = this.CreateTypeInitializer();
 
         this.currentCilFile = unknown;
         this.currentFile = unknown;
@@ -426,7 +428,9 @@ internal sealed partial class Parser
         }
     }
 
-    private void AddFundamentalAttributes(bool disableJITOptimization)
+    private void AddFundamentalAttributes(
+        TargetFramework targetFramework,
+        bool disableJITOptimization)
     {
         // Apply TFA if could be imported.
         if (this.TryGetMethod(
@@ -437,7 +441,7 @@ internal sealed partial class Parser
             var tfa = new CustomAttribute(tfactor);
             tfa.ConstructorArguments.Add(new(
                 this.UnsafeGetType("System.String"),
-                this.targetFramework.ToString()));
+                targetFramework.ToString()));
             this.module.Assembly.CustomAttributes.Add(tfa);
 
             this.logger.Trace(
@@ -647,7 +651,9 @@ internal sealed partial class Parser
     /////////////////////////////////////////////////////////////////////
 
     public bool Finish(
-        bool applyOptimization, bool disableJITOptimization)
+        TargetFramework? targetFramework,
+        bool? disableJITOptimization,
+        bool applyOptimization)
     {
         this.FinishCurrentState();
 
@@ -657,19 +663,22 @@ internal sealed partial class Parser
             this.BeginNewFileScope(unknown.RelativePath);
 
             // Add text type when exist methods.
-            if (this.cabiTextType.Methods.Count >= 1)
+            if (this.cabiTextType.Methods.Count >= 1 &&
+                !this.module.Types.Any(t => object.ReferenceEquals(t, this.cabiTextType)))
             {
                 this.module.Types.Add(this.cabiTextType);
             }
 
             // Add data type when exist fields.
-            if (this.cabiDataType.Fields.Count >= 1)
+            if (this.cabiDataType.Fields.Count >= 1 &&
+                !this.module.Types.Any(t => object.ReferenceEquals(t, this.cabiDataType)))
             {
                 this.module.Types.Add(this.cabiDataType);
             }
 
             // Add rdata type when exist fields.
-            if (this.cabiRDataType.Fields.Count >= 1)
+            if (this.cabiRDataType.Fields.Count >= 1 &&
+                !this.module.Types.Any(t => object.ReferenceEquals(t, this.cabiRDataType)))
             {
                 this.module.Types.Add(this.cabiRDataType);
             }
@@ -703,8 +712,11 @@ internal sealed partial class Parser
 
             ///////////////////////////////////////////////
 
-            // Try add fundamental attributes.
-            this.AddFundamentalAttributes(disableJITOptimization);
+            if (targetFramework is { } tf && disableJITOptimization is { } djo)
+            {
+                // Try add fundamental attributes.
+                this.AddFundamentalAttributes(tf, djo);
+            }
 
             // Apply final adjustments.
             this.ApplyFinalAdjustments(applyOptimization);

@@ -49,7 +49,7 @@ $ dotnet tool install -g chibias-cli
 ```bash
 $ chibias
 
-chibias [0.41.0,net6.0] [...]
+chibias [0.45.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -60,9 +60,9 @@ usage: chibias [options] <source path> [<source path> ...]
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
       --winexe      Produce Windows executable assembly
-  -a <path>         AppHost template path
   -L <path>         Reference assembly base path
   -l <name>         Reference assembly name
+  -i                Will inject to output assembly file
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
@@ -70,10 +70,11 @@ usage: chibias [options] <source path> [<source path> ...]
       -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
-  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
   -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
+  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]
+  -a <path>         CoreCLR AppHost template path
       --log <level> Log level [debug|trace|information|warning|error|silent]
   -h, --help        Show this help
 ```
@@ -81,6 +82,8 @@ usage: chibias [options] <source path> [<source path> ...]
 * chibiasは、コマンドラインで指摘された複数のソースコードをアセンブルして、1つの.NETアセンブリにまとめます。
 * 参照アセンブリパス `-l` は、`ld` のライブラリルックアップと同じように最後から順に評価されます。
   この機能は、重複するシンボル(関数/グローバル変数)にも適用されます。
+  また、ライブラリファイル名は、ネイティブツールチェインと同様に `lib` というプレフィックスが適用されている事を想定し、
+  かつ、フォールバックとして指定されたままのファイル名も想定します。
 * ターゲットフレームワークのデフォルト(上記の例では`net6.0`)は、chibiasの動作環境に依存します。
 * ターゲットフレームワークの指定は、コアライブラリのバリエーションを仮定するだけで、
   `mscorlib.dll`や`System.Private.CoreLib.dll`アセンブリを自動的に検出するわけではありません（別章参照）。
@@ -88,6 +91,7 @@ usage: chibias [options] <source path> [<source path> ...]
   この値は、アセンブリにマークを設定するだけです。異なる値を指定したとしても、生成されるオプコードには影響ありません。
   WindowsのCLR環境以外では、常に`AnyCPU`として動作する可能性があります。
 * ログレベルは、デフォルトで`warning`です。大文字小文字は無視されます。
+* 注入モード `-i` を使用する場合は、 `-a`, `-p`, `-v`, `-f`, `-w` の指定が無視されます。
 
 ----
 
@@ -140,13 +144,14 @@ $ echo $?
 ```
 
 * 注意: この例では、アセンブル時に属性に関する警告が発生しますが、無視して構いません。
+* `main` 関数の `argc` や `argv` に相当する引数を使用する場合は、FCLである `mscorlib.dll` アセンブリへの参照が必要です。
 
 ### .NET 6や.NET Coreなどで動かすには
 
 ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
 
 ```bash
-$ chibias -f net6.0 -L~/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ chibias -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 ターゲットフレームワークと、対応するコアライブラリのバージョンは一致する必要があります。
@@ -241,7 +246,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 |`void()`|`void main(void)`|
 
 奇妙に思えるかもしれませんが、引数の`argv`は、現実にポインタへのポインタです。
-そしてその先は、Unicodeではない、終端文字を含む8ビット文字列を示します。
+そしてその先は、終端文字を含むUTF-8文字列を示します。
 
 chibiasは`wmain`による、UTF-16LEワイド幅文字列を含むエントリポイントをサポートしていません。
 
@@ -896,6 +901,50 @@ public struct foo
 ```
 
 このような場合でも、再び有効なIDを指定する`.location`ディレクティブを指定すれば、シーケンスポイントを出力する事に注意して下さい。
+
+
+----
+
+## 注入モード
+
+注入モードは、chibiasの特徴的な機能の一つで、あらかじめ用意された .NETアセンブリファイル内に、直接CILコードを埋め込むモードです。
+このモードは、コマンドラインオプションで `-i` を指定する事で有効化されます。
+
+例えば、C#でコンパイルされた .NETアセンブリ `merged.dll` が存在する場合、
+注入モードを使用することで、 `merged.dll` 内にアセンブルした結果のCILコードを直接埋め込むことが出来ます。
+
+以下のようなC#ソースから生成した `merged.dll` アセンブリが存在するとします:
+
+```csharp
+namespace C;
+
+// CILコード側から認識できるように、C.textクラス内にメソッドを配置する
+public static class text
+{
+    public static long add_int64(long a, long b) =>
+        a + b;
+}
+```
+
+注入モードを使用すると、以下のCILコードを直接 `merged.dll` 内に「注入」して、`add_int64` と正しくリンク出来ます:
+
+```
+.function public int32() main
+    ldc.i4.1
+    conv.i8
+    ldc.i4.2
+    conv.i8
+    call add_int64    ; C#側のメソッドを呼び出す
+    conv.i4
+    ret
+```
+
+これは、chibiccなどで生成されるC言語のソースコードを、直接C#ソースコードと合成して生成させ、
+単一の .NET相互運用アセンブリファイルを生成出来る事を意味します。
+
+現在のバージョンでは、CILソースコードから注入対象 .NETアセンブリ内のシンボルを参照することが出来ます。
+
+* 将来のバージョンで、.NETアセンブリからCILの関数シンボルを参照する事が出来るようにする予定です。
 
 
 ----

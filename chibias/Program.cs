@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.cli;
 using System;
 using System.Runtime.InteropServices;
 
@@ -18,7 +19,9 @@ public static class Program
     {
         try
         {
-            var options = Options.Parse(args);
+            var options = Options.Parse(
+                args,
+                ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker);
 
             if (options.ShowHelp || options.SourceCodePaths.Count == 0)
             {

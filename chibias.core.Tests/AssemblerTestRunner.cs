@@ -7,27 +7,27 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibias.Internal;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
-using chibias.Internal;
 
 namespace chibias;
 
-partial class AssemblerTests
+internal static class AssemblerTestRunner
 {
-    private readonly string id =
+    private static readonly string artifactsBasePath = Path.GetFullPath("artifacts");
+    private static readonly string id =
         $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{new Random().Next()}";
 
-    private string Run(
+    public static string RunCore(
         string[] chibiasSourceCodes,
-        AssemblyTypes assemblyType = AssemblyTypes.Dll,
-        string[]? additionalReferencePaths = null,
-        string targetFrameworkMoniker = "net45",
-        [CallerMemberName] string memberName = null!)
+        string[]? additionalReferencePaths,
+        string? injectToAssemblyPath,
+        Func<AssemblerCreationOptions?> creationOptions,
+        string memberName)
     {
         var basePath = Path.GetFullPath(
             Path.Combine("tests", id, memberName));
@@ -49,10 +49,8 @@ partial class AssemblerTests
 
             try
             {
-                var coreLibPath = Path.GetFullPath("mscorlib.dll");
-                var tmp2Path = Path.GetFullPath("tmp2.dll");
-                var appHostTemplatePath = Path.GetFullPath(
-                    Utilities.IsInWindows ? "apphost.exe" : "apphost.linux-x64");
+                var coreLibPath = Path.Combine(artifactsBasePath, "mscorlib.dll");
+                var tmp2Path = Path.Combine(artifactsBasePath, "tmp2.dll");
 
                 var referenceAssemblyBasePaths = new[]
                     {
@@ -75,19 +73,22 @@ partial class AssemblerTests
 
                 var outputAssemblyPath =
                     Path.Combine(basePath, "output.dll");
-                var tf = TargetFramework.TryParse(targetFrameworkMoniker, out var tf1) ?
-                    tf1 : throw new InvalidOperationException();
+
+                if (injectToAssemblyPath != null)
+                {
+                    File.Copy(injectToAssemblyPath, outputAssemblyPath, true);
+                }
+
                 var succeeded = assember.Assemble(
                     outputAssemblyPath,
                     new()
                     {
                         ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
                         ReferenceAssemblyNames = referenceAssemblyNames!,
-                        AssemblyType = assemblyType,
-                        TargetFramework = tf,
                         DebugSymbolType = DebugSymbolTypes.Embedded,
-                        Options = AssembleOptions.Deterministic,
-                        AppHostTemplatePath = appHostTemplatePath,
+                        IsDeterministic = true,
+                        ApplyOptimization = false,
+                        CreationOptions = creationOptions(),
                     },
                     chibiasSourceCodes.Select((sc, index) =>
                         new SourceCodeItem(new StringReader(sc), index >= 1 ? $"source{index}.s" : "source.s")).
@@ -98,7 +99,7 @@ partial class AssemblerTests
 
                 var psi = new ProcessStartInfo()
                 {
-                    FileName = Path.GetFullPath(
+                    FileName = Path.Combine(artifactsBasePath,
                         Utilities.IsInWindows ? "ildasm.exe" : "ildasm.linux-x64"),
                     Arguments = $"-utf8 -out={disassembledPath} {outputAssemblyPath}"
                 };
@@ -128,7 +129,8 @@ partial class AssemblerTests
                     }
 
                     if (!line.StartsWith("// Image base:") &&
-                        !line.StartsWith("// MVID:"))
+                        !line.StartsWith("// MVID:") &&
+                        !line.StartsWith("// WARNING: Created Win32 resource file"))
                     {
                         disassembledSourceCode.AppendLine(line);
                     }
@@ -153,17 +155,4 @@ partial class AssemblerTests
 
         return disassembledSourceCode.ToString();
     }
-
-    private string Run(
-        string chibiasSourceCode,
-        AssemblyTypes assemblyType = AssemblyTypes.Dll,
-        string[]? additionalReferencePaths = null,
-        string targetFrameworkMoniker = "net45",
-        [CallerMemberName] string memberName = null!) =>
-        this.Run(
-            new[] { chibiasSourceCode },
-            assemblyType,
-            additionalReferencePaths,
-            targetFrameworkMoniker,
-            memberName);
 }
