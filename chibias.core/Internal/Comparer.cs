@@ -60,3 +60,15 @@ internal sealed class TypeDefinitionComparer :
     public static readonly TypeDefinitionComparer Instance = new();
 }
 
+internal sealed class MemberReferenceComparer :
+    IEqualityComparer<MemberReference>
+{
+    public bool Equals(MemberReference? x, MemberReference? y) =>
+        x!.FullName == y!.FullName;
+
+    public int GetHashCode(MemberReference obj) =>
+        obj.FullName.GetHashCode();
+
+    public static readonly MemberReferenceComparer Instance = new();
+}
+

@@ -112,7 +112,6 @@ public sealed class Assembler
                 (type.IsClass || type.IsInterface || type.IsValueType || type.IsEnum) &&
                 type.GenericParameters.Count == 0).
             SelectMany(IterateTypesDescendants).
-            Distinct(TypeDefinitionComparer.Instance).
             Collect(type => type?.Resolve())
 #if DEBUG
             .ToArray()
@@ -145,7 +144,9 @@ public sealed class Assembler
                 type.IsPublic && type.IsValueType &&
                 type.Namespace == "C.type");
 
-        return new(this.logger, methods.Concat(fields).Concat(types));
+        return new(this.logger,
+            methods.Concat(fields).Concat(types).
+            Distinct(MemberReferenceComparer.Instance));
     }
 
     private void AssembleFromSource(

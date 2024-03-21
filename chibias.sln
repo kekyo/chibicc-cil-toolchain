@@ -32,6 +32,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{2D17624C-B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mergetestbed", "misc\mergetestbed\mergetestbed.csproj", "{D0633B87-E72A-4362-B11F-E614494771C0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "combinetestbed", "misc\combinetestbed\combinetestbed.csproj", "{7875CC3D-B029-4D43-8328-8D7A8D773091}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -62,12 +64,17 @@ Global
 		{D0633B87-E72A-4362-B11F-E614494771C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D0633B87-E72A-4362-B11F-E614494771C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0633B87-E72A-4362-B11F-E614494771C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7875CC3D-B029-4D43-8328-8D7A8D773091}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7875CC3D-B029-4D43-8328-8D7A8D773091}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7875CC3D-B029-4D43-8328-8D7A8D773091}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7875CC3D-B029-4D43-8328-8D7A8D773091}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{D0633B87-E72A-4362-B11F-E614494771C0} = {2D17624C-B2B8-4343-94BF-34056C7FD4EC}
+		{7875CC3D-B029-4D43-8328-8D7A8D773091} = {2D17624C-B2B8-4343-94BF-34056C7FD4EC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {50B7704D-EFFD-4789-90DD-F594F80C2B97}
