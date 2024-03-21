@@ -11,7 +11,7 @@ using NUnit.Framework;
 using System;
 using System.IO;
 using System.Threading.Tasks;
-
+using chibias.Internal;
 using static VerifyNUnit.Verifier;
 
 namespace chibias;
@@ -2718,10 +2718,8 @@ public sealed partial class AssemblerTests
     [Test]
     public Task InMerged1()
     {
-        var injectToAssemblyPath = Path.GetFullPath(Path.Combine(
-            Path.GetDirectoryName(this.GetType().Assembly.Location)!,
-            "..", "..", "..", "..",
-            "misc", "mergetestbed", "bin", "Debug", "net45", "mergetestbed.dll"));
+        var injectToAssemblyPath = Path.Combine(
+            AssemblerTestRunner.ArtifactsBasePath, "mergetestbed.dll");
         var actual = RunInjection(@"
             .function public int32() main
                 ldc.i4.1
@@ -2733,10 +2731,8 @@ public sealed partial class AssemblerTests
     [Test]
     public Task InMerged2()
     {
-        var injectToAssemblyPath = Path.GetFullPath(Path.Combine(
-            Path.GetDirectoryName(this.GetType().Assembly.Location)!,
-            "..", "..", "..", "..",
-            "misc", "mergetestbed", "bin", "Debug", "net45", "mergetestbed.dll"));
+        var injectToAssemblyPath = Path.Combine(
+            AssemblerTestRunner.ArtifactsBasePath, "mergetestbed.dll");
         var actual = RunInjection(@"
             .function public int32() main
                 ldc.i4.1

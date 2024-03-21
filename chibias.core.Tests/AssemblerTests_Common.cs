@@ -29,7 +29,9 @@ partial class AssemblerTests
             () =>
             {
                 var appHostTemplatePath = Path.GetFullPath(
-                    Utilities.IsInWindows ? "apphost.exe" : "apphost.linux-x64");
+                    Path.Combine(
+                        AssemblerTestRunner.ArtifactsBasePath,
+                        Utilities.IsInWindows ? "apphost.exe" : "apphost.linux-x64"));
                 var tf = TargetFramework.TryParse(targetFrameworkMoniker, out var tf1) ?
                     tf1 : throw new InvalidOperationException();
                 return new()

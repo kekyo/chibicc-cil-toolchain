@@ -18,7 +18,9 @@ namespace chibias;
 
 internal static class AssemblerTestRunner
 {
-    private static readonly string artifactsBasePath = Path.GetFullPath("artifacts");
+    public static readonly string ArtifactsBasePath = Path.GetFullPath(
+        Path.Combine("..", "..", "..", "artifacts"));
+    
     private static readonly string id =
         $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{new Random().Next()}";
 
@@ -49,8 +51,8 @@ internal static class AssemblerTestRunner
 
             try
             {
-                var coreLibPath = Path.Combine(artifactsBasePath, "mscorlib.dll");
-                var tmp2Path = Path.Combine(artifactsBasePath, "tmp2.dll");
+                var coreLibPath = Path.Combine(ArtifactsBasePath, "mscorlib.dll");
+                var tmp2Path = Path.Combine(ArtifactsBasePath, "tmp2.dll");
 
                 var referenceAssemblyBasePaths = new[]
                     {
@@ -99,7 +101,7 @@ internal static class AssemblerTestRunner
 
                 var psi = new ProcessStartInfo()
                 {
-                    FileName = Path.Combine(artifactsBasePath,
+                    FileName = Path.Combine(ArtifactsBasePath,
                         Utilities.IsInWindows ? "ildasm.exe" : "ildasm.linux-x64"),
                     Arguments = $"-utf8 -out={disassembledPath} {outputAssemblyPath}"
                 };

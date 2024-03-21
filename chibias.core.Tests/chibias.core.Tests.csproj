@@ -18,9 +18,6 @@
 
   <ItemGroup>
     <None Remove="artifacts\*" />
-    <Content Include="artifacts\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>
