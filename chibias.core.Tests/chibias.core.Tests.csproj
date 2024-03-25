@@ -20,4 +20,10 @@
     <None Remove="artifacts\*" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="AssemblerTests.cs">
+      <DependentUpon>AssemblerTests_Common.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
 </Project>

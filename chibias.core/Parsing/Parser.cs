@@ -234,19 +234,19 @@ internal sealed partial class Parser
     private void OutputError(Token token, string message)
     {
         this.caughtError = true;
-        this.logger.Error($"{this.currentCilFile.RelativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
+        this.logger.Error($"{this.currentCilFile.RelativePath}:{token.Line + 1}:{token.StartColumn + 1}: {message}");
     }
 
     private void OutputError(Location location, string message)
     {
         this.caughtError = true;
-        this.logger.Error($"{location.File.RelativePath}({location.StartLine + 1},{location.StartColumn + 1}): {message}");
+        this.logger.Error($"{location.File.RelativePath}:{location.StartLine + 1}:{location.StartColumn + 1}: {message}");
     }
 
     private void OutputWarning(Token token, string message)
     {
         this.caughtError = true;
-        this.logger.Warning($"{this.currentCilFile.RelativePath}({token.Line + 1},{token.StartColumn + 1}): {message}");
+        this.logger.Warning($"{this.currentCilFile.RelativePath}:{token.Line + 1}:{token.StartColumn + 1}: {message}");
     }
 
     /////////////////////////////////////////////////////////////////////

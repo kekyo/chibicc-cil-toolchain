@@ -337,6 +337,30 @@ public sealed partial class AssemblerTests
     /////////////////////////////////////////////////////////
 
     [Test]
+    public Task CombinedMultipleAssemblyCodeDuplicatedStructure()
+    {
+        var combineToAssemblyPath = Path.Combine(
+            AssemblerTestRunner.ArtifactsBasePath, "combinetestbed.dll");
+        var actual = Run(@"
+            .function public int32() main
+                .local Foo
+                ldloca 0
+                initobj Foo
+                ldloc.0
+                call foo_calc
+                ret
+            .structure public Foo
+                public int32 a
+                public int16 b
+                public uint8 c
+            ",
+            new[] { combineToAssemblyPath });
+        return Verify(actual);
+    }
+
+    /////////////////////////////////////////////////////////
+
+    [Test]
     public Task VariableArgumentsFunction()
     {
         var actual = Run(@"
@@ -2714,6 +2738,8 @@ public sealed partial class AssemblerTests
             targetFrameworkMoniker: "net7.0");
         return Verify(actual);
     }
+
+    /////////////////////////////////////////////////////////
 
     [Test]
     public Task InMerged1()
