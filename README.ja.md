@@ -10,15 +10,27 @@
 | chibias.core (Core library) | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
 | chibias.build (MSBuild scripting) | [![NuGet chibias.build](https://img.shields.io/nuget/v/chibias.build.svg?style=flat)](https://www.nuget.org/packages/chibias.build) |
 
-## これは何?
-
 [English language is here](https://github.com/kekyo/chibias-cil)
 
-これは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) を移植するためのバックエンドとなるCIL/MSILアセンブラです。
+## これは何?
+
+chibiasは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) を移植するためのバックエンドとなるCIL/MSILアセンブラです。
+これは、簡素な構文規則でCILアセンブリ言語を記述可能で、アセンブルを行い、.NETアセンブリファイルを出力することが出来ます。以下はコード例です:
+
+```
+.function public void() main
+    ldstr "Hello world"
+    call void(string) System.Console.WriteLine
+    ret
+```
+
+chibiasは、表面的には単なるCILアセンブラのバリエーションの一つとみなすことが出来ますが、
+.NET標準のILAsmがCILアセンブラとして網羅的かつプリミティブなツールチェインである一方で、
+chibiasはC言語との相互運用性を向上させるための、いくつかの重要なフィーチャーを盛り込んでいる点が異なります。
+
 まだ作業中ですが、[YouTube](https://bit.ly/3XbqPSQ) にて、Gitコミット毎に移植する解説シリーズを放送しています。
 
 [chibicc-cil](https://github.com/kekyo/chibicc-cil) は、ある程度移植が進んだ段階で公開する予定です。しばらくお待ちください。
-
 
 ----
 
@@ -31,7 +43,11 @@ chibiasは、複数のCILソースコードを入力として、アセンブル�
 chibiasはchibiccのバックエンドアセンブラとして開発しましたが、単独でも使用可能です。
 ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、機械出力を行いやすく、かつ人間にとっても書きやすくなっています。
 
-一般的なCコンパイラは、最終段階でリンカ `ld` に中間形式ファイル `*.o` を入力して生成しますが、chibiasはこのようなファイルを扱わずに、直接 `exe` や `dll`を生成します。chibiasは、リンカの機能を兼ねていると考えることが出来て、分割されたソースコードを扱う場合は、ソースコード自体 (`*.s`) を中間形式ファイルとみなせば、リンカと同様に扱うことが出来ます。
+一般的なCコンパイラは、最終段階でリンカ `ld` に中間形式ファイル `*.o` を入力して生成しますが、
+chibiasはこのようなファイルを扱わずに、直接 `exe` や `dll`を生成します。
+chibiasは、リンカの機能を兼ねていると考えることが出来て、分割されたソースコードを扱う場合は、
+ソースコード自体 (`*.s`) を中間形式ファイルとみなせば、リンカと同様に扱うことが出来ます。
+実際に、chibiccはCILアセンブラソースコードを `*.o` として出力します。
 
 
 ----
@@ -93,6 +109,7 @@ usage: chibias [options] <source path> [<source path> ...]
 * ログレベルは、デフォルトで`warning`です。大文字小文字は無視されます。
 * 注入モード `-i` を使用する場合は、 `-a`, `-p`, `-v`, `-f`, `-w` の指定が無視されます。
 
+
 ----
 
 ## Hello world
@@ -103,7 +120,7 @@ chibiasを使って "Hello world" を実行してみましょう。
 ```
 .function public void() main
     ldstr "Hello world with chibias!"
-    call System.Console.WriteLine string
+    call void(string) System.Console.WriteLine
     ret
 ```
 
@@ -432,7 +449,7 @@ string(int8,int32,...)*
     .local System.ArgIterator
     ldloca.s 0
     arglist
-    call System.ArgIterator..ctor System.RuntimeArgumentHandle
+    call void(System.RuntimeArgumentHandle) System.ArgIterator..ctor
     ; (ArgIteratorを使って列挙する)
     ret
 ```
@@ -533,7 +550,7 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 ```
 .function public void() main
     ldstr "Hello world"
-    call string() System.Console.WriteLine
+    call void(string) System.Console.WriteLine
     ret
 ```
 
@@ -567,6 +584,11 @@ getterに`get_Length()`、setterに`set_Length()`というメソッド名に対�
 .NETでは、コールサイトと呼ばれる場合もあります。
 chibiasでは、関数ポインタ型と同じような構文で指定します。
 
+関数ポインタ型と異なるのは、関数シグネチャはポインタではないため、終端に`*`が付かない事です。
+
+* `int32(string)*`: 関数ポインタ
+* `int32(string)`: 関数シグネチャ（コールサイト）
+
 これらは、関数ディレクティブや、`call` や `ldftn` オプコードでメソッドのオーバーロードを特定したり、
 `calli` オプコードで使用します:
 
@@ -577,8 +599,6 @@ chibiasでは、関数ポインタ型と同じような構文で指定します�
     calli int32(string)
     ret
 ```
-
-関数ポインタ型と異なるのは、関数シグネチャはポインタではないため、終端に`*`が付かない事です。
 
 ### グローバル変数
 

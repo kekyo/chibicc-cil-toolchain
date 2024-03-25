@@ -10,11 +10,23 @@
 | chibias.core (Core library) | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
 | chibias.build (MSBuild scripting) | [![NuGet chibias.build](https://img.shields.io/nuget/v/chibias.build.svg?style=flat)](https://www.nuget.org/packages/chibias.build) |
 
-## What is this?
-
 [![Japanese language](Images/Japanese.256.png)](https://github.com/kekyo/chibias-cil/blob/main/README.ja.md)
 
-This is a CIL/MSIL assembler, backend for porting C language compiler implementation derived from [chibicc](https://github.com/rui314/chibicc) on .NET CIL/CLR.
+## What is this?
+
+chibias is a CIL/MSIL assembler that serves as a backend for porting [chibicc](https://github.com/rui314/chibicc) on the .NET CIL/CLR.
+It can write CIL assembly language with simple syntax rules, perform assembly, and output .NET assembly files. Here is an example code:
+
+```
+.function public void() main
+    ldstr "Hello world"
+    call void(string) System.Console.WriteLine
+    ret
+```
+
+.NET standard ILAsm is a comprehensive and primitive toolchain as a CIL assembler,
+while chibias includes several important features to improve interoperability with the C language.
+
 It is WIP and broadcasting side-by-side Git commit portion on [YouTube (In Japanese)](https://bit.ly/3XbqPSQ).
 
 [chibicc-cil](https://github.com/kekyo/chibicc-cil) will be made available as the porting progresses to some extent, please wait.
@@ -32,7 +44,11 @@ chibias was developed as a backend assembler for chibicc, but can also be used b
 The source code employs simplified syntax rules compared to ILAsm,
 making it easier to machine generation and easier for humans to write.
 
-The general C compiler generates intermediate object format files `*.o` by inputting them to the linker `ld` at the final stage. chibias does not handle such object files, but generates `exe` and `dll` directly. When dealing with split source code, you can consider the source code itself (`*.s`) as an intermediate object format file and treat it same way as a linker.
+The general C compiler generates intermediate object format files `*.o` by inputting them to the linker `ld` at the final stage.
+chibias does not handle such object files, but generates `exe` and `dll` directly.
+When dealing with split source code, you can consider the source code itself (`*.s`)
+as an intermediate object format file and treat it same way as a linker.
+In fact, chibicc outputs the CIL assembler source code as `*.o`.
 
 
 ----
@@ -104,7 +120,7 @@ You should create a new source code file `hello.s` with the contents only need 4
 ```
 .function public void() main
     ldstr "Hello world with chibias!"
-    call System.Console.WriteLine string
+    call void(string) System.Console.WriteLine
     ret
 ```
 
@@ -435,7 +451,7 @@ Function accepts additional variable arguments:
     .local System.ArgIterator
     ldloca.s 0
     arglist
-    call System.ArgIterator..ctor System.RuntimeArgumentHandle
+    call void(System.RuntimeArgumentHandle) System.ArgIterator..ctor
     ; (Iterates with ArgIterator.)
     ret
 ```
@@ -540,7 +556,7 @@ Specify the method signature and full method name:
 ```
 .function public void() main
     ldstr "Hello world"
-    call string() System.Console.WriteLine
+    call void(string) System.Console.WriteLine
     ret
 ```
 
@@ -577,6 +593,11 @@ Function signature is a syntax that indicates the parameter set and return type 
 Sometimes referred to as "Call sites" in .NET.
 In the case of chibias, they are specified with a syntax similar to function pointer types.
 
+Function signatures differ from function pointer types in that they are not terminated with a `*` because they are not pointers.
+
+* `int32(string)*`: Function pointer
+* `int32(string)`: Function signature (call site)
+
 These are used in function directives, to identify method overloads in the `call` and `ldftn` opcodes,
 and in the `calli` opcode:
 
@@ -587,9 +608,6 @@ and in the `calli` opcode:
     calli int32(string)
     ret
 ```
-
-It differs from the function pointer type,
-function signature is not a pointer so does not terminate with `*`.
 
 ### Global variables
 
