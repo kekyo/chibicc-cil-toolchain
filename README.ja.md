@@ -65,7 +65,7 @@ $ dotnet tool install -g chibias-cli
 ```bash
 $ chibias
 
-chibias [0.45.0,net6.0] [...]
+chibias [0.46.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
 https://github.com/kekyo/chibias-cil
 Copyright (c) Kouji Matsui
@@ -88,10 +88,11 @@ usage: chibias [options] <source path> [<source path> ...]
       -O0           Disable optimization (defaulted)
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -f <tfm>          Target framework moniker (defaulted: net6.0)
-  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]
-  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]
+  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)
+  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)
   -a <path>         CoreCLR AppHost template path
-      --log <level> Log level [debug|trace|information|warning|error|silent]
+      --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)
+      --dryrun      Need to dryrun
   -h, --help        Show this help
 ```
 

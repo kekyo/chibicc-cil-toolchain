@@ -19,14 +19,14 @@ public static class Program
     {
         try
         {
-            var options = Options.Parse(
+            var options = CliOptions.Parse(
                 args,
                 ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker);
 
             if (options.ShowHelp || options.SourceCodePaths.Count == 0)
             {
                 Console.WriteLine();
-                Options.WriteUsage(Console.Out);
+                CliOptions.WriteUsage(Console.Out);
                 Console.WriteLine();
                 return 1;
             }

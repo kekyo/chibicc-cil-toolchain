@@ -344,8 +344,13 @@ public sealed class Assembler
         if (allFinished)
         {
             this.logger.Information(
-                $"Writing: {Path.GetFileName(outputAssemblyCandidateFullPath)}");
+                $"Writing: {Path.GetFileName(outputAssemblyCandidateFullPath)}{(options.IsDryRun ? " (dryrun)" : "")}");
 
+            if (options.IsDryRun)
+            {
+                return allFinished;
+            }
+            
             var outputAssemblyBasePath =
                 Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath);
             try
