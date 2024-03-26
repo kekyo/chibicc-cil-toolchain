@@ -89,4 +89,5 @@ public sealed class AssemblerOptions
     public bool ApplyOptimization = false;
     public AssemblerCreationOptions? CreationOptions =
         new();
+    public bool IsDryRun = false; 
 }

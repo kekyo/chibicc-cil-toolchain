@@ -15,7 +15,7 @@ using System.Linq;
 
 namespace chibias.cli;
 
-public sealed class Options
+public sealed class CliOptions
 {
     private static readonly Dictionary<string, RuntimeConfigurationOptions> rollforwards = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -38,13 +38,13 @@ public sealed class Options
     public bool ShowHelp = false;
     public readonly List<string> SourceCodePaths = new();
 
-    private Options()
+    private CliOptions()
     {
     }
 
-    public static Options Parse(string[] args, string defaultTargetFrameworkMoniker)
+    public static CliOptions Parse(string[] args, string defaultTargetFrameworkMoniker)
     {
-        var options = new Options();
+        var options = new CliOptions();
         var referenceAssemblyBasePaths = new List<string>();
         var referenceAssemblyNames = new List<string>();
 
@@ -275,6 +275,9 @@ public sealed class Options
                                         continue;
                                     }
                                     break;
+                                case "dryrun":
+                                    options.AssemblerOptions.IsDryRun = true;
+                                    continue;
                                 case "help":
                                     options.ShowHelp = true;
                                     continue;
@@ -299,31 +302,40 @@ public sealed class Options
             }
         }
 
-        if (options.OutputAssemblyPath == null)
+        switch (options.OutputAssemblyPath)
         {
-            switch (options.AssemblerOptions.CreationOptions?.AssemblyType)
-            {
-                case AssemblyTypes.Exe:
-                case AssemblyTypes.WinExe:
-                    options.OutputAssemblyPath =
-                        options.AssemblerOptions.CreationOptions.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETFramework ?
-                            Path.GetFullPath("a.out.exe") : Path.GetFullPath("a.out.dll");
-                    break;
-                default:
-                    switch (options.SourceCodePaths.FirstOrDefault())
-                    {
-                        case null:
-                        case "-":
-                            options.OutputAssemblyPath = Path.GetFullPath("a.out.dll");
-                            break;
-                        case { } path:
-                            options.OutputAssemblyPath = Path.Combine(
-                                Utilities.GetDirectoryPath(path),
-                                Path.GetFileNameWithoutExtension(path) + ".dll");
-                            break;
-                    }
-                    break;
-            }
+            case null:
+                switch (options.AssemblerOptions.CreationOptions?.AssemblyType)
+                {
+                    case AssemblyTypes.Exe:
+                    case AssemblyTypes.WinExe:
+                        options.OutputAssemblyPath =
+                            options.AssemblerOptions.CreationOptions.TargetFramework.Identifier ==
+                            TargetFrameworkIdentifiers.NETFramework
+                                ? Path.GetFullPath("a.out.exe")
+                                : Path.GetFullPath("a.out.dll");
+                        break;
+                    default:
+                        switch (options.SourceCodePaths.FirstOrDefault())
+                        {
+                            case null:
+                            case "-":
+                                options.OutputAssemblyPath = Path.GetFullPath("a.out.dll");
+                                break;
+                            case { } path:
+                                options.OutputAssemblyPath = Path.Combine(
+                                    Utilities.GetDirectoryPath(path),
+                                    Path.GetFileNameWithoutExtension(path) + ".dll");
+                                break;
+                        }
+
+                        break;
+                }
+                break;
+            // HACK:
+            case "/dev/null":
+                options.AssemblerOptions.IsDryRun = true;
+                break;
         }
 
         options.AssemblerOptions.ReferenceAssemblyBasePaths = referenceAssemblyBasePaths.
@@ -372,6 +384,8 @@ public sealed class Options
         {
             logger.Information($"WillInjectTo={this.OutputAssemblyPath}");
         }
+        
+        logger.Information($"IsDryRun={this.AssemblerOptions.IsDryRun}");
     }
 
     public static void WriteUsage(TextWriter tw)
@@ -399,10 +413,11 @@ public sealed class Options
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
-        tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64]");
-        tw.WriteLine("  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit]");
+        tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)");
+        tw.WriteLine("  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)");
         tw.WriteLine("  -a <path>         .NET Core AppHost template path");
-        tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent]");
+        tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)");
+        tw.WriteLine("      --dryrun      Need to dryrun");
         tw.WriteLine("  -h, --help        Show this help");
     }
 }
