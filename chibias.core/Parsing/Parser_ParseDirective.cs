@@ -267,14 +267,56 @@ partial class Parser
         var globalTypeNameToken = tokens[2];
         var globalName = tokens[3].Text;
 
+        var fa = scopeDescriptor switch
+        {
+            ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
+            ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static,
+            _ => FieldAttributes.Assembly | FieldAttributes.Static,
+        };
+
+        if (this.TryGetField(
+            globalName,
+            out var f,
+            this.fileScopedType,
+            LookupTargets.All))
+        {
+            this.DelayLookingUpType(
+                globalTypeNameToken,
+                globalTypeNameToken,
+                LookupTargets.All,
+                type =>
+                {
+                    if (type.FullName != f.FieldType.FullName)
+                    {
+                        this.OutputError(
+                            tokens[1],
+                            $"Mismatched previous field type: {globalName}");
+                    }
+                });
+            
+            var previousField = f.Resolve();
+            if (previousField.Attributes != fa)
+            {
+                this.OutputError(
+                    tokens[1],
+                    $"Mismatched previous field attribute: {globalName}");
+            }
+
+            if (data != null)
+            {
+                if (!previousField.InitialValue.SequenceEqual(data) || !previousField.IsInitOnly)
+                {
+                    this.OutputError(
+                        tokens[3],
+                        $"Mismatched previous field declaration: {globalName}");
+                }
+            }
+            return;
+        }
+
         var field = new FieldDefinition(
             globalName,
-            scopeDescriptor switch
-            {
-                ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static,
-                ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static,
-                _ => FieldAttributes.Assembly | FieldAttributes.Static,
-            },
+            fa,
             this.CreateDummyType());
 
         if (data != null)
@@ -342,14 +384,56 @@ partial class Parser
         var constantTypeNameToken = tokens[2];
         var constantName = tokens[3].Text;
 
+        var fa = scopeDescriptor switch
+        {
+            ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
+            ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
+            _ => FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly,
+        };
+
+        if (this.TryGetField(
+            constantName,
+            out var f,
+            this.fileScopedType,
+            LookupTargets.All))
+        {
+            this.DelayLookingUpType(
+                constantTypeNameToken,
+                constantTypeNameToken,
+                LookupTargets.All,
+                type =>
+                {
+                    if (type.FullName != f.FieldType.FullName)
+                    {
+                        this.OutputError(
+                            tokens[1],
+                            $"Mismatched previous constant field type: {constantName}");
+                    }
+                });
+            
+            var previousField = f.Resolve();
+            if (previousField.Attributes != fa)
+            {
+                this.OutputError(
+                    tokens[1],
+                    $"Mismatched previous constant field attribute: {constantName}");
+            }
+
+            if (data != null)
+            {
+                if (!previousField.InitialValue.SequenceEqual(data))
+                {
+                    this.OutputError(
+                        tokens[3],
+                        $"Mismatched previous constant field declaration: {constantName}");
+                }
+            }
+            return;
+        }
+        
         var field = new FieldDefinition(
             constantName,
-            scopeDescriptor switch
-            {
-                ScopeDescriptors.Public => FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
-                ScopeDescriptors.File => FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
-                _ => FieldAttributes.Assembly | FieldAttributes.Static | FieldAttributes.InitOnly,
-            },
+            fa,
             this.CreateDummyType());
 
         field.InitialValue = data;

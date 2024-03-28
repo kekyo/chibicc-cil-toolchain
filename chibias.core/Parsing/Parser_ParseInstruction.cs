@@ -380,7 +380,7 @@ partial class Parser
     }
 
     /////////////////////////////////////////////////////////////////////
-
+ 
     private Instruction? ParseInlineType(
         OpCode opCode, Token[] tokens)
     {
