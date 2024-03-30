@@ -5,7 +5,7 @@
     <TargetFrameworks>net40;netcoreapp2.2;netcoreapp3.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
     <AssemblyName>chibicc_build</AssemblyName>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <IsPackable>true</IsPackable>
+    <IsPackable>false</IsPackable>  <!-- TODO: -->
     <PackageId>chibicc.build</PackageId>
     <NuSpecFile>chibicc.build.nuspec</NuSpecFile>
   </PropertyGroup>
