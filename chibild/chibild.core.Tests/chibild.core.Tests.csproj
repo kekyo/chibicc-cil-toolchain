@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <None Remove="artifacts\*" />
+    <Content Include="artifacts\*" />
   </ItemGroup>
 
   <ItemGroup>
