@@ -1,0 +1,31 @@
+﻿<!--
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// chibicc-toolchain - The specialized backend toolchain for chibicc-cil
+// Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
+//
+// Licensed under MIT: https://opensource.org/licenses/MIT
+//
+/////////////////////////////////////////////////////////////////////////////////////
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Core'">
+    <_chibild_build_RuntimeName>dotnet </_chibild_build_RuntimeName>
+    <_chibild_build_ExecutableName>chibild.dll</_chibild_build_ExecutableName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Full'">
+    <_chibild_build_RuntimeName></_chibild_build_RuntimeName>
+    <_chibild_build_ExecutableName>chibild.exe</_chibild_build_ExecutableName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' == 'Mono'">
+    <_chibild_build_RuntimeName>mono </_chibild_build_RuntimeName>
+    <_chibild_build_ExecutableName>chibild.exe</_chibild_build_ExecutableName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <_chibild_build_ScriptBaseDir>$(MSBuildThisFileDirectory)</_chibild_build_ScriptBaseDir>
+    <chibildBuildEnable>True</chibildBuildEnable>
+  </PropertyGroup>
+
+</Project>

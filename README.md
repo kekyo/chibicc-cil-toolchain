@@ -1,4 +1,4 @@
-﻿# The specialized backend CIL assembler for chibicc-cil
+﻿# The specialized backend toolchain for chibicc-cil
 
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 
@@ -6,15 +6,15 @@
 
 | Package  | NuGet                                                                                                                |
 |:---------|:---------------------------------------------------------------------------------------------------------------------|
-| chibias-cli (dotnet CLI) | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibias-cli.svg?style=flat)](https://www.nuget.org/packages/chibias-cli) |
-| chibias.core (Core library) | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
-| chibias.build (MSBuild scripting) | [![NuGet chibias.build](https://img.shields.io/nuget/v/chibias.build.svg?style=flat)](https://www.nuget.org/packages/chibias.build) |
+| chibild-cli (dotnet CLI) | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
+| chibild.core (Core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
+| chibild.build (MSBuild scripting) | [![NuGet chibild.build](https://img.shields.io/nuget/v/chibild.build.svg?style=flat)](https://www.nuget.org/packages/chibild.build) |
 
-[![Japanese language](Images/Japanese.256.png)](https://github.com/kekyo/chibias-cil/blob/main/README.ja.md)
+[![Japanese language](Images/Japanese.256.png)](https://github.com/kekyo/chibicc-cil-toolchain/blob/main/README.ja.md)
 
 ## What is this?
 
-chibias is a CIL/MSIL assembler that serves as a backend for porting [chibicc](https://github.com/rui314/chibicc) on the .NET CIL/CLR.
+chibild is a CIL/MSIL assembler that serves as a backend for porting [chibicc](https://github.com/rui314/chibicc) on the .NET CIL/CLR.
 It can write CIL assembly language with simple syntax rules, perform assembly, and output .NET assembly files. Here is an example code:
 
 ```
@@ -25,7 +25,7 @@ It can write CIL assembly language with simple syntax rules, perform assembly, a
 ```
 
 .NET standard ILAsm is a comprehensive and primitive toolchain as a CIL assembler,
-while chibias includes several important features to improve interoperability with the C language.
+while chibild includes several important features to improve interoperability with the C language.
 
 It is WIP and broadcasting side-by-side Git commit portion on [YouTube (In Japanese)](https://bit.ly/3XbqPSQ).
 
@@ -36,16 +36,16 @@ It is WIP and broadcasting side-by-side Git commit portion on [YouTube (In Japan
 
 ## Overview
 
-chibias takes multiple CIL source codes as input, performs assembly, and outputs the result as . NET assemblies. At this time, reference assemblies can be specified so that they can be referenced from the CIL source code.
+chibild takes multiple CIL source codes as input, performs assembly, and outputs the result as . NET assemblies. At this time, reference assemblies can be specified so that they can be referenced from the CIL source code.
 
-![chibias overview](Images/chibias.png)
+![chibild overview](Images/chibild.png)
 
-chibias was developed as a backend assembler for chibicc, but can also be used by us.
+chibild was developed as a backend assembler for chibicc, but can also be used by us.
 The source code employs simplified syntax rules compared to ILAsm,
 making it easier to machine generation and easier for humans to write.
 
 The general C compiler generates intermediate object format files `*.o` by inputting them to the linker `ld` at the final stage.
-chibias does not handle such object files, but generates `exe` and `dll` directly.
+chibild does not handle such object files, but generates `exe` and `dll` directly.
 When dealing with split source code, you can consider the source code itself (`*.s`)
 as an intermediate object format file and treat it same way as a linker.
 In fact, chibicc outputs the CIL assembler source code as `*.o`.
@@ -55,24 +55,24 @@ In fact, chibicc outputs the CIL assembler source code as `*.o`.
 
 ## How to use
 
-Install CLI via nuget package [chibias-cli](https://www.nuget.org/packages/chibias-cli). (NOT 'chibias-cil' :)
+Install CLI via nuget package [chibild-cli](https://www.nuget.org/packages/chibild-cli). (NOT 'chibild-cil' :)
 
 ```bash
-$ dotnet tool install -g chibias-cli
+$ dotnet tool install -g chibild-cli
 ```
 
 Then:
 
 ```bash
-$ chibias
+$ chibild
 
-chibias [0.45.0,net6.0] [...]
+chibild [0.45.0,net6.0] [...]
 This is the CIL assembler, part of chibicc-cil project.
-https://github.com/kekyo/chibias-cil
+https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: chibias [options] <source path> [<source path> ...]
+usage: chibild [options] <source path> [<source path> ...]
   -o <path>         Output assembly path
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
@@ -97,12 +97,12 @@ usage: chibias [options] <source path> [<source path> ...]
   -h, --help        Show this help
 ```
 
-* chibias will combine multiple source code in command line pointed into one assembly.
+* chibild will combine multiple source code in command line pointed into one assembly.
 * Reference assembly paths `-l` evaluates last-to-first order, same as `ld` looking up.
   This feature applies to duplicated symbols (function/global variables).
   Library file names are assumed to be prefixed with `lib` as in the native toolchain,
   and also assumes the filename as specified in fallbacks.
-* The default target framework moniker (`net6.0` in the above example) depends on the operating environment of chibias.
+* The default target framework moniker (`net6.0` in the above example) depends on the operating environment of chibild.
 * Specifying a target framework moniker only assumes a variation of the core library.
   And it does NOT automatically detect the `mscorlib.dll` or `System.Private.CoreLib.dll` assembly files (see below).
 * Target windows architecture is `AnyCPU` by default. These values ignore case.
@@ -115,31 +115,31 @@ usage: chibias [options] <source path> [<source path> ...]
 
 ## Hello world
 
-Let's play "Hello world" with chibias.
+Let's play "Hello world" with chibild.
 You should create a new source code file `hello.s` with the contents only need 4 lines:
 
 ```
 .function public void() main
-    ldstr "Hello world with chibias!"
+    ldstr "Hello world with chibild!"
     call void(string) System.Console.WriteLine
     ret
 ```
 
-Then invoke chibias with:
+Then invoke chibild with:
 
 ```bash
-$ chibias -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 Run it:
 
 ```bash
 $ ./hello.exe
-Hello world with chibias!
+Hello world with chibild!
 ```
 
 Yes, this example uses the `System.Console.WriteLine()` defined in the `mscorlib.dll` assembly file in the
-Windows environment (WSL). But now you know how to reference assemblies from chibias.
+Windows environment (WSL). But now you know how to reference assemblies from chibild.
 
 Linux and other operating systems can be used in the same way, by adding references you need.
 Also, if you assemble code that uses only built-in types (see below), you do not need references to other assemblies:
@@ -153,7 +153,7 @@ Also, if you assemble code that uses only built-in types (see below), you do not
 ```
 
 ```bash
-$ chibias -f net45 -o adder.exe adder.s
+$ chibild -f net45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -167,7 +167,7 @@ $ echo $?
 Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
 
 ```bash
-$ chibias -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 The version of the target framework moniker and the corresponding core library must match.
@@ -186,22 +186,22 @@ This package is provided by MS under the MIT license, so you are free to use it.
 The `nupkg` file is in zip format, so you can use `unzip` to extract the contents.
 
 It is important to note that all of the assemblies included in this package do not have any code bodies.
-It is possible to reference them with chibias, but it is not possible to run them.
+It is possible to reference them with chibild, but it is not possible to run them.
 If you want to run it in a Linux environment or others, you will need a runtime such as mono/.NET Core.
 
 ```bash
 $ mono ./hello.exe
-Hello world with chibias!
+Hello world with chibild!
 ```
 
 In any case, if you want to refer to the complete `mscorlib.dll` or `System.Private.CoreLib.dll` files,
 it may be better to simply install mono and/or .NET SDK and reference the files in that directory.
 
-At the moment, chibias does not automatically detect these assembly files installed on the system.
+At the moment, chibild does not automatically detect these assembly files installed on the system.
 This is by design as stand-alone independent assembler, like the GNU assembler.
 In the future, it may be possible to resolve assembly files automatically via the MSBuild script.
 
-(The `chibias.build` package is available for this purpose. But it is still incomplete and cannot be used now.)
+(The `chibild.build` package is available for this purpose. But it is still incomplete and cannot be used now.)
 
 
 ----
@@ -210,9 +210,9 @@ In the future, it may be possible to resolve assembly files automatically via th
 
 TODO: WIP, Specifications have not yet been finalized.
 
-To check the syntax, you should look at [the test code](https://github.com/kekyo/chibias-cil/blob/main/chibias.core.Tests/AssemblerTests.cs).
+To check the syntax, you should look at [the test code](https://github.com/kekyo/chibicc-cil-toolchain/blob/main/chibild.core.Tests/AssemblerTests.cs).
 
-The syntax of chibias has the following features:
+The syntax of chibild has the following features:
 
 * The body of the opcode can be written in almost the same way as in ILAsm.
 * Unnecessarily verbose descriptions are eliminated as much as possible.
@@ -264,7 +264,7 @@ The signature of the `main` function accepts the following variations:
 It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
 And beyond that, it indicates a UTF-8 string containing the terminating character.
 
-chibias does not support entry points containing UTF-16LE wide-length strings by `wmain`.
+chibild does not support entry points containing UTF-16LE wide-length strings by `wmain`.
 
 ### Literals
 
@@ -441,7 +441,7 @@ The parameters for function signature are optional. Formats are:
 
 The function name both forward and backaward references are accepted.
 
-Important: If you are calling a function defined in chibias,
+Important: If you are calling a function defined in chibild,
 you do not need to specify any parameter type list for the `call` operand.
 In another hand, .NET overloaded methods, an parameter type list is required.
 
@@ -460,7 +460,7 @@ Function accepts additional variable arguments:
 A trailing `...` at the end of the argument list of the function signature to mark it as accepting variable arguments.
 
 However, that this variable parameter is handled differently from variable parameters (.NET array) in C#.
-chibias uses `arglist` semantics in defined CIL.
+chibild uses `arglist` semantics in defined CIL.
 
 `arglist` is enumerated using the `System.ArgIterator` type, as in the example above.
 For more information, you need to Google the `__arglist` keyword or `ArgIterator` in C#.
@@ -480,7 +480,7 @@ For example, calls above function `add_n` would use:
 All types of parameters to be passed in a function call, including types corresponding to additional arguments,
 are made explicit as signatures.
 
-Because chibias does not perform flow analysis to detect parameter types automatically.
+Because chibild does not perform flow analysis to detect parameter types automatically.
 If this declaration is incorrect, calls will fail at runtime.
 
 ### Call external function
@@ -496,7 +496,7 @@ Before assemble to make `test.dll`
 ```
 
 ```bash
-$ chibias -c test.s
+$ chibild -c test.s
 ```
 
 Then:
@@ -510,7 +510,7 @@ Then:
 ```
 
 ```bash
-$ chibias -ltest main.s
+$ chibild -ltest main.s
 ```
 
 The functions (.NET CIL methods) are placed into single class named `C.text`.
@@ -592,7 +592,7 @@ If this does not work, please use tools such as ILDAsm or ILSpy to check target 
 
 Function signature is a syntax that indicates the parameter set and return type of the method being called.
 Sometimes referred to as "Call sites" in .NET.
-In the case of chibias, they are specified with a syntax similar to function pointer types.
+In the case of chibild, they are specified with a syntax similar to function pointer types.
 
 Function signatures differ from function pointer types in that they are not terminated with a `*` because they are not pointers.
 
@@ -688,7 +688,7 @@ It is not only definition the scope, but also determines when the initialization
 ### Value array type
 
 .NET does not have an array type that behaves like a value type.
-chibias can use the `value array` type to pseudo-realize this.
+chibild can use the `value array` type to pseudo-realize this.
 The value array type plays a very important role in the realization of the C language compiler.
 
 To use a value array type, declare the type as follows:
@@ -726,7 +726,7 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 }
 ```
 
-This structure can behave likes an array outside of chibias (and chibicc).
+This structure can behave likes an array outside of chibild (and chibicc).
 
 The natural interpretation of composite types is also performed.
 For example:
@@ -737,17 +737,17 @@ For example:
 * `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
 When declaring nested array types, care must be taken with the order of the elements.
-For example, order in chibias is reversed for a type expressed in C as follows:
+For example, order in chibild is reversed for a type expressed in C as follows:
 
 ```c
 // C language
 char foo[3][4][5];
 
-// chibias
+// chibild
 int8[5][4][3] foo
 ```
 
-This is because chibias evaluate array types from the left to right, as follows.
+This is because chibild evaluate array types from the left to right, as follows.
 The composite type definitions described above are same:
 
 `( ( int8 [5] ) [4] ) [3]`
@@ -757,7 +757,7 @@ Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
 ### Enumeration type
 
-The enumeration type that can be defined in chibias are the same as enumeration type in .NET,
+The enumeration type that can be defined in chibild are the same as enumeration type in .NET,
 which implicitly inherit from `System.Enum`.
 
 ```
@@ -811,7 +811,7 @@ Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
 ### Structure type
 
-The structure types that can be defined in chibias are the same as structure types in .NET,
+The structure types that can be defined in chibild are the same as structure types in .NET,
 which implicitly inherit from `System.ValueType`.
 
 ```
@@ -944,7 +944,7 @@ If you specify a `.location` directive that specifies a valid ID, sequence point
 
 ## Injection mode
 
-The injection mode is one of the distinctive features of chibias,
+The injection mode is one of the distinctive features of chibild,
 to embed CIL code directly in a pre-prepared .NET assembly file.
 This mode is enabled by specifying `-i` command line option.
 
@@ -994,18 +994,18 @@ There are no prerequisites required for the build.
 For example:
 
 ```bash
-$ dotnet build chibias.sln
+$ dotnet build chibild.sln
 ```
 
 The test currently relies on the native binary ILDAsm, so they can only be run on Windows x64 or Linux x64.
 In my environment, it takes about 30 seconds.
 
 ```bash
-$ dotnet test chibias.sln
+$ dotnet test chibild.sln
 ```
 
 The `build-nupkg.bat` or `build-nupkg.sh` will generate NuGet packages in the `artifacts` directory.
-The `chibias.net4` project generates single file binaries for `net48` in `Release` build.
+The `chibild.net4` project generates single file binaries for `net48` in `Release` build.
 
 
 ----
