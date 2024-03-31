@@ -33,8 +33,20 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "combinetestbed", "chibild\misc\combinetestbed\combinetestbed.csproj", "{7875CC3D-B029-4D43-8328-8D7A8D773091}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "chibild", "chibild", "{D0131164-9D0E-4CEE-9CB3-FC617BD661DA}"
+	ProjectSection(SolutionItems) = preProject
+		chibild\Directory.Build.props = chibild\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibicc.build", "chibicc.build\chibicc.build.csproj", "{69DC07CB-4E13-4F7A-B7A6-A3F9B1B0111D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "chibias", "chibias", "{A4C160C3-9D6F-4B0C-9A66-CA5FE5264672}"
+	ProjectSection(SolutionItems) = preProject
+		chibias\Directory.Build.props = chibias\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibias", "chibias\chibias\chibias.csproj", "{F347B527-EAA8-4675-932B-13F54C252DC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibias.net4", "chibias\chibias.net4\chibias.net4.csproj", "{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -70,6 +82,14 @@ Global
 		{69DC07CB-4E13-4F7A-B7A6-A3F9B1B0111D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{69DC07CB-4E13-4F7A-B7A6-A3F9B1B0111D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{69DC07CB-4E13-4F7A-B7A6-A3F9B1B0111D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F347B527-EAA8-4675-932B-13F54C252DC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F347B527-EAA8-4675-932B-13F54C252DC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F347B527-EAA8-4675-932B-13F54C252DC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F347B527-EAA8-4675-932B-13F54C252DC7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,6 +102,8 @@ Global
 		{7453BCDC-28AE-44DD-B96C-A4E2BA6740D6} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
 		{9228F275-78AA-475D-844D-6D54A62B132A} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
 		{2D17624C-B2B8-4343-94BF-34056C7FD4EC} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
+		{F347B527-EAA8-4675-932B-13F54C252DC7} = {A4C160C3-9D6F-4B0C-9A66-CA5FE5264672}
+		{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E} = {A4C160C3-9D6F-4B0C-9A66-CA5FE5264672}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {50B7704D-EFFD-4789-90DD-F594F80C2B97}

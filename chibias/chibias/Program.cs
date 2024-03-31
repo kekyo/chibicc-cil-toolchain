@@ -7,11 +7,11 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using chibild.cli;
 using System;
 using System.Runtime.InteropServices;
+using chibias.cli;
 
-namespace chibild;
+namespace chibias;
 
 public static class Program
 {
@@ -19,11 +19,9 @@ public static class Program
     {
         try
         {
-            var options = CliOptions.Parse(
-                args,
-                ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker);
+            var options = CliOptions.Parse(args);
 
-            if (options.ShowHelp || options.ObjectFilePaths.Count == 0)
+            if (options.ShowHelp || options.SourceFilePaths.Count == 0)
             {
                 Console.WriteLine();
                 CliOptions.WriteUsage(Console.Out);
@@ -31,27 +29,19 @@ public static class Program
                 return 1;
             }
 
-            using var logger = new TextWriterLogger(
-                options.LogLevel,
-                Console.Out);
+            var assembler = new Assembler();
 
-            logger.Information($"Started. [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
-
-            options.Write(logger);
-
-            var linker = new Linker(logger);
-
-            if (linker.Link(
-                options.OutputAssemblyPath,
-                options.LinkerOptions,
-                options.ObjectFilePaths.ToArray()))
+            if (assembler.Assemble(
+                options.OutputObjectFilePath,
+                options.SourceFilePaths.ToArray(),
+                options.IsDryRun))
             {
-                logger.Information($"Finished.");
+                //logger.Information($"Finished.");
                 return 0;
             }
             else
             {
-                logger.Information($"Failed linking.");
+                //logger.Information($"Failed linking.");
                 return 2;
             }
         }

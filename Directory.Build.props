@@ -14,7 +14,6 @@
     <RepositoryUrl>https://github.com/kekyo/chibicc-cil-toolchain.git</RepositoryUrl>
     <IsPackable>false</IsPackable>
 
-    <RootNamespace>chibild</RootNamespace>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1570;CS1591;CA1416;CS8981;CS0436</NoWarn>
