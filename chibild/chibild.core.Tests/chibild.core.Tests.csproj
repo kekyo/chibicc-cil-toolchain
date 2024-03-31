@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="Verify.NUnit" Version="19.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\chibild.core\chibild.core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="artifacts\*" />
+    <Content Include="artifacts\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="LinkerTests.cs">
+      <DependentUpon>AssemblerTests_Common.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+</Project>

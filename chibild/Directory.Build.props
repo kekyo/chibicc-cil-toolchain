@@ -1,0 +1,9 @@
+<Project>
+
+  <PropertyGroup>
+    <RootNamespace>chibild</RootNamespace>
+  </PropertyGroup>
+  
+  <Import Project="../Directory.Build.props" />
+
+</Project>

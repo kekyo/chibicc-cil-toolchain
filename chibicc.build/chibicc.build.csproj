@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>chibicc_build</AssemblyName>
+    <IsPackable>false</IsPackable>  <!-- TODO: -->
+    <PackageId>chibicc.build</PackageId>
+    <NuSpecFile>chibicc.build.nuspec</NuSpecFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- <ProjectReference Include="..\chibild\chibild.core\chibild.core.csproj" /> -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- <None Include="..\Images\chibild.100.png" Pack="true" PackagePath="" /> -->
+    <!-- <Compile Include="..\chibild\chibild\*.cs" BaseLink="." /> -->
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,48 @@
+﻿<!--
+/////////////////////////////////////////////////////////////////////////////////////
+//
+// chibicc-toolchain - The specialized backend toolchain for chibicc-cil
+// Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
+//
+// Licensed under MIT: https://opensource.org/licenses/MIT
+//
+/////////////////////////////////////////////////////////////////////////////////////
+-->
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- Common (internal) -->
+    
+  <PropertyGroup Condition="('$(MSBuildRuntimeType)' == 'Core') AND ('$(MicrosoftNETBuildTasksTFM)' != '')">
+    <_chibild_build_PlatformName>$(MicrosoftNETBuildTasksTFM)</_chibild_build_PlatformName>
+  </PropertyGroup>
+  <PropertyGroup Condition="('$(MSBuildRuntimeType)' == 'Core') AND ('$(MicrosoftNETBuildTasksTFM)' == '') AND ('$(BundledNETCoreAppTargetFrameworkVersion)' != '')">
+    <_chibild_build_PlatformName Condition="$(BundledNETCoreAppTargetFrameworkVersion) &gt;= 5.0">net$(BundledNETCoreAppTargetFrameworkVersion)</_chibild_build_PlatformName>
+    <_chibild_build_PlatformName Condition="$(BundledNETCoreAppTargetFrameworkVersion) &lt; 5.0">netcoreapp$(BundledNETCoreAppTargetFrameworkVersion)</_chibild_build_PlatformName>
+  </PropertyGroup>
+  <PropertyGroup Condition="('$(MSBuildRuntimeType)' == 'Core') AND ('$(MicrosoftNETBuildTasksTFM)' == '') AND ('$(BundledNETCoreAppTargetFrameworkVersion)' == '')">
+    <_chibild_build_PlatformName>netcoreapp2.2</_chibild_build_PlatformName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(MSBuildRuntimeType)' != 'Core'">
+    <_chibild_build_PlatformName>net40</_chibild_build_PlatformName>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <_chibild_build_ToolingDir>$([System.IO.Path]::Combine('$(_chibild_build_ScriptBaseDir)','..','tools','$(_chibild_build_PlatformName)'))</_chibild_build_ToolingDir>
+  </PropertyGroup>
+        
+  <!-- ====================================================================== -->
+
+  <!-- Common -->
+
+  <PropertyGroup>
+    <chibildBuildToolingRuntimeName Condition="'$(chibildBuildToolingRuntimeName)' == ''">$(_chibild_build_RuntimeName)</chibildBuildToolingRuntimeName>
+    <chibildBuildToolingDir Condition="'$(chibildBuildToolingDir)' == ''">$([System.IO.Path]::GetFullPath('$(_chibild_build_ToolingDir)'))</chibildBuildToolingDir>
+    <chibildBuildToolingPath Condition="'$(chibildBuildToolingPath)' == ''">$([System.IO.Path]::Combine('$(chibildBuildToolingDir)','$(_chibild_build_ExecutableName)'))</chibildBuildToolingPath>
+  </PropertyGroup>
+    
+  <!-- Usage:
+  <Exec WorkingDirectory="$(chibildBuildToolingDir)"
+     Command="$(chibildBuildToolingRuntimeName)&quot;$(chibildBuildToolingPath)&quot; ...." />
+  -->
+
+</Project>

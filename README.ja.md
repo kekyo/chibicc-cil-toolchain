@@ -1,21 +1,22 @@
-﻿# The specialized backend CIL assembler for chibicc-cil
+﻿# The specialized backend toolchain for chibicc-cil
 
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 
 ## NuGet
 
-| Package  | NuGet                                                                                                                |
-|:---------|:---------------------------------------------------------------------------------------------------------------------|
-| chibias-cli (dotnet CLI) | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibias-cli.svg?style=flat)](https://www.nuget.org/packages/chibias-cli) |
-| chibias.core (Core library) | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
-| chibias.build (MSBuild scripting) | [![NuGet chibias.build](https://img.shields.io/nuget/v/chibias.build.svg?style=flat)](https://www.nuget.org/packages/chibias.build) |
+| Package                            | NuGet                                                                                                                            |
+|:-----------------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| chibias-cli (dotnet CLI)           | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
+| chibild-cli (dotnet CLI)           | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
+| chibild.core (Linker core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
 
-[English language is here](https://github.com/kekyo/chibias-cil)
+[English language is here](https://github.com/kekyo/chibicc-cil-toolchain)
 
 ## これは何?
 
-chibiasは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) を移植するためのバックエンドとなるCIL/MSILアセンブラです。
-これは、簡素な構文規則でCILアセンブリ言語を記述可能で、アセンブルを行い、.NETアセンブリファイルを出力することが出来ます。以下はコード例です:
+chibicc-toolchainは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) を移植するためのバックエンドとなる、CIL/MSILアセンブラ・リンカなどのツールチェインです。
+このツールチェインで使用するCILアセンブラは、簡素な構文規則でCILアセンブリ言語を記述可能で、アセンブルを行い、.NETアセンブリファイルを出力することが出来ます。
+以下はコード例です:
 
 ```
 .function public void() main
@@ -24,9 +25,9 @@ chibiasは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) �
     ret
 ```
 
-chibiasは、表面的には単なるCILアセンブラのバリエーションの一つとみなすことが出来ますが、
+このツールチェインは、表面的には単なるCILアセンブラのバリエーションの一つとみなすことが出来ますが、
 .NET標準のILAsmがCILアセンブラとして網羅的かつプリミティブなツールチェインである一方で、
-chibiasはC言語との相互運用性を向上させるための、いくつかの重要なフィーチャーを盛り込んでいる点が異なります。
+chibicc-toolchainはC言語との相互運用性を向上させるための、いくつかの重要なフィーチャーを盛り込んでいる点が異なります。
 
 まだ作業中ですが、[YouTube](https://bit.ly/3XbqPSQ) にて、Gitコミット毎に移植する解説シリーズを放送しています。
 
@@ -34,44 +35,62 @@ chibiasはC言語との相互運用性を向上させるための、いくつか
 
 ----
 
-## chibiasの全体像
+## chibildの全体像
 
-chibiasは、複数のCILソースコードを入力として、アセンブルを行い、結果を.NETアセンブリとして出力します。この時、参照アセンブリ群を指定して、ソースコードから参照出来るようにします。
+chibicc-toolchainは、以下のツールチェインプログラムで構成されています:
 
-![chibias overview](Images/chibias.png)
+* chibias: CILアセンブラ
+* chibild: CILオブジェクトリンカ
 
-chibiasはchibiccのバックエンドアセンブラとして開発しましたが、単独でも使用可能です。
-ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、機械出力を行いやすく、かつ人間にとっても書きやすくなっています。
+![chibicc-toolchain overview](Images/toolchain.png)
 
-一般的なCコンパイラは、最終段階でリンカ `ld` に中間形式ファイル `*.o` を入力して生成しますが、
-chibiasはこのようなファイルを扱わずに、直接 `exe` や `dll`を生成します。
-chibiasは、リンカの機能を兼ねていると考えることが出来て、分割されたソースコードを扱う場合は、
-ソースコード自体 (`*.s`) を中間形式ファイルとみなせば、リンカと同様に扱うことが出来ます。
-実際に、chibiccはCILアセンブラソースコードを `*.o` として出力します。
+chibiasは、実際にはCILソースコード群('*.s')を結合して、そのままオブジェクトファイル('*.o')として出力し、
+CILソースコードの実質的なアセンブル処理は、chibildが行います。
+
+chibiasとchibildの、この奇妙な挙動は、実装の制約によるものですが、
+ツールチェイン使用者にとって見れば、POSIXで想定されるasやldなどのツールチェインと対比させて使用方法を理解できるという強みがあります。
+
+以降の説明では、CILアセンブリソースコードをchibildで直接使用して解説します。
+
+### CILアセンブル処理
+
+chibildは、複数のCILオブジェクトファイル（ソースコード）を入力として、アセンブルを行い、
+結果を.NETアセンブリとして出力します。
+この時、参照アセンブリ群を指定して、オブジェクトファイルから参照出来るようにします。
+
+chibildはchibiccのバックエンドアセンブラとして開発しましたが、単独でも使用可能です。
+ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、機械出力を行いやすく、
+かつ人間にとっても書きやすくなっています。
 
 
 ----
 
 ## 使用方法
 
-CLIバージョンのchibiasを、nuget [chibias-cli](https://www.nuget.org/packages/chibias-cli) からインストール出来ます (紛らわしいのですが、 'chibias-cil' ではありません :)
+CLIバージョンのツールチェインを、nugetからインストール出来ます
+
+* chibias: [chibias-cli](https://www.nuget.org/packages/chibias-cli)
+* chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli).
+
+(紛らわしいのですが、 'chibias-cil' や 'chibild-cil' ではありません :)
 
 ```bash
 $ dotnet tool install -g chibias-cli
+$ dotnet tool install -g chibild-cli
 ```
 
 使用可能になったかどうかは、以下のように確認できます:
 
 ```bash
-$ chibias
+$ cil-chibild
 
-chibias [0.46.0,net6.0] [...]
-This is the CIL assembler, part of chibicc-cil project.
-https://github.com/kekyo/chibias-cil
+chibild [0.49.0,net6.0] [...]
+This is the CIL object linker, part of chibicc-cil project.
+https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: chibias [options] <source path> [<source path> ...]
+usage: cil-chibild [options] <obj path> [<obj path> ...]
   -o <path>         Output assembly path
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
@@ -96,12 +115,12 @@ usage: chibias [options] <source path> [<source path> ...]
   -h, --help        Show this help
 ```
 
-* chibiasは、コマンドラインで指摘された複数のソースコードをアセンブルして、1つの.NETアセンブリにまとめます。
+* chibildは、コマンドラインで指摘された複数のソースコードをアセンブルして、1つの.NETアセンブリにまとめます。
 * 参照アセンブリパス `-l` は、`ld` のライブラリルックアップと同じように最後から順に評価されます。
   この機能は、重複するシンボル(関数/グローバル変数)にも適用されます。
   また、ライブラリファイル名は、ネイティブツールチェインと同様に `lib` というプレフィックスが適用されている事を想定し、
   かつ、フォールバックとして指定されたままのファイル名も想定します。
-* ターゲットフレームワークのデフォルト(上記の例では`net6.0`)は、chibiasの動作環境に依存します。
+* ターゲットフレームワークのデフォルト(上記の例では`net6.0`)は、chibildの動作環境に依存します。
 * ターゲットフレームワークの指定は、コアライブラリのバリエーションを仮定するだけで、
   `mscorlib.dll`や`System.Private.CoreLib.dll`アセンブリを自動的に検出するわけではありません（別章参照）。
 * ターゲットWindowsアーキテクチャは、デフォルトで`AnyCPU`です。大文字小文字は無視されます。
@@ -115,33 +134,33 @@ usage: chibias [options] <source path> [<source path> ...]
 
 ## Hello world
 
-chibiasを使って "Hello world" を実行してみましょう。
+chibildを使って "Hello world" を実行してみましょう。
 新しいソースコード・ファイル `hello.s` を作り、以下のようにコードを書きます。この4行だけでOKです:
 
 ```
 .function public void() main
-    ldstr "Hello world with chibias!"
+    ldstr "Hello world with chibild!"
     call void(string) System.Console.WriteLine
     ret
 ```
 
-出来たら、chibiasを呼び出します:
+出来たら、chibildを呼び出します:
 
 ```bash
-$ chibias -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ cil-chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 実行します:
 
 ```bash
 $ ./hello.exe
-Hello world with chibias!
+Hello world with chibild!
 ```
 
 このサンプルは、 `mscorlib.dll` アセンブリに定義されている `System.Console.WriteLine()` を参照します。
 そして、このファイルは Windows のシステムディレクトリに存在するものを、WSL環境から指定しているため、
 少々わかりにくいかもしれません。
-しかし、chibiasがどうやって参照するアセンブリを特定するのか、についてはこの例で十分でしょう。
+しかし、chibildがどうやって参照するアセンブリを特定するのか、についてはこの例で十分でしょう。
 
 Linuxや他のOSでも、必要な参照を追加することで同じように使うことができます。
 また、ビルトイン型（後述）だけを使用するコードをアセンブルした場合は、他のアセンブリへの参照は必要ありません:
@@ -155,7 +174,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 ```
 
 ```bash
-$ chibias -f net45 -o adder.exe adder.s
+$ cil-chibild -f net45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -169,7 +188,7 @@ $ echo $?
 ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
 
 ```bash
-$ chibias -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ cil-chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 ターゲットフレームワークと、対応するコアライブラリのバージョンは一致する必要があります。
@@ -188,33 +207,33 @@ nugetで公開されている、[ReferenceAssemblies (net45)](https://www.nuget.
 nupkgファイルはzip形式なので、`unzip` を使って中身を取り出すことができます。
 
 注意点として、本パッケージに含まれる全てのアセンブリは、コード本体を持ちません。
-chibiasで参照することは可能ですが、実行することはできません。
+chibildで参照することは可能ですが、実行することはできません。
 Linux環境などで実行する場合は、mono/.NET Coreなどのランタイムが必要になります:
 
 ```bash
 $ mono ./hello.exe
-Hello world with chibias!
+Hello world with chibild!
 ```
 
 いずれにしても、完全な `mscorlib.dll`や`System.Private.CoreLib.dll`ファイルを参照したい場合は、
 単にmonoや.NET SDKをインストールして、そのディレクトリ内のファイルを参照するほうが良いかもしれません。
 
-今のところ、chibiasは、システムにインストールされたこれらのアセンブリファイルを自動的に検出しません。
+今のところ、chibildは、システムにインストールされたこれらのアセンブリファイルを自動的に検出しません。
 GNUアセンブラのように、単体で独立したアセンブラとして、意図的に設計した結果です。
 将来的には、MSBuildスクリプトを経由して、自動的にアセンブリファイルを解決出来るようになるかもしれません。
 
-(この目的のために、`chibias.build` パッケージを用意しています。このパッケージはまだ不完全で使用できません。)
+(この目的のために、`chibicc.build` パッケージを用意しています。このパッケージはまだ不完全で使用できません。)
 
 
 ----
 
-## chibiasアセンブリ構文
+## chibildアセンブリ構文
 
 TODO: 作業中、まだ仕様が確定していません。
 
-この章は随時更新していますが、現在の構文を確認するには、[テストコード](https://github.com/kekyo/chibias-cil/blob/main/chibias.core.Tests/AssemblerTests.cs) を参照して下さい。
+この章は随時更新していますが、現在の構文を確認するには、[テストコード](https://github.com/kekyo/chibicc-cil-toolchain/blob/main/chibild.core.Tests/AssemblerTests.cs) を参照して下さい。
 
-chibiasの構文には、以下の特徴があります:
+chibildの構文には、以下の特徴があります:
 
 * オプコードの本体は、殆どILAsmと同様に記述が可能
 * 不必要に冗長な記述を、可能な限り排除
@@ -266,7 +285,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 奇妙に思えるかもしれませんが、引数の`argv`は、現実にポインタへのポインタです。
 そしてその先は、終端文字を含むUTF-8文字列を示します。
 
-chibiasは`wmain`による、UTF-16LEワイド幅文字列を含むエントリポイントをサポートしていません。
+chibildは`wmain`による、UTF-16LEワイド幅文字列を含むエントリポイントをサポートしていません。
 
 ### リテラル
 
@@ -330,9 +349,9 @@ NAME:
 |`string`|`System.String`| |
 |`typedref`|`System.TypedReference`| |
 
-ビルトイン型のうち、`System.Boolean`型と`System.Char`型は特殊で、chibiasがこれらの型を使用する場合、常に1バイト又は2バイトマーシャリングを適用します。
+ビルトイン型のうち、`System.Boolean`型と`System.Char`型は特殊で、chibildがこれらの型を使用する場合、常に1バイト又は2バイトマーシャリングを適用します。
 .NETのデフォルトでは、これらの型のフットプリントサイズは、状況によって変化しますが、
-chibiasを使って生成されるアセンブリは、常に上記のサイズとなる事を意味します。
+chibildを使って生成されるアセンブリは、常に上記のサイズとなる事を意味します。
 
 関数ポインタ型は、以下のように指定します:
 (空白で区切られたものは不可）
@@ -440,7 +459,7 @@ string(int8,int32,...)*
 
 関数名は、前方参照、後方参照のいずれも可能です。
 
-重要: chibiasで定義された関数を呼び出す場合は、`call` オペランドに引数型リストを指定する必要はありません。
+重要: chibildで定義された関数を呼び出す場合は、`call` オペランドに引数型リストを指定する必要はありません。
 .NETのオーバーロードされたメソッドを呼び出す場合は、引数型リストが必要です。
 
 関数の引数で、追加の可変引数を受け取ることが出来ます:
@@ -458,7 +477,7 @@ string(int8,int32,...)*
 関数シグネチャの引数リストの終端に `...` を指定する事で、可変引数を受け取るようにマークされます。
 
 但し、この可変引数は、C#における可変引数とは扱いが異なることに注意してください。
-C#では、可変引数を.NET配列で受け取りますが、chibiasではCILの`arglist`と呼ばれる機能を使います。
+C#では、可変引数を.NET配列で受け取りますが、chibildではCILの`arglist`と呼ばれる機能を使います。
 
 この可変引数は、上記例のように、`System.ArgIterator`型を用いて列挙を行います。
 詳しくは、C#の`__arglist`キーワードや`ArgIterator`で調べて下さい。
@@ -476,7 +495,7 @@ C#では、可変引数を.NET配列で受け取りますが、chibiasではCIL�
 ```
 
 追加引数に相当する型を含めた、関数呼び出しで渡すべきパラメータのすべての型を、シグネチャとして明示します。
-chibiasはオプコードのフロー解析を行わないため、この指定が誤っていると、可変引数を持つ関数の呼び出しが実行時に失敗します。
+chibildはオプコードのフロー解析を行わないため、この指定が誤っていると、可変引数を持つ関数の呼び出しが実行時に失敗します。
 
 ### 外部アセンブリの関数の呼び出し
 
@@ -491,7 +510,7 @@ chibiasはオプコードのフロー解析を行わないため、この指定�
 ```
 
 ```bash
-$ chibias -c test.s
+$ chibild -c test.s
 ```
 
 その後、以下のように、上記アセンブリの関数を呼び出します:
@@ -505,7 +524,7 @@ $ chibias -c test.s
 ```
 
 ```bash
-$ chibias -ltest main.s
+$ chibild -ltest main.s
 ```
 
 関数（.NET CILメソッド）は、`C.text`という名前のクラス内に配置されます。
@@ -583,7 +602,7 @@ getterに`get_Length()`、setterに`set_Length()`というメソッド名に対�
 
 関数シグネチャは、呼び出し対象メソッドの引数群と戻り値の型を示す構文です。
 .NETでは、コールサイトと呼ばれる場合もあります。
-chibiasでは、関数ポインタ型と同じような構文で指定します。
+chibildでは、関数ポインタ型と同じような構文で指定します。
 
 関数ポインタ型と異なるのは、関数シグネチャはポインタではないため、終端に`*`が付かない事です。
 
@@ -678,7 +697,7 @@ public static class text
 ### 値型の配列
 
 .NETには、値型のように振る舞う配列型がありません。
-chibiasは、 `value array` 型を使ってこれを擬似的に実現することができます。
+chibildは、 `value array` 型を使ってこれを擬似的に実現することができます。
 値型の配列は、C言語コンパイラの実現において非常に重要な役割を担っています。
 
 値型の配列を使用するには、以下のように型を宣言します:
@@ -716,7 +735,7 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 }
 ```
 
-この構造体型は、chibias（とchibicc）の外では、配列のように振る舞うことができます。
+この構造体型は、chibild（とchibicc）の外では、配列のように振る舞うことができます。
 
 また、複合された型の自然な解釈も行われます。例えば:
 
@@ -726,17 +745,17 @@ public struct SByte_len5   // TODO: : IList<sbyte>, IReadOnlyList<sbyte>
 * `int8[5]*[3]` --> `System.SByte_len5_ptr_len3`
 
 ネストした配列型を宣言する場合は、要素の順序に注意が必要です。
-例えば、C言語で以下のように表現される型は、chibiasでは要素の順序が逆になります:
+例えば、C言語で以下のように表現される型は、chibildでは要素の順序が逆になります:
 
 ```c
 // C言語
 char foo[3][4][5];
 
-// chibias
+// chibild
 int8[5][4][3] foo
 ```
 
-これは、chibiasが配列型を以下のように、左から右へと評価するためです。前述の複合された型定義も同様です:
+これは、chibildが配列型を以下のように、左から右へと評価するためです。前述の複合された型定義も同様です:
 
 `( ( int8 [5] ) [4] ) [3]`
 
@@ -745,7 +764,7 @@ int8[5][4][3] foo
 
 ### 列挙体型
 
-chibiasで定義できる列挙体型は、.NETでの列挙体型と同様で、`System.Enum` を暗黙のうちに継承した型です。
+chibildで定義できる列挙体型は、.NETでの列挙体型と同様で、`System.Enum` を暗黙のうちに継承した型です。
 
 ```
 .enumeration public int32 foo
@@ -798,7 +817,7 @@ public enum foo : int
 
 ### 構造体型
 
-chibiasで定義できる構造体型は、.NETでの構造体型と同様で、`System.ValueType` を暗黙のうちに継承した型です。
+chibildで定義できる構造体型は、.NETでの構造体型と同様で、`System.ValueType` を暗黙のうちに継承した型です。
 
 ```
 .structure public foo
@@ -928,7 +947,7 @@ public struct foo
 
 ## 注入モード
 
-注入モードは、chibiasの特徴的な機能の一つで、あらかじめ用意された .NETアセンブリファイル内に、直接CILコードを埋め込むモードです。
+注入モードは、chibildの特徴的な機能の一つで、あらかじめ用意された .NETアセンブリファイル内に、直接CILコードを埋め込むモードです。
 このモードは、コマンドラインオプションで `-i` を指定する事で有効化されます。
 
 例えば、C#でコンパイルされた .NETアセンブリ `merged.dll` が存在する場合、
@@ -976,29 +995,29 @@ public static class text
 例えば:
 
 ```bash
-$ dotnet build chibias.sln
+$ dotnet build chibild.sln
 ```
 
 テストは現在のところ、ネイティブバイナリのILDAsmに依存しているため、Windows x64環境またはLinux x64でのみ実行できます。
 手元の環境で、30秒ほどかかりました。
 
 ```bash
-$ dotnet test chibias.sln
+$ dotnet test chibild.sln
 ```
 
 `build-nupkg.bat`又は`build-nupkg.sh`を使用すると、NuGetパッケージを`artifacts`ディレクトリに生成します。
-`chibias.net4`プロジェクトは、`Release`ビルドで`net48`向けの単一ファイルバイナリを生成します。
+`chibild.net4`プロジェクトは、`Release`ビルドで`net48`向けの単一ファイルバイナリを生成します。
 
 
 ----
 
 ## TODO
 
-[TODO (英語)](https://github.com/kekyo/chibias-cil#todo) を参照してください。
+[TODO (英語)](https://github.com/kekyo/chibicc-cil-toolchain#todo) を参照してください。
 
 ----
 
-## chibiasの背景
+## chibicc-toolchainの背景
 
 当初は [ILAsm.Managed](https://github.com/kekyo/ILAsm.Managed) を使っていたのですが、いくつか問題点がありました:
 

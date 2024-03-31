@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "chibias": {
-      "commandName": "Project",
-      "commandLineArgs": "-o test/commonsym -f net6.0 -a /home/kouji/.dotnet/sdk/6.0.418/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.26 test/common.o test/commonsym.o -lc-bootstrap -lSystem.Private.CoreLib",
-      "workingDirectory": "/home/kouji/Projects/chibicc-cil"
-    }
-  }
-}
