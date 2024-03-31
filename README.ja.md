@@ -4,18 +4,19 @@
 
 ## NuGet
 
-| Package  | NuGet                                                                                                                |
-|:---------|:---------------------------------------------------------------------------------------------------------------------|
-| chibild-cli (dotnet CLI) | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
-| chibild.core (Core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
-| chibild.build (MSBuild scripting) | [![NuGet chibild.build](https://img.shields.io/nuget/v/chibild.build.svg?style=flat)](https://www.nuget.org/packages/chibild.build) |
+| Package                            | NuGet                                                                                                                            |
+|:-----------------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| chibias-cli (dotnet CLI)           | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
+| chibild-cli (dotnet CLI)           | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
+| chibild.core (Linker core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
 
 [English language is here](https://github.com/kekyo/chibicc-cil-toolchain)
 
 ## これは何?
 
-chibildは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) を移植するためのバックエンドとなるCIL/MSILアセンブラです。
-これは、簡素な構文規則でCILアセンブリ言語を記述可能で、アセンブルを行い、.NETアセンブリファイルを出力することが出来ます。以下はコード例です:
+chibicc-toolchainは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) を移植するためのバックエンドとなる、CIL/MSILアセンブラ・リンカなどのツールチェインです。
+このツールチェインで使用するCILアセンブラは、簡素な構文規則でCILアセンブリ言語を記述可能で、アセンブルを行い、.NETアセンブリファイルを出力することが出来ます。
+以下はコード例です:
 
 ```
 .function public void() main
@@ -24,9 +25,9 @@ chibildは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) �
     ret
 ```
 
-chibildは、表面的には単なるCILアセンブラのバリエーションの一つとみなすことが出来ますが、
+このツールチェインは、表面的には単なるCILアセンブラのバリエーションの一つとみなすことが出来ますが、
 .NET標準のILAsmがCILアセンブラとして網羅的かつプリミティブなツールチェインである一方で、
-chibildはC言語との相互運用性を向上させるための、いくつかの重要なフィーチャーを盛り込んでいる点が異なります。
+chibicc-toolchainはC言語との相互運用性を向上させるための、いくつかの重要なフィーチャーを盛り込んでいる点が異なります。
 
 まだ作業中ですが、[YouTube](https://bit.ly/3XbqPSQ) にて、Gitコミット毎に移植する解説シリーズを放送しています。
 
@@ -36,42 +37,60 @@ chibildはC言語との相互運用性を向上させるための、いくつか
 
 ## chibildの全体像
 
-chibildは、複数のCILソースコードを入力として、アセンブルを行い、結果を.NETアセンブリとして出力します。この時、参照アセンブリ群を指定して、ソースコードから参照出来るようにします。
+chibicc-toolchainは、以下のツールチェインプログラムで構成されています:
 
-![chibild overview](Images/chibild.png)
+* chibias: CILアセンブラ
+* chibild: CILオブジェクトリンカ
+
+![chibicc-toolchain overview](Images/toolchain.png)
+
+chibiasは、実際にはCILソースコード群('*.s')を結合して、そのままオブジェクトファイル('*.o')として出力し、
+CILソースコードの実質的なアセンブル処理は、chibildが行います。
+
+chibiasとchibildの、この奇妙な挙動は、実装の制約によるものですが、
+ツールチェイン使用者にとって見れば、POSIXで想定されるasやldなどのツールチェインと対比させて使用方法を理解できるという強みがあります。
+
+以降の説明では、CILアセンブリソースコードをchibildで直接使用して解説します。
+
+### CILアセンブル処理
+
+chibildは、複数のCILオブジェクトファイル（ソースコード）を入力として、アセンブルを行い、
+結果を.NETアセンブリとして出力します。
+この時、参照アセンブリ群を指定して、オブジェクトファイルから参照出来るようにします。
 
 chibildはchibiccのバックエンドアセンブラとして開発しましたが、単独でも使用可能です。
-ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、機械出力を行いやすく、かつ人間にとっても書きやすくなっています。
-
-一般的なCコンパイラは、最終段階でリンカ `ld` に中間形式ファイル `*.o` を入力して生成しますが、
-chibildはこのようなファイルを扱わずに、直接 `exe` や `dll`を生成します。
-chibildは、リンカの機能を兼ねていると考えることが出来て、分割されたソースコードを扱う場合は、
-ソースコード自体 (`*.s`) を中間形式ファイルとみなせば、リンカと同様に扱うことが出来ます。
-実際に、chibiccはCILアセンブラソースコードを `*.o` として出力します。
+ソースコードは、ILAsmと比べて簡素化された構文規則を採用するため、機械出力を行いやすく、
+かつ人間にとっても書きやすくなっています。
 
 
 ----
 
 ## 使用方法
 
-CLIバージョンのchibildを、nuget [chibild-cli](https://www.nuget.org/packages/chibild-cli) からインストール出来ます (紛らわしいのですが、 'chibild-cil' ではありません :)
+CLIバージョンのツールチェインを、nugetからインストール出来ます
+
+* chibias: [chibias-cli](https://www.nuget.org/packages/chibias-cli)
+* chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli).
+
+(紛らわしいのですが、 'chibias-cil' や 'chibild-cil' ではありません :)
 
 ```bash
+$ dotnet tool install -g chibias-cli
 $ dotnet tool install -g chibild-cli
 ```
 
 使用可能になったかどうかは、以下のように確認できます:
 
 ```bash
-$ chibild
+$ cil-chibild
 
-chibild [0.46.0,net6.0] [...]
-This is the CIL assembler, part of chibicc-cil project.
+chibild [0.49.0,net6.0] [...]
+This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: chibild [options] <source path> [<source path> ...]
+usage: cil-chibild [options] <obj path> [<obj path> ...]
   -o <path>         Output assembly path
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
@@ -128,7 +147,7 @@ chibildを使って "Hello world" を実行してみましょう。
 出来たら、chibildを呼び出します:
 
 ```bash
-$ chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ cil-chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 実行します:
@@ -155,7 +174,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 ```
 
 ```bash
-$ chibild -f net45 -o adder.exe adder.s
+$ cil-chibild -f net45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -169,7 +188,7 @@ $ echo $?
 ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
 
 ```bash
-$ chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ cil-chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 ターゲットフレームワークと、対応するコアライブラリのバージョンは一致する必要があります。
@@ -203,7 +222,7 @@ Hello world with chibild!
 GNUアセンブラのように、単体で独立したアセンブラとして、意図的に設計した結果です。
 将来的には、MSBuildスクリプトを経由して、自動的にアセンブリファイルを解決出来るようになるかもしれません。
 
-(この目的のために、`chibild.build` パッケージを用意しています。このパッケージはまだ不完全で使用できません。)
+(この目的のために、`chibicc.build` パッケージを用意しています。このパッケージはまだ不完全で使用できません。)
 
 
 ----
@@ -998,7 +1017,7 @@ $ dotnet test chibild.sln
 
 ----
 
-## chibildの背景
+## chibicc-toolchainの背景
 
 当初は [ILAsm.Managed](https://github.com/kekyo/ILAsm.Managed) を使っていたのですが、いくつか問題点がありました:
 

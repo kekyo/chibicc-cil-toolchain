@@ -4,18 +4,20 @@
 
 ## NuGet
 
-| Package  | NuGet                                                                                                                |
-|:---------|:---------------------------------------------------------------------------------------------------------------------|
-| chibild-cli (dotnet CLI) | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
-| chibild.core (Core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
-| chibild.build (MSBuild scripting) | [![NuGet chibild.build](https://img.shields.io/nuget/v/chibild.build.svg?style=flat)](https://www.nuget.org/packages/chibild.build) |
+| Package                            | NuGet                                                                                                                |
+|:-----------------------------------|:---------------------------------------------------------------------------------------------------------------------|
+| chibias-cli (dotnet CLI)           | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
+| chibild-cli (dotnet CLI)           | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
+| chibild.core (Linker core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
 
 [![Japanese language](Images/Japanese.256.png)](https://github.com/kekyo/chibicc-cil-toolchain/blob/main/README.ja.md)
 
 ## What is this?
 
-chibild is a CIL/MSIL assembler that serves as a backend for porting [chibicc](https://github.com/rui314/chibicc) on the .NET CIL/CLR.
-It can write CIL assembly language with simple syntax rules, perform assembly, and output .NET assembly files. Here is an example code:
+chibicc-toolchain is a toolchain, including a CIL/MSIL assembler and a linker,
+that serves as a backend for porting [chibicc](https://github.com/rui314/chibicc) on .NET CIL/CLR.
+The CIL assembler used in this toolchain can write CIL assembly language with simple syntax rules, perform assembly, and output .
+Here is an example code:
 
 ```
 .function public void() main
@@ -24,8 +26,10 @@ It can write CIL assembly language with simple syntax rules, perform assembly, a
     ret
 ```
 
-.NET standard ILAsm is a comprehensive and primitive toolchain as a CIL assembler,
-while chibild includes several important features to improve interoperability with the C language.
+On the surface, this toolchain can be regarded as just another CIL assembler variant.
+.NET standard ILAsm is an exhaustive and primitive toolchain as a CIL assembler.
+On the other hand, chibicc-toolchain differs in that it includes several important features
+to improve interoperability with the C language.
 
 It is WIP and broadcasting side-by-side Git commit portion on [YouTube (In Japanese)](https://bit.ly/3XbqPSQ).
 
@@ -36,43 +40,61 @@ It is WIP and broadcasting side-by-side Git commit portion on [YouTube (In Japan
 
 ## Overview
 
-chibild takes multiple CIL source codes as input, performs assembly, and outputs the result as . NET assemblies. At this time, reference assemblies can be specified so that they can be referenced from the CIL source code.
+chibicc-toolchain consists of the following toolchain programs:
 
-![chibild overview](Images/chibild.png)
+* chibias: A CIL assembler.
+* chibild: A CIL object linker.
+
+![chibicc-toolchain overview](Images/toolchain.png)
+
+chibias actually combines a group of CIL source code ('*.s') and outputs it as-is as an object file ('*.o'),
+chibild performs the actual assembly process of the CIL source code.
+
+The strange behavior of chibias and chibilds is due to implementation limitations.
+For toolchain users, the advantage is that they can contrast their usage with
+that of the "as" and "ld" toolchains expected on POSIX.
+
+In the following sections, the CIL assembly source code is used directly in chibild.
+
+### CIL assembling
+
+chibild takes multiple CIL object file (source codes) as input, performs assembly,
+and outputs the result as .NET assemblies.
+At this time, reference assemblies can be specified so that they can be referenced from the CIL object file.
 
 chibild was developed as a backend assembler for chibicc, but can also be used by us.
 The source code employs simplified syntax rules compared to ILAsm,
 making it easier to machine generation and easier for humans to write.
-
-The general C compiler generates intermediate object format files `*.o` by inputting them to the linker `ld` at the final stage.
-chibild does not handle such object files, but generates `exe` and `dll` directly.
-When dealing with split source code, you can consider the source code itself (`*.s`)
-as an intermediate object format file and treat it same way as a linker.
-In fact, chibicc outputs the CIL assembler source code as `*.o`.
 
 
 ----
 
 ## How to use
 
-Install CLI via nuget package [chibild-cli](https://www.nuget.org/packages/chibild-cli). (NOT 'chibild-cil' :)
+Install CLI via nuget:
+
+* chibias: [chibias-cli](https://www.nuget.org/packages/chibias-cli)
+* chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli).
+
+* (It is not `chibias-cil` and `chibild-cil` :)
 
 ```bash
+$ dotnet tool install -g chibias-cli
 $ dotnet tool install -g chibild-cli
 ```
 
 Then:
 
 ```bash
-$ chibild
+$ cil-chibild
 
-chibild [0.45.0,net6.0] [...]
-This is the CIL assembler, part of chibicc-cil project.
+chibild [0.49.0,net6.0] [...]
+This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: chibild [options] <source path> [<source path> ...]
+usage: cil-chibild [options] <obj path> [<obj path> ...]
   -o <path>         Output assembly path
   -c, --dll         Produce dll assembly
       --exe         Produce executable assembly (defaulted)
@@ -128,7 +150,7 @@ You should create a new source code file `hello.s` with the contents only need 4
 Then invoke chibild with:
 
 ```bash
-$ chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ cil-chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 Run it:
@@ -153,7 +175,7 @@ Also, if you assemble code that uses only built-in types (see below), you do not
 ```
 
 ```bash
-$ chibild -f net45 -o adder.exe adder.s
+$ cil-chibild -f net45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -167,7 +189,7 @@ $ echo $?
 Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
 
 ```bash
-$ chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ cil-chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
 ```
 
 The version of the target framework moniker and the corresponding core library must match.
@@ -201,7 +223,7 @@ At the moment, chibild does not automatically detect these assembly files instal
 This is by design as stand-alone independent assembler, like the GNU assembler.
 In the future, it may be possible to resolve assembly files automatically via the MSBuild script.
 
-(The `chibild.build` package is available for this purpose. But it is still incomplete and cannot be used now.)
+(The `chibicc.build` package is available for this purpose. But it is still incomplete and cannot be used now.)
 
 
 ----
@@ -994,14 +1016,14 @@ There are no prerequisites required for the build.
 For example:
 
 ```bash
-$ dotnet build chibild.sln
+$ dotnet build chibicc-cil-toolchain.sln
 ```
 
 The test currently relies on the native binary ILDAsm, so they can only be run on Windows x64 or Linux x64.
 In my environment, it takes about 30 seconds.
 
 ```bash
-$ dotnet test chibild.sln
+$ dotnet test chibicc-cil-toolchain.sln
 ```
 
 The `build-nupkg.bat` or `build-nupkg.sh` will generate NuGet packages in the `artifacts` directory.
@@ -1032,7 +1054,7 @@ Might not be implemented:
 
 ----
 
-## Background
+## chibicc-toolchain background
 
 Initially I used [ILAsm.Managed](https://github.com/kekyo/ILAsm.Managed), but there were some issues:
 
