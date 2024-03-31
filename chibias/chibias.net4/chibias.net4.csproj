@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net48</TargetFrameworks>
-    <AssemblyName>chibias</AssemblyName>
+    <AssemblyName>cil-chibias</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
