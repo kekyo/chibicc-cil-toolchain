@@ -76,11 +76,6 @@ internal static class LinkerTestRunner
                 var outputAssemblyPath =
                     Path.Combine(basePath, "output.dll");
 
-                if (injectToAssemblyPath != null)
-                {
-                    File.Copy(injectToAssemblyPath, outputAssemblyPath, true);
-                }
-
                 var succeeded = assember.Link(
                     outputAssemblyPath,
                     new()
@@ -92,6 +87,7 @@ internal static class LinkerTestRunner
                         ApplyOptimization = false,
                         CreationOptions = creationOptions(),
                     },
+                    injectToAssemblyPath,
                     chibildSourceCodes.Select((sc, index) =>
                         new ObjectFileItem(new StringReader(sc), index >= 1 ? $"source{index}.s" : "source.s")).
                         ToArray());

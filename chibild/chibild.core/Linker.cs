@@ -15,6 +15,7 @@ using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -198,6 +199,7 @@ public sealed class Linker
     private bool Run(
         string outputAssemblyPath,
         LinkerOptions options,
+        string? injectToAssemblyPath,
         Func<Parser, bool> runner)
     {
         using var assemblyResolver = new AssemblyResolver(
@@ -236,8 +238,13 @@ public sealed class Linker
         ModuleDefinition? injectTargetModule = null;
 
         // Will be create a new assembly.
-        if (options.CreationOptions is { } co1)
+        if (injectToAssemblyPath == null)
         {
+            if (options.CreationOptions is not { } co1)
+            {
+                throw new ArgumentException("Required CreationOptions in assembly creating.");
+            }
+            
             var assemblyName = new AssemblyNameDefinition(
                 Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath),
                 options.CreationOptions?.Version);
@@ -295,8 +302,9 @@ public sealed class Linker
         // Will be injected exist assembly.
         else
         {
+            // Read it.
             injectTargetAssembly = assembly = assemblyResolver.ReadAssemblyFrom(
-                outputAssemblyCandidateFullPath);
+                injectToAssemblyPath);
             injectTargetModule = module = assembly.MainModule;
         }
 
@@ -450,9 +458,10 @@ public sealed class Linker
         return allFinished;
     }
 
-    private bool Link(
+    private bool InternalLink(
         string outputAssemblyPath,
         LinkerOptions options,
+        string? injectToAssemblyPath,
         string? baseSourcePath,
         ObjectFileItem[] objectFileItems)
     {
@@ -464,6 +473,7 @@ public sealed class Linker
         return this.Run(
             outputAssemblyPath,
             options,
+            injectToAssemblyPath,
             parser =>
             {
                 var allFinished = true;
@@ -487,27 +497,32 @@ public sealed class Linker
     public bool Link(
         string outputAssemblyPath,
         LinkerOptions options,
+        string? injectToAssemblyPath,
         params ObjectFileItem[] objectFileItems) =>
-        this.Link(
+        this.InternalLink(
             outputAssemblyPath,
             options,
+            injectToAssemblyPath,
             null,
             objectFileItems);
 
     public bool Link(
         string outputAssemblyPath,
         LinkerOptions options,
+        string? injectToAssemblyPath,
         string objectFilePathDebuggerHint,
         TextReader objectFileReader) =>
-        this.Link(
+        this.InternalLink(
             outputAssemblyPath,
             options,
+            injectToAssemblyPath,
             null,
             new[] { new ObjectFileItem(objectFileReader, objectFilePathDebuggerHint) });
 
     public bool Link(
         string outputAssemblyPath,
         LinkerOptions options,
+        string? injectToAssemblyPath,
         params string[] objectPaths)
     {
         if (objectPaths.Length == 0)
@@ -574,9 +589,10 @@ public sealed class Linker
                 return false;
             }
 
-            return this.Link(
+            return this.InternalLink(
                 outputAssemblyPath,
                 options,
+                injectToAssemblyPath,
                 baseObjectFilePath,
                 objectFileItems);
         }

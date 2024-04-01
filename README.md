@@ -88,7 +88,7 @@ Then:
 ```bash
 $ cil-chibild
 
-chibild [0.49.0,net6.0] [...]
+cil-chibild [0.50.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
@@ -96,23 +96,23 @@ License under MIT
 
 usage: cil-chibild [options] <obj path> [<obj path> ...]
   -o <path>         Output assembly path
-  -c, --dll         Produce dll assembly
-      --exe         Produce executable assembly (defaulted)
-      --winexe      Produce Windows executable assembly
+  -c, -mdll         Produce dll assembly
+      -mexe         Produce executable assembly (defaulted)
+      -mwinexe      Produce Windows executable assembly
   -L <path>         Reference assembly base path
   -l <name>         Reference assembly name
-  -i                Will inject to output assembly file
+  -i <path>         Will inject into an assembly file
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
       -gw           Produce windows proprietary debug symbol file
-      -g0           Omit debug symbol file
+  -s, -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
-  -f <tfm>          Target framework moniker (defaulted: net6.0)
-  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)
-  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)
+  -m <tfm>          Target framework moniker (defaulted: net6.0)
+  -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)
+  -m <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)
   -a <path>         CoreCLR AppHost template path
       --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)
       --dryrun      Need to dryrun
@@ -131,7 +131,7 @@ usage: cil-chibild [options] <obj path> [<obj path> ...]
   This value only sets the mark on the assembly. Specifying a different value will not affect generated your opcodes.
   It may always operate as `AnyCPU` except in Windows CLR environment.
 * Log level is `warning` by default. These values ignore case.
-* When using the `-i` injection mode, the `-a`, `-p`, `-v`, `-f`, and `-w` specifications are ignored.
+* When using the `-i` injection mode, the `-a`, `-v` and `-m` specifications are ignored.
 
 ----
 
@@ -150,7 +150,7 @@ You should create a new source code file `hello.s` with the contents only need 4
 Then invoke chibild with:
 
 ```bash
-$ cil-chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ cil-chibild -mnet45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 Run it:
@@ -175,7 +175,7 @@ Also, if you assemble code that uses only built-in types (see below), you do not
 ```
 
 ```bash
-$ cil-chibild -f net45 -o adder.exe adder.s
+$ cil-chibild -mnet45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -189,7 +189,8 @@ $ echo $?
 Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
 
 ```bash
-$ cil-chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+  -o hello.exe hello.s
 ```
 
 The version of the target framework moniker and the corresponding core library must match.
@@ -271,7 +272,7 @@ Scope descriptors are common in other declarations.
 | `internal` | Referenced only within the same assembly. |
 | `file` | Referenced only from the current source code file. |
 
-* Automatic apply entry point when using `main` function name and assemble executable file with same as `--exe` option.
+* Automatic apply entry point when using `main` function name and assemble executable file with same as `-mexe` option.
 * The scope descriptor of the entry point must be `public` or `internal`.
 
 The signature of the `main` function accepts the following variations:
@@ -604,7 +605,8 @@ you must specify the signatures of the methods that implement them. For example:
 ```
 
 Most properties use a fixed naming convention.
-As above, in the case of `System.String.Length` corresponds to the method names `get_Length()` for getter and `set_Length()` for setter.
+As above, in the case of `System.String.Length` corresponds to the method names `get_Length()`
+for getter and `set_Length()` for setter.
 In the case of an indexer, it corresponds to the method name `get_Item()` or `set_Item()`.
 
 However, these naming conventions are not mandatory, so different names may apply.
@@ -616,7 +618,8 @@ Function signature is a syntax that indicates the parameter set and return type 
 Sometimes referred to as "Call sites" in .NET.
 In the case of chibild, they are specified with a syntax similar to function pointer types.
 
-Function signatures differ from function pointer types in that they are not terminated with a `*` because they are not pointers.
+Function signatures differ from function pointer types in that they are not terminated
+with a `*` because they are not pointers.
 
 * `int32(string)*`: Function pointer
 * `int32(string)`: Function signature (call site)
@@ -704,7 +707,8 @@ It can be used mainly for complex initialization of global variables:
 The scope descriptor is considered the same as `internal` even if it is specified as `public`.
 It is not only definition the scope, but also determines when the initialization is performed:
 
-* `public` or `internal`: Called just before manipulating global variables whose scope is specified as `public` or `internal`.
+* `public` or `internal`: Called just before manipulating global variables
+  whose scope is specified as `public` or `internal`.
 * `file`: Called just before manipulating global variables whose scope is specified as `file`.
 
 ### Value array type
@@ -774,7 +778,8 @@ The composite type definitions described above are same:
 
 `( ( int8 [5] ) [4] ) [3]`
 
-Note: To use the value array type, references to the types `System.ValueType` and `System.IndexOutOfRangeException` must be resolved.
+Note: To use the value array type, references to the types `System.ValueType`
+and `System.IndexOutOfRangeException` must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
 ### Enumeration type
@@ -970,10 +975,10 @@ The injection mode is one of the distinctive features of chibild,
 to embed CIL code directly in a pre-prepared .NET assembly file.
 This mode is enabled by specifying `-i` command line option.
 
-For example, if you have a .NET assembly `merged.dll` compiled in C#.
-Using the injection mode, you can embed the resulting .NET assembly CIL code directly in `merged.dll`.
+For example, if you have a .NET assembly `managed.dll` compiled in C#.
+Using the injection mode, you can embed the resulting .NET assembly CIL code directly in `managed.dll`.
 
-Suppose there is a `merged.dll` assembly generated from the following C# source:
+Suppose there is a `managed.dll` assembly generated from the following C# source:
 
 ```csharp
 namespace C;
@@ -986,10 +991,10 @@ public static class text
 }
 ```
 
-Using injection mode, you can "inject" the following CIL code directly into `merged.dll` and link it correctly with `add_int64` method:
+Using injection mode, you can "inject" the following CIL code directly into `managed.dll` and link it correctly with `add_int64` method:
 
 ```
-.function public int32() main
+.function public int32() add_c
     ldc.i4.1
     conv.i8
     ldc.i4.2
@@ -997,6 +1002,13 @@ Using injection mode, you can "inject" the following CIL code directly into `mer
     call add_int64    ; Calling methods on the C# side
     conv.i4
     ret
+```
+
+To `injected.dll` by the command:
+
+```bash
+$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+  -i managed.dll -c -o injected.dll add_c.s
 ```
 
 This means that generated from C code by chibicc,
@@ -1009,7 +1021,7 @@ In the current version, it is possible to reference symbols in the injected .NET
 
 ----
 
-## Building from source code
+## Building the toolchains from source code
 
 Builds can be done in .NET 8 SDK environment.
 There are no prerequisites required for the build.
@@ -1027,7 +1039,7 @@ $ dotnet test chibicc-cil-toolchain.sln
 ```
 
 The `build-nupkg.bat` or `build-nupkg.sh` will generate NuGet packages in the `artifacts` directory.
-The `chibild.net4` project generates single file binaries for `net48` in `Release` build.
+The `chibias.net4` and `chibild.net4` project generates single file binaries for `net48` in `Release` build.
 
 
 ----

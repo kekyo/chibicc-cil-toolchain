@@ -35,6 +35,7 @@ public sealed class CliOptions
 
     public string OutputAssemblyPath = null!;
     public readonly LinkerOptions LinkerOptions = new();
+    public string? InjectToAssemblyPath;
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
     public readonly List<string> ObjectFilePaths = new();
@@ -103,8 +104,9 @@ public sealed class CliOptions
                             }
                             else if (args.Length >= index)
                             {
-                                var referenceAssemblyName = args[++index];
+                                var referenceAssemblyName = args[index + 1];
                                 referenceAssemblyNames.Add(referenceAssemblyName);
+                                index++;
                                 continue;
                             }
                             break;
@@ -115,6 +117,19 @@ public sealed class CliOptions
                             }
                             continue;
                         case 'i':
+                            if (arg.Length >= 3)
+                            {
+                                options.InjectToAssemblyPath = arg.Substring(2);
+                                options.LinkerOptions.CreationOptions = null;
+                                continue;
+                            }
+                            else if (args.Length >= index)
+                            {
+                                options.InjectToAssemblyPath = args[index + 1];
+                                options.LinkerOptions.CreationOptions = null;
+                                index++;
+                                continue;
+                            }
                             options.LinkerOptions.CreationOptions = null;
                             continue;
                         case 'a':
@@ -161,6 +176,13 @@ public sealed class CliOptions
                                 continue;
                             }
                             break;
+                        case 's':
+                            if (arg.Length == 2)
+                            {
+                                options.LinkerOptions.DebugSymbolType = DebugSymbolTypes.None;
+                                continue;
+                            }
+                            break;
                         case 'O':
                             if (arg.Length == 3)
                             {
@@ -195,20 +217,8 @@ public sealed class CliOptions
                                 continue;
                             }
                             break;
-                        case 'p':
-                            if (args.Length >= index &&
-                                rollforwards.TryGetValue(args[index + 1], out var rollforward))
-                            {
-                                index++;
-                                if (options.LinkerOptions.CreationOptions is { } co5)
-                                {
-                                    co5.RuntimeConfiguration = rollforward;
-                                }
-                                continue;
-                            }
-                            break;
                         case 'v':
-                            if (arg.Length >= 2 &&
+                            if (arg.Length == 2 &&
                                 Version.TryParse(args[index + 1], out var version))
                             {
                                 index++;
@@ -219,28 +229,57 @@ public sealed class CliOptions
                                 continue;
                             }
                             break;
-                        case 'f':
-                            if (arg.Length >= 2 &&
-                                TargetFramework.TryParse(args[index + 1], out var tf2))
+                        case 'm':
+                            var mopt = (arg.Length >= 3) ? arg.Substring(2) :
+                                args.Length >= index ? args[++index] :
+                                null;
+                            if (mopt != null)
                             {
-                                index++;
-                                if (options.LinkerOptions.CreationOptions is { } co7)
+                                if (TargetFramework.TryParse(mopt, out var tf2))
                                 {
-                                    co7.TargetFramework = tf2;
+                                    if (options.LinkerOptions.CreationOptions is { } co7)
+                                    {
+                                        co7.TargetFramework = tf2;
+                                    }
+                                    continue;
                                 }
-                                continue;
-                            }
-                            break;
-                        case 'w':
-                            if (args.Length >= index &&
-                                Enum.TryParse<TargetWindowsArchitectures>(args[index + 1], true, out var arch))
-                            {
-                                index++;
-                                if (options.LinkerOptions.CreationOptions is { } co8)
+                                if (Enum.TryParse<TargetWindowsArchitectures>(mopt, true, out var arch))
                                 {
-                                    co8.TargetWindowsArchitecture = arch;
+                                    if (options.LinkerOptions.CreationOptions is { } co8)
+                                    {
+                                        co8.TargetWindowsArchitecture = arch;
+                                    }
+                                    continue;
                                 }
-                                continue;
+                                if (rollforwards.TryGetValue(mopt, out var rollforward))
+                                {
+                                    if (options.LinkerOptions.CreationOptions is { } co5)
+                                    {
+                                        co5.RuntimeConfiguration = rollforward;
+                                    }
+                                    continue;
+                                }
+                                switch (mopt.ToLowerInvariant())
+                                {
+                                    case "dll":
+                                        if (options.LinkerOptions.CreationOptions is { } co9)
+                                        {
+                                            co9.AssemblyType = AssemblyTypes.Dll;
+                                        }
+                                        continue;
+                                    case "exe":
+                                        if (options.LinkerOptions.CreationOptions is { } co10)
+                                        {
+                                            co10.AssemblyType = AssemblyTypes.Exe;
+                                        }
+                                        continue;
+                                    case "winexe":
+                                        if (options.LinkerOptions.CreationOptions is { } co11)
+                                        {
+                                            co11.AssemblyType = AssemblyTypes.WinExe;
+                                        }
+                                        continue;
+                                }
                             }
                             break;
                         case 'h':
@@ -249,24 +288,6 @@ public sealed class CliOptions
                         case '-':
                             switch (arg.Substring(2).ToLowerInvariant())
                             {
-                                case "dll":
-                                    if (options.LinkerOptions.CreationOptions is { } co9)
-                                    {
-                                        co9.AssemblyType = AssemblyTypes.Dll;
-                                    }
-                                    continue;
-                                case "exe":
-                                    if (options.LinkerOptions.CreationOptions is { } co10)
-                                    {
-                                        co10.AssemblyType = AssemblyTypes.Exe;
-                                    }
-                                    continue;
-                                case "winexe":
-                                    if (options.LinkerOptions.CreationOptions is { } co11)
-                                    {
-                                        co11.AssemblyType = AssemblyTypes.WinExe;
-                                    }
-                                    continue;
                                 case "log":
                                     if (args.Length >= index &&
                                         Enum.TryParse<LogLevels>(args[index + 1], true, out var logLevel))
@@ -383,7 +404,7 @@ public sealed class CliOptions
         }
         else
         {
-            logger.Information($"WillInjectTo={this.OutputAssemblyPath}");
+            logger.Information($"InjectToAssemblyPath={this.InjectToAssemblyPath}");
         }
         
         logger.Information($"IsDryRun={this.LinkerOptions.IsDryRun}");
@@ -391,31 +412,31 @@ public sealed class CliOptions
 
     public static void WriteUsage(TextWriter tw)
     {
-        tw.WriteLine($"chibild [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
+        tw.WriteLine($"cil-chibild [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
         tw.WriteLine("This is the CIL object linker, part of chibicc-cil project.");
         tw.WriteLine("https://github.com/kekyo/chibicc-cil-toolchain");
         tw.WriteLine("Copyright (c) Kouji Matsui");
         tw.WriteLine("License under MIT");
         tw.WriteLine();
-        tw.WriteLine("usage: chibild [options] <obj path> [<obj path> ...]");
+        tw.WriteLine("usage: cil-chibild [options] <obj path> [<obj path> ...]");
         tw.WriteLine("  -o <path>         Output assembly path");
-        tw.WriteLine("  -c, --dll         Produce dll assembly");
-        tw.WriteLine("      --exe         Produce executable assembly (defaulted)");
-        tw.WriteLine("      --winexe      Produce Windows executable assembly");
+        tw.WriteLine("  -c, -mdll         Produce dll assembly");
+        tw.WriteLine("      -mexe         Produce executable assembly (defaulted)");
+        tw.WriteLine("      -mwinexe      Produce Windows executable assembly");
         tw.WriteLine("  -L <path>         Reference assembly base path");
         tw.WriteLine("  -l <name>         Reference assembly name");
-        tw.WriteLine("  -i                Will inject to output assembly file");
+        tw.WriteLine("  -i <path>         Will inject into an assembly file");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");
         tw.WriteLine("      -gw           Produce windows proprietary debug symbol file");
-        tw.WriteLine("      -g0           Omit debug symbol file");
+        tw.WriteLine("  -s, -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
-        tw.WriteLine($"  -f <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
-        tw.WriteLine("  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)");
-        tw.WriteLine("  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)");
+        tw.WriteLine($"  -m <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
+        tw.WriteLine("  -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)");
+        tw.WriteLine("  -m <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)");
         tw.WriteLine("  -a <path>         .NET Core AppHost template path");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)");
         tw.WriteLine("      --dryrun      Need to dryrun");

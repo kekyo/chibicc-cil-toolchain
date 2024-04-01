@@ -50,10 +50,10 @@ jobs:
     # Build
     
     - name: Build
-      run: dotnet build -p:Configuration=Release -p:Platform="Any CPU" -p:RestoreNoCache=True -p:BuildIdentifier=${GITHUB_RUN_NUMBER} chibicc-toolchain.sln
+      run: dotnet build -p:Configuration=Release -p:Platform="Any CPU" -p:RestoreNoCache=True -p:BuildIdentifier=${GITHUB_RUN_NUMBER} chibicc-cil-toolchain.sln
 
     - name: Build NuGet packages
-      run: dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts chibicc-toolchain.sln
+      run: dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts chibicc-cil-toolchain.sln
 
     #-----------------------------------------------------------------------
     # Test
@@ -61,7 +61,7 @@ jobs:
     - name: Test
       run: |
         dotnet clean -p:Configuration=Release -p:Platform="Any CPU"
-        dotnet test -p:Configuration=Release -p:Platform="Any CPU" -p:CITest=True chibicc-toolchain.sln
+        dotnet test -p:Configuration=Release -p:Platform="Any CPU" -p:CITest=True chibicc-cil-toolchain.sln
       timeout-minutes: 10
 
     #-----------------------------------------------------------------------
@@ -124,10 +124,10 @@ jobs:
     # Build
     
     - name: Build
-      run: dotnet build -p:Configuration=Release -p:Platform="Any CPU" -p:RestoreNoCache=True -p:BuildIdentifier=${GITHUB_RUN_NUMBER} chibicc-toolchain.sln
+      run: dotnet build -p:Configuration=Release -p:Platform="Any CPU" -p:RestoreNoCache=True -p:BuildIdentifier=${GITHUB_RUN_NUMBER} chibicc-cil-toolchain.sln
 
     - name: Build NuGet packages
-      run: dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts chibicc-toolchain.sln
+      run: dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -p:BuildIdentifier=${GITHUB_RUN_NUMBER} -o artifacts chibicc-cil-toolchain.sln
 
     #-----------------------------------------------------------------------
     # Test
@@ -135,7 +135,7 @@ jobs:
     - name: Test
       run: |
         dotnet clean -p:Configuration=Release -p:Platform="Any CPU"
-        dotnet test -p:Configuration=Release -p:Platform="Any CPU" -p:CITest=True chibicc-toolchain.sln
+        dotnet test -p:Configuration=Release -p:Platform="Any CPU" -p:CITest=True chibicc-cil-toolchain.sln
       timeout-minutes: 10
 
     #-----------------------------------------------------------------------

@@ -108,13 +108,13 @@ public sealed class CliOptions
 
     public static void WriteUsage(TextWriter tw)
     {
-        tw.WriteLine($"chibias [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
+        tw.WriteLine($"cil-chibias [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
         tw.WriteLine("This is a stub CIL assembler, part of chibicc-cil project.");
         tw.WriteLine("https://github.com/kekyo/chibicc-cil-toolchain");
         tw.WriteLine("Copyright (c) Kouji Matsui");
         tw.WriteLine("License under MIT");
         tw.WriteLine();
-        tw.WriteLine("usage: chibias [options] <soruce path> [<soruce path> ...]");
+        tw.WriteLine("usage: cil-chibias [options] <soruce path> [<soruce path> ...]");
         tw.WriteLine("  -o <path>         Output object file path");
         tw.WriteLine("      --dryrun      Need to dryrun");
         tw.WriteLine("  -h, --help        Show this help");
