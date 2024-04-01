@@ -44,6 +44,7 @@ public static class Program
             if (linker.Link(
                 options.OutputAssemblyPath,
                 options.LinkerOptions,
+                options.InjectToAssemblyPath,
                 options.ObjectFilePaths.ToArray()))
             {
                 logger.Information($"Finished.");

@@ -23,6 +23,7 @@ public static class LinkerExtension
         AssembleOptions options,
         Version version,
         TargetFramework targetFramework,
+        string? injectToAssemblyPath,
         params string[] sourcePaths) =>
         linker.Link(
             outputAssemblyPath,
@@ -39,5 +40,6 @@ public static class LinkerExtension
                 },
                 DebugSymbolType = debugSymbolType,
             },
+            injectToAssemblyPath,
             sourcePaths);
 }

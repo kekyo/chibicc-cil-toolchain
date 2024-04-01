@@ -1,4 +1,4 @@
-/////////////////////////////////////////////////////////////////////////////////////
+﻿/////////////////////////////////////////////////////////////////////////////////////
 //
 // chibicc-toolchain - The specialized backend toolchain for chibicc-cil
 // Copyright (c) Kouji Matsui(@kozy_kekyo, @kekyo @mastodon.cloud)
@@ -35,6 +35,7 @@ public sealed class CliOptions
 
     public string OutputAssemblyPath = null!;
     public readonly LinkerOptions LinkerOptions = new();
+    public string? InjectToAssemblyPath;
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
     public readonly List<string> ObjectFilePaths = new();
@@ -103,8 +104,9 @@ public sealed class CliOptions
                             }
                             else if (args.Length >= index)
                             {
-                                var referenceAssemblyName = args[++index];
+                                var referenceAssemblyName = args[index + 1];
                                 referenceAssemblyNames.Add(referenceAssemblyName);
+                                index++;
                                 continue;
                             }
                             break;
@@ -115,6 +117,19 @@ public sealed class CliOptions
                             }
                             continue;
                         case 'i':
+                            if (arg.Length >= 3)
+                            {
+                                options.InjectToAssemblyPath = arg.Substring(2);
+                                options.LinkerOptions.CreationOptions = null;
+                                continue;
+                            }
+                            else if (args.Length >= index)
+                            {
+                                options.InjectToAssemblyPath = args[index + 1];
+                                options.LinkerOptions.CreationOptions = null;
+                                index++;
+                                continue;
+                            }
                             options.LinkerOptions.CreationOptions = null;
                             continue;
                         case 'a':
@@ -203,7 +218,7 @@ public sealed class CliOptions
                             }
                             break;
                         case 'v':
-                            if (arg.Length >= 2 &&
+                            if (arg.Length == 2 &&
                                 Version.TryParse(args[index + 1], out var version))
                             {
                                 index++;
@@ -215,13 +230,13 @@ public sealed class CliOptions
                             }
                             break;
                         case 'm':
-                            if ((arg.Length >= 3 ?
-                                arg.Substring(2) :
-                                (++index < args.Length ? args[index] : null)) is { } mopt)
+                            var mopt = (arg.Length >= 3) ? arg.Substring(2) :
+                                args.Length >= index ? args[++index] :
+                                null;
+                            if (mopt != null)
                             {
                                 if (TargetFramework.TryParse(mopt, out var tf2))
                                 {
-                                    index++;
                                     if (options.LinkerOptions.CreationOptions is { } co7)
                                     {
                                         co7.TargetFramework = tf2;
@@ -230,7 +245,6 @@ public sealed class CliOptions
                                 }
                                 if (Enum.TryParse<TargetWindowsArchitectures>(mopt, true, out var arch))
                                 {
-                                    index++;
                                     if (options.LinkerOptions.CreationOptions is { } co8)
                                     {
                                         co8.TargetWindowsArchitecture = arch;
@@ -239,7 +253,6 @@ public sealed class CliOptions
                                 }
                                 if (rollforwards.TryGetValue(mopt, out var rollforward))
                                 {
-                                    index++;
                                     if (options.LinkerOptions.CreationOptions is { } co5)
                                     {
                                         co5.RuntimeConfiguration = rollforward;
@@ -391,7 +404,7 @@ public sealed class CliOptions
         }
         else
         {
-            logger.Information($"WillInjectTo={this.OutputAssemblyPath}");
+            logger.Information($"InjectToAssemblyPath={this.InjectToAssemblyPath}");
         }
         
         logger.Information($"IsDryRun={this.LinkerOptions.IsDryRun}");
@@ -412,7 +425,7 @@ public sealed class CliOptions
         tw.WriteLine("      -mwinexe      Produce Windows executable assembly");
         tw.WriteLine("  -L <path>         Reference assembly base path");
         tw.WriteLine("  -l <name>         Reference assembly name");
-        tw.WriteLine("  -i                Will inject to output assembly file");
+        tw.WriteLine("  -i <path>         Will inject into an assembly file");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");

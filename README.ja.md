@@ -92,12 +92,12 @@ License under MIT
 
 usage: cil-chibild [options] <obj path> [<obj path> ...]
   -o <path>         Output assembly path
-  -c, --dll         Produce dll assembly
-      --exe         Produce executable assembly (defaulted)
-      --winexe      Produce Windows executable assembly
+  -c, -mdll         Produce dll assembly
+      -mexe         Produce executable assembly (defaulted)
+      -mwinexe      Produce Windows executable assembly
   -L <path>         Reference assembly base path
   -l <name>         Reference assembly name
-  -i                Will inject to output assembly file
+  -i <path>         Will inject into an assembly file
   -g, -g2           Produce embedded debug symbol (defaulted)
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
@@ -127,7 +127,7 @@ usage: cil-chibild [options] <obj path> [<obj path> ...]
   この値は、アセンブリにマークを設定するだけです。異なる値を指定したとしても、生成されるオプコードには影響ありません。
   WindowsのCLR環境以外では、常に`AnyCPU`として動作する可能性があります。
 * ログレベルは、デフォルトで`warning`です。大文字小文字は無視されます。
-* 注入モード `-i` を使用する場合は、 `-a`, `-p`, `-v`, `-f`, `-w` の指定が無視されます。
+* 注入モード `-i` を使用する場合は、 `-a`, `-v`, `-m` の指定が無視されます。
 
 
 ----
@@ -188,7 +188,8 @@ $ echo $?
 ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
 
 ```bash
-$ cil-chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib -o hello.exe hello.s
+$ cil-chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+  -o hello.exe hello.s
 ```
 
 ターゲットフレームワークと、対応するコアライブラリのバージョンは一致する必要があります。
@@ -269,7 +270,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 |`internal`|同じアセンブリ内でのみ参照可能。|
 |`file`|現在のソースコードファイルからのみ参照可能。|
 
-* コマンドラインのオプションに `--exe` を指定するなどして、実行可能形式を生成する場合、
+* コマンドラインのオプションに `-mexe` を指定するなどして、実行可能形式を生成する場合、
   関数名が `main` であれば、自動的にエントリポイントとみなされます。
 * エントリポイントのスコープ記述子は、`public`又は`internal`が必要です。
 
@@ -349,7 +350,8 @@ NAME:
 |`string`|`System.String`| |
 |`typedref`|`System.TypedReference`| |
 
-ビルトイン型のうち、`System.Boolean`型と`System.Char`型は特殊で、chibildがこれらの型を使用する場合、常に1バイト又は2バイトマーシャリングを適用します。
+ビルトイン型のうち、`System.Boolean`型と`System.Char`型は特殊で、chibildがこれらの型を使用する場合、
+常に1バイト又は2バイトマーシャリングを適用します。
 .NETのデフォルトでは、これらの型のフットプリントサイズは、状況によって変化しますが、
 chibildを使って生成されるアセンブリは、常に上記のサイズとなる事を意味します。
 
@@ -390,7 +392,8 @@ string(int8,int32,...)*
 
 配列の要素数を指定した型は、「値型配列」と呼ばれます。
 
-関数ポインタ型、可変引数、値型配列のそれぞれは、C#においてのデリゲート型、`params`による可変引数、`System.Array`を基底とした配列とは扱いが異なります。
+関数ポインタ型、可変引数、値型配列のそれぞれは、C#においてのデリゲート型、
+`params`による可変引数、`System.Array`を基底とした配列とは扱いが異なります。
 詳細は、別項を参照してください。
 
 ### ローカル変数
@@ -582,7 +585,8 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 シグネチャを指定せず、オーバーロードメソッドが複数存在する場合は、誤ったメソッドを選択する可能性があります。
 通常、戻り値の型は検証されませんが、 `op_Implicit` 及び `op_Explicit` メソッドの場合のみ、戻り値の型も一致する事が確認されます。
 
-.NETメソッドを参照するために、コマンドラインオプション `-l` で、メソッド定義を含むアセンブリを指定する必要があります。これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
+.NETメソッドを参照するために、コマンドラインオプション `-l` で、メソッド定義を含むアセンブリを指定する必要があります。
+これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
 
 補足: プロパティやインデクサを呼び出す必要がある場合は、それらを実装するメソッドのシグネチャを特定しておく必要があります。例えば:
 
@@ -950,10 +954,10 @@ public struct foo
 注入モードは、chibildの特徴的な機能の一つで、あらかじめ用意された .NETアセンブリファイル内に、直接CILコードを埋め込むモードです。
 このモードは、コマンドラインオプションで `-i` を指定する事で有効化されます。
 
-例えば、C#でコンパイルされた .NETアセンブリ `merged.dll` が存在する場合、
-注入モードを使用することで、 `merged.dll` 内にアセンブルした結果のCILコードを直接埋め込むことが出来ます。
+例えば、C#でコンパイルされた .NETアセンブリ `managed.dll` が存在する場合、
+注入モードを使用することで、 `managed.dll` 内にアセンブルした結果のCILコードを直接埋め込むことが出来ます。
 
-以下のようなC#ソースから生成した `merged.dll` アセンブリが存在するとします:
+以下のようなC#ソースから生成した `managed.dll` アセンブリが存在するとします:
 
 ```csharp
 namespace C;
@@ -966,10 +970,10 @@ public static class text
 }
 ```
 
-注入モードを使用すると、以下のCILコードを直接 `merged.dll` 内に「注入」して、`add_int64` と正しくリンク出来ます:
+注入モードを使用すると、以下のCILコードを直接 `managed.dll` 内に「注入」して、`add_int64` と正しくリンク出来ます:
 
 ```
-.function public int32() main
+.function public int32() add_c
     ldc.i4.1
     conv.i8
     ldc.i4.2
@@ -977,6 +981,13 @@ public static class text
     call add_int64    ; C#側のメソッドを呼び出す
     conv.i4
     ret
+```
+
+以下のコマンドを使用して `injected.dll` を生成します:
+
+```bash
+$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+  -i managed.dll -c -o injected.dll add_c.s
 ```
 
 これは、chibiccなどで生成されるC言語のソースコードを、直接C#ソースコードと合成して生成させ、
@@ -995,18 +1006,18 @@ public static class text
 例えば:
 
 ```bash
-$ dotnet build chibild.sln
+$ dotnet build chibicc-cil-toolchain.sln
 ```
 
 テストは現在のところ、ネイティブバイナリのILDAsmに依存しているため、Windows x64環境またはLinux x64でのみ実行できます。
 手元の環境で、30秒ほどかかりました。
 
 ```bash
-$ dotnet test chibild.sln
+$ dotnet test chibicc-cil-toolchain.sln
 ```
 
 `build-nupkg.bat`又は`build-nupkg.sh`を使用すると、NuGetパッケージを`artifacts`ディレクトリに生成します。
-`chibild.net4`プロジェクトは、`Release`ビルドで`net48`向けの単一ファイルバイナリを生成します。
+`chibias.net4`と`chibild.net4`プロジェクトは、`Release`ビルドで`net48`向けの単一ファイルバイナリを生成します。
 
 
 ----
