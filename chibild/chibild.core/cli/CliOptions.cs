@@ -161,6 +161,13 @@ public sealed class CliOptions
                                 continue;
                             }
                             break;
+                        case 's':
+                            if (arg.Length == 2)
+                            {
+                                options.LinkerOptions.DebugSymbolType = DebugSymbolTypes.None;
+                                continue;
+                            }
+                            break;
                         case 'O':
                             if (arg.Length == 3)
                             {
@@ -409,7 +416,7 @@ public sealed class CliOptions
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");
         tw.WriteLine("      -gw           Produce windows proprietary debug symbol file");
-        tw.WriteLine("      -g0           Omit debug symbol file");
+        tw.WriteLine("  -s, -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
