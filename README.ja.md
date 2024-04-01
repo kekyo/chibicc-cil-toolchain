@@ -70,7 +70,7 @@ chibildはchibiccのバックエンドアセンブラとして開発しました
 CLIバージョンのツールチェインを、nugetからインストール出来ます
 
 * chibias: [chibias-cli](https://www.nuget.org/packages/chibias-cli)
-* chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli).
+* chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli)
 
 (紛らわしいのですが、 'chibias-cil' や 'chibild-cil' ではありません :)
 
@@ -84,7 +84,7 @@ $ dotnet tool install -g chibild-cli
 ```bash
 $ cil-chibild
 
-chibild [0.49.0,net6.0] [...]
+cil-chibild [0.50.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
@@ -102,13 +102,13 @@ usage: cil-chibild [options] <obj path> [<obj path> ...]
       -g1           Produce portable debug symbol file
       -gm           Produce mono debug symbol file
       -gw           Produce windows proprietary debug symbol file
-      -g0           Omit debug symbol file
+  -s, -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
-  -f <tfm>          Target framework moniker (defaulted: net6.0)
-  -w <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)
-  -p <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)
+  -m <tfm>          Target framework moniker (defaulted: net6.0)
+  -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)
+  -m <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)
   -a <path>         CoreCLR AppHost template path
       --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)
       --dryrun      Need to dryrun
