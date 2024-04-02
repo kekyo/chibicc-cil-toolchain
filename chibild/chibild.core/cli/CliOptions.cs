@@ -13,6 +13,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using chibicc.toolchain.Logging;
 
 namespace chibild.cli;
 

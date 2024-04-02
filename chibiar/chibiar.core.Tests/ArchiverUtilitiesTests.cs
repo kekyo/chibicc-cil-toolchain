@@ -14,6 +14,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chibicc.toolchain.Archiving;
 
 using static VerifyNUnit.Verifier;
 using static chibiar.ArchiverTestRunner;
@@ -21,11 +22,11 @@ using static chibiar.ArchiverTestRunner;
 namespace chibiar;
 
 [TestFixture]
-public sealed class ArchiverTests
+public sealed class ArchiverUtilitiesTests
 {
     private static async Task VerifySymbolTableAsync(ZipArchive zip)
     {
-       var symTableEntry = zip.GetEntry(Archiver.SymbolTableFileName)!;
+       var symTableEntry = zip.GetEntry(ArchiverUtilities.SymbolTableFileName)!;
         using var afs = symTableEntry.Open();
 
         var tr = new StreamReader(afs, Encoding.UTF8, true);
@@ -57,7 +58,7 @@ public sealed class ArchiverTests
             
             Assert.That(
                 zip.Entries.Select(e => e.Name),
-                Is.EqualTo(new[] { "parse.o", Archiver.SymbolTableFileName }));
+                Is.EqualTo(new[] { "parse.o", ArchiverUtilities.SymbolTableFileName }));
 
             await VerifySymbolTableAsync(zip);
         });
@@ -87,7 +88,7 @@ public sealed class ArchiverTests
             
             Assert.That(
                 zip.Entries.Select(e => e.Name),
-                Is.EqualTo(new[] { "parse.o", "codegen.o", Archiver.SymbolTableFileName }));
+                Is.EqualTo(new[] { "parse.o", "codegen.o", ArchiverUtilities.SymbolTableFileName }));
 
             await VerifySymbolTableAsync(zip);
         });

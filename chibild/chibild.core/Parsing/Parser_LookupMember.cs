@@ -8,12 +8,13 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using chibild.Internal;
-using chibild.Tokenizing;
+using chibicc.toolchain.Tokenizing;
 using Mono.Cecil;
 using Mono.Cecil.Rocks;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using chibicc.toolchain.Logging;
 
 namespace chibild.Parsing;
 

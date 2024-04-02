@@ -9,7 +9,7 @@
 
 using System.Collections.Generic;
 using System.IO;
-
+using chibicc.toolchain.Logging;
 using Mono.Cecil;
 
 namespace chibild.Internal;

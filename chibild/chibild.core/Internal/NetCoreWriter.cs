@@ -12,6 +12,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using chibicc.toolchain.Logging;
 
 namespace chibild.Internal;
 

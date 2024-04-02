@@ -10,6 +10,7 @@
 using chibild.cli;
 using System;
 using System.Runtime.InteropServices;
+using chibicc.toolchain.Logging;
 
 namespace chibild;
 

@@ -9,7 +9,7 @@
 
 using chibild.Internal;
 using chibild.Parsing.Embedding;
-using chibild.Tokenizing;
+using chibicc.toolchain.Tokenizing;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using chibicc.toolchain.Logging;
 
 namespace chibild.Parsing;
 

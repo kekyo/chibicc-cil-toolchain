@@ -8,13 +8,12 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chibild.Tokenizing;
+using chibicc.toolchain.Archiving;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -35,8 +34,6 @@ public enum AddResults
 
 public sealed class Archiver
 {
-    public static readonly string SymbolTableFileName = "__symtable$";
-    
     private static Stream OpenStream(string path, bool writable) =>
         (path == "-") ?
             (writable ? Console.OpenStandardOutput() : Console.OpenStandardInput()) :
@@ -44,81 +41,6 @@ public sealed class Archiver
                 path,
                 writable ? FileMode.Create : FileMode.Open,
                 writable ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read);
-
-    private readonly struct Symbol
-    {
-        public readonly Token Directive;
-        public readonly Token Scope;
-        public readonly Token Name;
-        public readonly string FileName;
-
-        public Symbol(Token directive, Token scope, Token name, string fileName)
-        {
-            this.Directive = directive;
-            this.Scope = scope;
-            this.Name = name;
-            this.FileName = fileName;
-        }
-    }
-
-    private sealed class SymbolComparer : IEqualityComparer<Symbol>
-    {
-        public bool Equals(Symbol x, Symbol y) =>
-            x.Directive.Text.Equals(y.Directive.Text) &&
-            x.Name.Text.Equals(y.Name.Text);
-
-        public int GetHashCode(Symbol obj)
-        {
-            unchecked
-            {
-                return
-                    (obj.Directive.Text.GetHashCode() * 397) ^
-                     obj.Name.Text.GetHashCode();
-            }
-        }
-
-        public static readonly SymbolComparer Instance = new();
-    }
-
-    private static IEnumerable<Symbol> EnumerateSymbols(TextReader tr, string fileName)
-    {
-        var tokenizer = new Tokenizer();
-
-        while (true)
-        {
-            var line = tr.ReadLine();
-            if (line == null)
-            {
-                break;
-            }
-
-            var tokens = tokenizer.TokenizeLine(line);
-            if (tokens.Length >= 3)
-            {
-                var directive = tokens[0];
-                var scope = tokens[1];
-                if (directive.Type == TokenTypes.Directive &&
-                    scope.Type == TokenTypes.Identity &&
-                    scope.Text is "public" or "internal")
-                {
-                    switch (directive.Text)
-                    {
-                        case "function":
-                        case "global":
-                        case "enumeration":
-                            if (tokens.Length >= 4)
-                            {
-                                yield return new(directive, scope, tokens[3], fileName);
-                            }
-                            break;
-                        case "structure":
-                            yield return new(directive, scope, tokens[2], fileName);
-                            break;
-                    }
-                }
-            }
-        }
-    }
 
     private static Symbol[] ReadSymbols(string objectFilePath, SymbolTableModes symbolTableMode)
     {
@@ -130,7 +52,7 @@ public sealed class Archiver
             var tr = new StreamReader(ofs, Encoding.UTF8, true);
 
             var fileName = Path.GetFileNameWithoutExtension(objectFilePath) + ".o";
-            var symbols = EnumerateSymbols(tr, fileName).
+            var symbols = ArchiverUtilities.EnumerateSymbols(tr, fileName).
                 Distinct(SymbolComparer.Instance).
                 ToArray();
 
@@ -205,7 +127,7 @@ public sealed class Archiver
 
                     if (updated &&
                         symbolTableMode != SymbolTableModes.ForceIgnore &&
-                        archive?.GetEntry(SymbolTableFileName) is { } symbolTableEntry)
+                        archive?.GetEntry(ArchiverUtilities.SymbolTableFileName) is { } symbolTableEntry)
                     {
                         symbolTableEntry.Delete();
                     }
@@ -228,7 +150,8 @@ public sealed class Archiver
 
         if (archive != null)
         {
-            var symbolTableEntry = archive.CreateEntry(SymbolTableFileName, CompressionLevel.Optimal);
+            var symbolTableEntry = archive.CreateEntry(
+                ArchiverUtilities.SymbolTableFileName, CompressionLevel.Optimal);
                             
             using var afs = symbolTableEntry.Open();
 

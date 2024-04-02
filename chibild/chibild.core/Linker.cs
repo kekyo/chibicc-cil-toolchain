@@ -7,9 +7,9 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Tokenizing;
 using chibild.Internal;
 using chibild.Parsing;
-using chibild.Tokenizing;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Mdb;
@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using chibicc.toolchain.Logging;
 
 namespace chibild;
 

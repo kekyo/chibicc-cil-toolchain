@@ -29,4 +29,8 @@
     <EmbeddedResource Include="Parsing\Embedding\_start_i.s" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
+  </ItemGroup>
+
 </Project>

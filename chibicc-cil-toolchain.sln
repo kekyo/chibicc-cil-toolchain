@@ -58,6 +58,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibiar.core.Tests", "chibi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibiar.core", "chibiar\chibiar.core\chibiar.core.csproj", "{EDFB3E84-7FD5-414D-9A17-378C62CA3F35}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "toolchain.common", "toolchain.common\toolchain.common.csproj", "{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -116,6 +118,10 @@ Global
 		{EDFB3E84-7FD5-414D-9A17-378C62CA3F35}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EDFB3E84-7FD5-414D-9A17-378C62CA3F35}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EDFB3E84-7FD5-414D-9A17-378C62CA3F35}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

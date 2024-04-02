@@ -10,6 +10,7 @@
 using Mono.Cecil;
 using System.Collections;
 using System.Collections.Generic;
+using chibicc.toolchain.Logging;
 
 namespace chibild.Internal;
 
