@@ -13,44 +13,9 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace chibild.Internal;
+namespace chibild.Tokenizing;
 
-internal enum TokenTypes
-{
-    Directive,
-    Label,
-    String,
-    Identity,
-}
-
-internal sealed class Token
-{
-    public readonly TokenTypes Type;
-
-    public readonly string Text;
-    public readonly uint Line;
-    public readonly uint StartColumn;
-    public readonly uint EndColumn;
-
-    public Token(
-        TokenTypes type,
-        string text,
-        uint line,
-        uint startColumn,
-        uint endColumn)
-    {
-        this.Type = type;
-        this.Text = text;
-        this.Line = line;
-        this.StartColumn = startColumn;
-        this.EndColumn = endColumn;
-    }
-
-    public override string ToString() =>
-        $"{this.Type}: {this.Text}";
-}
-
-internal sealed class Tokenizer
+public sealed class Tokenizer
 {
     private enum EscapeStates
     {

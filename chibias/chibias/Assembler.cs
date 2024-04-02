@@ -17,7 +17,10 @@ public sealed class Assembler
     private static Stream OpenStream(string path, bool writable) =>
         (path == "-") ?
             (writable ? Console.OpenStandardOutput() : Console.OpenStandardInput()) :
-            new FileStream(path, writable ? FileMode.Create : FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            new FileStream(
+                path,
+                writable ? FileMode.Create : FileMode.Open,
+                writable ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read);
     
     public bool Assemble(
         string outputObjectFilePath,

@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using chibild.Internal;
+using chibild.Tokenizing;
 using Mono.Cecil;
 using System.Diagnostics;
 using System.Linq;
