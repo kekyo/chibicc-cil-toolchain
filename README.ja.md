@@ -84,17 +84,17 @@ $ dotnet tool install -g chibild-cli
 ```bash
 $ cil-chibild
 
-cil-chibild [0.50.0,net6.0] [...]
+cil-chibild [0.51.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: cil-chibild [options] <obj path> [<obj path> ...]
+usage: cil-chibild [options] <input path> [<input path> ...]
   -o <path>         Output assembly path
-  -c, -mdll         Produce dll assembly
-      -mexe         Produce executable assembly (defaulted)
-      -mwinexe      Produce Windows executable assembly
+  -shared, -mdll    Produce dll assembly
+           -mexe    Produce executable assembly (defaulted)
+           -mwinexe Produce Windows executable assembly
   -L <path>         Reference assembly base path
   -l <name>         Reference assembly name
   -i <path>         Will inject into an assembly file
@@ -115,7 +115,8 @@ usage: cil-chibild [options] <obj path> [<obj path> ...]
   -h, --help        Show this help
 ```
 
-* chibildは、コマンドラインで指摘された複数のソースコードをアセンブルして、1つの.NETアセンブリにまとめます。
+* chibildは、コマンドラインで指摘された複数の入力ファイル（オブジェクト '*.o'、CILソース '*.s'、あるいはアーカイブ '*.a'）
+ をアセンブルして、1つの.NETアセンブリにまとめます。
 * 参照アセンブリパス `-l` は、`ld` のライブラリルックアップと同じように最後から順に評価されます。
   この機能は、重複するシンボル(関数/グローバル変数)にも適用されます。
   また、ライブラリファイル名は、ネイティブツールチェインと同様に `lib` というプレフィックスが適用されている事を想定し、

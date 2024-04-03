@@ -88,17 +88,17 @@ Then:
 ```bash
 $ cil-chibild
 
-cil-chibild [0.50.0,net6.0] [...]
+cil-chibild [0.51.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: cil-chibild [options] <obj path> [<obj path> ...]
+usage: cil-chibild [options] <input path> [<input path> ...]
   -o <path>         Output assembly path
-  -c, -mdll         Produce dll assembly
-      -mexe         Produce executable assembly (defaulted)
-      -mwinexe      Produce Windows executable assembly
+  -shared, -mdll    Produce dll assembly
+           -mexe    Produce executable assembly (defaulted)
+           -mwinexe Produce Windows executable assembly
   -L <path>         Reference assembly base path
   -l <name>         Reference assembly name
   -i <path>         Will inject into an assembly file
@@ -119,7 +119,8 @@ usage: cil-chibild [options] <obj path> [<obj path> ...]
   -h, --help        Show this help
 ```
 
-* chibild will combine multiple source code in command line pointed into one assembly.
+* chibild assembles multiple input files (objects '*.o', CIL sources '*.s', and archives '*.a')
+ pointed out on the command line into a single .NET assembly.
 * Reference assembly paths `-l` evaluates last-to-first order, same as `ld` looking up.
   This feature applies to duplicated symbols (function/global variables).
   Library file names are assumed to be prefixed with `lib` as in the native toolchain,

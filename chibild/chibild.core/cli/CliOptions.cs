@@ -39,7 +39,7 @@ public sealed class CliOptions
     public string? InjectToAssemblyPath;
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
-    public readonly List<string> ObjectFilePaths = new();
+    public readonly List<string> InputFilePaths = new();
 
     private CliOptions()
     {
@@ -111,12 +111,6 @@ public sealed class CliOptions
                                 continue;
                             }
                             break;
-                        case 'c':
-                            if (options.LinkerOptions.CreationOptions is { } co1)
-                            {
-                                co1.AssemblyType = AssemblyTypes.Dll;
-                            }
-                            continue;
                         case 'i':
                             if (arg.Length >= 3)
                             {
@@ -178,6 +172,14 @@ public sealed class CliOptions
                             }
                             break;
                         case 's':
+                            if (arg == "-shared")
+                            {
+                                if (options.LinkerOptions.CreationOptions is { } co1)
+                                {
+                                    co1.AssemblyType = AssemblyTypes.Dll;
+                                }
+                                continue;
+                            }
                             if (arg.Length == 2)
                             {
                                 options.LinkerOptions.DebugSymbolType = DebugSymbolTypes.None;
@@ -311,9 +313,9 @@ public sealed class CliOptions
                     throw new InvalidOptionException($"Invalid option: {arg}");
                 }
 
-                var sourceCodePath =
+                var inputFilePath =
                     arg != "-" ? Path.GetFullPath(arg) : arg;
-                options.ObjectFilePaths.Add(sourceCodePath);
+                options.InputFilePaths.Add(inputFilePath);
             }
             catch (InvalidOptionException)
             {
@@ -339,7 +341,7 @@ public sealed class CliOptions
                                 : Path.GetFullPath("a.out.dll");
                         break;
                     default:
-                        switch (options.ObjectFilePaths.FirstOrDefault())
+                        switch (options.InputFilePaths.FirstOrDefault())
                         {
                             case null:
                             case "-":
@@ -373,9 +375,9 @@ public sealed class CliOptions
 
     public void Write(ILogger logger)
     {
-        foreach (var path in this.ObjectFilePaths)
+        foreach (var inputFilePath in this.InputFilePaths)
         {
-            logger.Information($"ObjectFilePath={path}");
+            logger.Information($"InputFilePaths={inputFilePath}");
         }
 
         logger.Information($"OutputAssemblyPath={this.OutputAssemblyPath}");
@@ -419,11 +421,11 @@ public sealed class CliOptions
         tw.WriteLine("Copyright (c) Kouji Matsui");
         tw.WriteLine("License under MIT");
         tw.WriteLine();
-        tw.WriteLine("usage: cil-chibild [options] <obj path> [<obj path> ...]");
+        tw.WriteLine("usage: cil-chibild [options] <input path> [<input path> ...]");
         tw.WriteLine("  -o <path>         Output assembly path");
-        tw.WriteLine("  -c, -mdll         Produce dll assembly");
-        tw.WriteLine("      -mexe         Produce executable assembly (defaulted)");
-        tw.WriteLine("      -mwinexe      Produce Windows executable assembly");
+        tw.WriteLine("  -shared, -mdll    Produce dll assembly");
+        tw.WriteLine("           -mexe    Produce executable assembly (defaulted)");
+        tw.WriteLine("           -mwinexe Produce Windows executable assembly");
         tw.WriteLine("  -L <path>         Reference assembly base path");
         tw.WriteLine("  -l <name>         Reference assembly name");
         tw.WriteLine("  -i <path>         Will inject into an assembly file");

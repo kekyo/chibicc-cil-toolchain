@@ -10,6 +10,7 @@
 using chibicc.toolchain.Tokenizing;
 using System;
 using System.IO;
+using System.Linq;
 
 namespace chibild.Parsing.Embedding;
 
@@ -21,20 +22,24 @@ internal static class EmbeddingCodeFragments
     private static readonly Lazy<Token[][]> startup_void = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Linker).Assembly.GetManifestResourceStream(
-            startupName + "_v.s")!)));
+            startupName + "_v.s")!)).
+        ToArray());
     private static readonly Lazy<Token[][]> startup_int32 = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Linker).Assembly.GetManifestResourceStream(
-            startupName + "_i.s")!)));
+            startupName + "_i.s")!)).
+        ToArray());
 
     private static readonly Lazy<Token[][]> startup_void_void = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Linker).Assembly.GetManifestResourceStream(
-            startupName + "_v_v.s")!)));
+            startupName + "_v_v.s")!)).
+        ToArray());
     private static readonly Lazy<Token[][]> startup_int32_void = new(() =>
         Tokenizer.TokenizeAll(new StreamReader(
             typeof(Linker).Assembly.GetManifestResourceStream(
-            startupName + "_i_v.s")!)));
+            startupName + "_i_v.s")!)).
+        ToArray());
 
     public static Token[][] Startup_Void =>
         startup_void.Value;

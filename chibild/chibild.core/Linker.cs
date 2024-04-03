@@ -7,6 +7,8 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Archiving;
+using chibicc.toolchain.Logging;
 using chibicc.toolchain.Tokenizing;
 using chibild.Internal;
 using chibild.Parsing;
@@ -19,25 +21,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using chibicc.toolchain.Logging;
 
 namespace chibild;
-
-public readonly struct ObjectFileItem
-{
-    public readonly TextReader Reader;
-    public readonly string ObjectFilePathDebuggerHint;
-
-    public ObjectFileItem(
-        TextReader reader, string objectFilePathDebuggerHint)
-    {
-        this.Reader = reader;
-        this.ObjectFilePathDebuggerHint = objectFilePathDebuggerHint;
-    }
-
-    public override string ToString() =>
-        this.ObjectFilePathDebuggerHint ?? "(null)";
-}
 
 public sealed class Linker
 {
@@ -151,58 +136,40 @@ public sealed class Linker
             Distinct(MemberReferenceComparer.Instance));
     }
 
-    private void LinkFromObjectFile(
+    private void ParseFromInputFile(
         Parser parser,
         string? baseObjectFilePath,
-        string objectFilePathDebuggerHint,
-        TextReader objectFileReader)
+        IInputFileItem inputFileItem)
     {
         parser.BeginNewCilSourceCode(
             baseObjectFilePath,
-            objectFilePathDebuggerHint,
+            inputFileItem.ObjectFilePathDebuggerHint,
             true);
 
-        var tokenizer = new Tokenizer();
-
-        var tokenizeLap = new List<TimeSpan>();
-        var parseLap = new List<TimeSpan>();
-        var sw = Stopwatch.StartNew();
-
-        while (true)
+        using var objectFileReader = inputFileItem.Open();
+        
+        foreach (var tokens in Tokenizer.TokenizeAll(objectFileReader))
         {
-            var line = objectFileReader.ReadLine();
-            if (line == null)
-            {
-                break;
-            }
-
-            var lap0 = sw.Elapsed;
-            var tokens = tokenizer.TokenizeLine(line);
-
-            var lap1 = sw.Elapsed;
-            parser.Parse(tokens);
-
-            var lap2 = sw.Elapsed;
-
-            tokenizeLap.Add(lap1 - lap0);
-            parseLap.Add(lap2 - lap1);
+             parser.Parse(tokens);
         }
-
-        var tokenizeTotal = tokenizeLap.Aggregate((t1, t2) => t1 + t2);
-        var tokenizeAverage = TimeSpan.FromTicks(tokenizeTotal.Ticks / tokenizeLap.Count);
-        var parseTotal = parseLap.Aggregate((t1, t2) => t1 + t2);
-        var parseAverage = TimeSpan.FromTicks(parseTotal.Ticks / parseLap.Count);
-
-        this.logger.Trace($"Stat: {objectFilePathDebuggerHint}: Tokenize: Total={tokenizeTotal}, Average={tokenizeAverage}, Count={tokenizeLap.Count}");
-        this.logger.Trace($"Stat: {objectFilePathDebuggerHint}: Parse: Total={parseTotal}, Average={parseAverage}, Count={parseLap.Count}");
     }
 
-    private bool Run(
+    private bool InternalLink(
         string outputAssemblyPath,
         LinkerOptions options,
         string? injectToAssemblyPath,
-        Func<Parser, bool> runner)
+        string? baseSourcePath,
+        IInputFileItem[] inputFileItems)
     {
+        // Avoid nothing object files.
+        if (inputFileItems.Length == 0 ||
+            inputFileItems.All(inputFileItem => inputFileItem.IsArchive))
+        {
+            return false;
+        }
+        
+        //////////////////////////////////////////////////////////////
+
         using var assemblyResolver = new AssemblyResolver(
             this.logger, options.ReferenceAssemblyBasePaths);
 
@@ -238,7 +205,7 @@ public sealed class Linker
         AssemblyDefinition? injectTargetAssembly = null;
         ModuleDefinition? injectTargetModule = null;
 
-        // Will be create a new assembly.
+        // Will be created a new assembly.
         if (injectToAssemblyPath == null)
         {
             if (options.CreationOptions is not { } co1)
@@ -324,7 +291,7 @@ public sealed class Linker
 
         //////////////////////////////////////////////////////////////
 
-        // Parse CIL source files.
+        // Parse CIL object files.
         var parser = new Parser(
             this.logger,
             module,
@@ -334,16 +301,28 @@ public sealed class Linker
             options.DebugSymbolType != DebugSymbolTypes.None,
             injectTargetModule);
 
-        var allFinished = runner(parser);
+        // Process input files except archives.
+        foreach (var inputFileItem in inputFileItems)
+        {
+            if (!inputFileItem.IsArchive)
+            {
+                this.logger.Information(
+                    $"Linking: {inputFileItem.ObjectFilePathDebuggerHint}");
+                    
+                this.ParseFromInputFile(
+                    parser,
+                    baseSourcePath,
+                    inputFileItem);
+            }
+        }
+
+        //////////////////////////////////////////////////////////////
 
         // Finalize parser.
-        if (allFinished)
-        {
-            allFinished = parser.Finish(
-                options.CreationOptions?.TargetFramework,
-                options.CreationOptions?.Options.HasFlag(AssembleOptions.DisableJITOptimization),
-                options.ApplyOptimization);
-        }
+        var allFinished = parser.Finish(
+            options.CreationOptions?.TargetFramework,
+            options.CreationOptions?.Options.HasFlag(AssembleOptions.DisableJITOptimization),
+            options.ApplyOptimization);
 
         cabiSpecificSymbols.Finish();
 
@@ -388,10 +367,8 @@ public sealed class Linker
                     outputAssemblyCandidateFullPath,
                     new()
                     {
-                        DeterministicMvid =
-                            options.IsDeterministic,
-                        WriteSymbols =
-                            options.DebugSymbolType != DebugSymbolTypes.None,
+                        DeterministicMvid = options.IsDeterministic,
+                        WriteSymbols = options.DebugSymbolType != DebugSymbolTypes.None,
                         SymbolWriterProvider = options.DebugSymbolType switch
                         {
                             DebugSymbolTypes.None => null!,
@@ -459,155 +436,105 @@ public sealed class Linker
         return allFinished;
     }
 
-    private bool InternalLink(
-        string outputAssemblyPath,
-        LinkerOptions options,
-        string? injectToAssemblyPath,
-        string? baseSourcePath,
-        ObjectFileItem[] objectFileItems)
-    {
-        if (objectFileItems.Length == 0)
-        {
-            return false;
-        }
-
-        return this.Run(
-            outputAssemblyPath,
-            options,
-            injectToAssemblyPath,
-            parser =>
-            {
-                var allFinished = true;
-
-                foreach (var objectFileItem in objectFileItems)
-                {
-                    this.logger.Information(
-                        $"Linking: {objectFileItem.ObjectFilePathDebuggerHint}");
-
-                    this.LinkFromObjectFile(
-                        parser,
-                        baseSourcePath,
-                        objectFileItem.ObjectFilePathDebuggerHint,
-                        objectFileItem.Reader);
-                }
-
-                return allFinished;
-            });
-    }
-
     public bool Link(
         string outputAssemblyPath,
         LinkerOptions options,
         string? injectToAssemblyPath,
-        params ObjectFileItem[] objectFileItems) =>
+        params IInputFileItem[] inputFileItems) =>
         this.InternalLink(
             outputAssemblyPath,
             options,
             injectToAssemblyPath,
             null,
-            objectFileItems);
+            inputFileItems);
 
     public bool Link(
         string outputAssemblyPath,
         LinkerOptions options,
         string? injectToAssemblyPath,
         string objectFilePathDebuggerHint,
-        TextReader objectFileReader) =>
+        TextReader inputFileReader) =>
         this.InternalLink(
             outputAssemblyPath,
             options,
             injectToAssemblyPath,
             null,
-            new[] { new ObjectFileItem(objectFileReader, objectFilePathDebuggerHint) });
+            new IInputFileItem[] { new InputTextReaderItem(() => inputFileReader, objectFilePathDebuggerHint) });
 
     public bool Link(
         string outputAssemblyPath,
         LinkerOptions options,
         string? injectToAssemblyPath,
-        params string[] objectPaths)
+        params string[] inputFilePaths)
     {
-        if (objectPaths.Length == 0)
+        if (inputFilePaths.Length == 0)
         {
             return false;
         }
 
-        var objectFullPaths = objectPaths.
+        var inputFileFullPaths = inputFilePaths.
             Select(path => path != "-" ? Path.GetFullPath(path) : path).
             ToArray();
 
-        var baseObjectFilePath = objectFullPaths.Length == 1 ?
-            Utilities.GetDirectoryPath(objectFullPaths[0]) :
-            Utilities.IntersectStrings(objectFullPaths).
+        var baseInputFilePath = inputFileFullPaths.Length == 1 ?
+            Utilities.GetDirectoryPath(inputFileFullPaths[0]) :
+            Utilities.IntersectStrings(inputFileFullPaths).
                 TrimEnd(Path.DirectorySeparatorChar);
 
         this.logger.Information(
-            $"Object file base path: {baseObjectFilePath}");
+            $"Input file base path: {baseInputFilePath}");
 
         //////////////////////////////////////////////////////////////
 
-        var objectFileItems = objectFullPaths.Select(objectFullPath =>
+        var inputFileItems = inputFileFullPaths.SelectMany(inputFileFullPath =>
         {
-            if (objectFullPath == "-")
+            if (inputFileFullPath == "-")
             {
-                return new ObjectFileItem(Console.In, "<stdin>");
+                return new IInputFileItem?[] { new InputStdInItem() };
             }
-            else
+            
+            if (!File.Exists(inputFileFullPath))
             {
-                if (!File.Exists(objectFullPath))
+                this.logger.Error(
+                    $"Unable to find input file: {inputFileFullPath}");
+                return new IInputFileItem?[] { null };
+            }
+
+            try
+            {
+                // All archive items.
+                if (Path.GetExtension(inputFileFullPath) == ".a")
                 {
-                    this.logger.Error(
-                        $"Unable to find object file: {objectFullPath}");
-                    return new ObjectFileItem();
+                    return ArchiverUtilities.EnumerateArchiveItem(inputFileFullPath).
+                        Select(itemName => (IInputFileItem?)new InputArchiveFileItem(inputFileFullPath, itemName));
                 }
-
-                try
+                // This input file (maybe object file)
+                else
                 {
-                    var fs = new FileStream(
-                        objectFullPath,
-                        FileMode.Open, FileAccess.Read, FileShare.Read);
-                    var reader = new StreamReader(
-                        fs,
-                        true);
-
-                    var hint = objectFullPath.
-                        Substring(baseObjectFilePath.Length + 1);
-
-                    return new ObjectFileItem(reader, hint);
-                }
-                catch (Exception ex)
-                {
-                    this.logger.Error(ex,
-                        $"Unable to open object file: {objectFullPath}");
-                    return new ObjectFileItem();
+                    var hint = inputFileFullPath.
+                        Substring(baseInputFilePath.Length + 1);
+                    return new IInputFileItem?[] { new InputObjectFileItem(inputFileFullPath, hint) };
                 }
             }
-        }).ToArray();
+            catch (Exception ex)
+            {
+                this.logger.Error(ex,
+                    $"Unable to open object file: {inputFileFullPath}");
+                return new IInputFileItem?[] { null };
+            }
+        }).
+        ToArray();
 
-        try
+        if (inputFileItems.Any(inputFileItem => inputFileItem == null))
         {
-            if (objectFileItems.Any(objectFileItem => objectFileItem.Reader == null))
-            {
-                return false;
-            }
-
-            return this.InternalLink(
-                outputAssemblyPath,
-                options,
-                injectToAssemblyPath,
-                baseObjectFilePath,
-                objectFileItems);
+            return false;
         }
-        finally
-        {
-            foreach (var objectFile in objectFileItems)
-            {
-                if (objectFile.Reader != null &&
-                    objectFile.Reader != Console.In)
-                {
-                    objectFile.Reader.Close();
-                    objectFile.Reader.Dispose();
-                }
-            }
-        }
+
+        return this.InternalLink(
+            outputAssemblyPath,
+            options,
+            injectToAssemblyPath,
+            baseInputFilePath,
+            inputFileItems!);
     }
 }

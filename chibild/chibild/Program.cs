@@ -24,7 +24,7 @@ public static class Program
                 args,
                 ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker);
 
-            if (options.ShowHelp || options.ObjectFilePaths.Count == 0)
+            if (options.ShowHelp || options.InputFilePaths.Count == 0)
             {
                 Console.WriteLine();
                 CliOptions.WriteUsage(Console.Out);
@@ -42,18 +42,14 @@ public static class Program
 
             var linker = new Linker(logger);
 
-            if (linker.Link(
-                options.OutputAssemblyPath,
-                options.LinkerOptions,
-                options.InjectToAssemblyPath,
-                options.ObjectFilePaths.ToArray()))
+            if (linker.Link(options))
             {
-                logger.Information($"Finished.");
+                logger.Information("Finished.");
                 return 0;
             }
             else
             {
-                logger.Information($"Failed linking.");
+                logger.Information("Failed linking.");
                 return 2;
             }
         }

@@ -10,9 +10,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
-using System.Xml;
 using chibicc.toolchain.Tokenizing;
 
 namespace chibicc.toolchain.Archiving;
@@ -71,5 +71,74 @@ public static class ArchiverUtilities
         }
 
         tw.Flush();
+    }
+
+    public static string[] EnumerateArchiveItem(string archiveFilePath)
+    {
+        using var archive = ZipFile.Open(
+            archiveFilePath,
+            ZipArchiveMode.Read,
+            Encoding.UTF8);
+
+        return archive.Entries.
+            Where(entry => entry.Name != SymbolTableFileName).
+            Select(entry => entry.Name).
+            ToArray();
+    }
+
+    private sealed class ArchiveItemStream : Stream
+    {
+        private readonly ZipArchive archive;
+        private readonly Stream parent;
+        
+        public ArchiveItemStream(ZipArchive archive, Stream parent)
+        {
+            this.archive = archive;
+            this.parent = parent;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            this.parent.Dispose();
+            this.archive.Dispose();
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotImplementedException();
+
+        public override long Position
+        {
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            this.parent.Read(buffer, offset, count);
+
+        public override long Seek(long offset, SeekOrigin origin) =>
+            throw new System.NotImplementedException();
+
+        public override void SetLength(long value) =>
+            throw new System.NotImplementedException();
+
+        public override void Write(byte[] buffer, int offset, int count) =>
+            throw new System.NotImplementedException();
+    }
+
+    public static Stream OpenArchiveItem(string archiveFilePath, string itemName)
+    {
+        using var archive = ZipFile.Open(
+            archiveFilePath,
+            ZipArchiveMode.Read,
+            Encoding.UTF8);
+
+        return new ArchiveItemStream(archive, archive.GetEntry(itemName)!.Open());
     }
 }

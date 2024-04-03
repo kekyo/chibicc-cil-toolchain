@@ -90,7 +90,9 @@ internal static class LinkerTestRunner
                     },
                     injectToAssemblyPath,
                     chibildSourceCodes.Select((sc, index) =>
-                        new ObjectFileItem(new StringReader(sc), index >= 1 ? $"source{index}.s" : "source.s")).
+                        (IInputFileItem)new InputTextReaderItem(
+                            () => new StringReader(sc),
+                            index >= 1 ? $"source{index}.s" : "source.s")).
                         ToArray());
 
                 var disassembledPath =

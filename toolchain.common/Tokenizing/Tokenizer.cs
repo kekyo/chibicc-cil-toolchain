@@ -216,10 +216,9 @@ public sealed class Tokenizer
         return tokens.ToArray();
     }
 
-    public static Token[][] TokenizeAll(TextReader tr)
+    public static IEnumerable<Token[]> TokenizeAll(TextReader tr)
     {
         var tokenizer = new Tokenizer();
-        var lines = new List<Token[]>();
 
         while (true)
         {
@@ -228,9 +227,8 @@ public sealed class Tokenizer
             {
                 break;
             }
-            lines.Add(tokenizer.TokenizeLine(line));
-        }
 
-        return lines.ToArray();
+            yield return tokenizer.TokenizeLine(line);
+        }
     }
 }

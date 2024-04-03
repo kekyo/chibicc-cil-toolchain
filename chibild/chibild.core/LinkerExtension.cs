@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using System;
+using chibild.cli;
 
 namespace chibild;
 
@@ -42,4 +43,13 @@ public static class LinkerExtension
             },
             injectToAssemblyPath,
             sourcePaths);
+
+    public static bool Link(
+        this Linker linker,
+        CliOptions cilOptions) =>
+        linker.Link(
+            cilOptions.OutputAssemblyPath,
+            cilOptions.LinkerOptions,
+            cilOptions.InjectToAssemblyPath,
+            cilOptions.InputFilePaths.ToArray());
 }
