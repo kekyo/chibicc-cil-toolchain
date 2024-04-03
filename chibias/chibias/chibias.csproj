@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
+  </ItemGroup>
+
 </Project>

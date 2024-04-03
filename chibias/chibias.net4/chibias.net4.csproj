@@ -12,6 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="..\chibias\*.cs" BaseLink="." />
     <Compile Include="..\chibias\cli\*.cs" BaseLink="cli" />
   </ItemGroup>

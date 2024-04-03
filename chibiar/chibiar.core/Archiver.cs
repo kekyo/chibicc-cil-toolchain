@@ -14,8 +14,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chibicc.toolchain.Archiving;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using chibicc.toolchain.IO;
 
 namespace chibiar;
 
@@ -34,26 +33,20 @@ public enum AddResults
 
 public sealed class Archiver
 {
-    private static Stream OpenStream(string path, bool writable) =>
-        (path == "-") ?
-            (writable ? Console.OpenStandardOutput() : Console.OpenStandardInput()) :
-            new FileStream(
-                path,
-                writable ? FileMode.Create : FileMode.Open,
-                writable ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read);
-
     private static Symbol[] ReadSymbols(string objectFilePath, SymbolTableModes symbolTableMode)
     {
         if (symbolTableMode == SymbolTableModes.ForceUpdate ||
             (symbolTableMode == SymbolTableModes.Auto && Path.GetExtension(objectFilePath) is ".o" or ".s"))
         {
-            using var ofs = OpenStream(objectFilePath, false);
+            using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
 
             var tr = new StreamReader(ofs, Encoding.UTF8, true);
 
             var fileName = Path.GetFileNameWithoutExtension(objectFilePath) + ".o";
             var symbols = ArchiverUtilities.EnumerateSymbols(tr, fileName).
                 Distinct(SymbolComparer.Instance).
+                OrderBy(symbol => symbol.Directive.Text).
+                ThenBy(symbol => symbol.Name.Text).
                 ToArray();
 
             return symbols;
@@ -64,28 +57,6 @@ public sealed class Archiver
         }
     }
 
-    private static void WriteSymbolTable(Stream stream, Symbol[] symbols)
-    {
-        var symbolsByDirectiveGroup = symbols.
-            GroupBy(symbol => symbol.Directive.Text).
-            ToDictionary(g => g.Key, g => g.ToArray());
-
-        var symbolsByDirective = new JObject(
-            symbolsByDirectiveGroup.
-                Select(g => new JProperty(
-                    g.Key,
-                    new JObject(g.Value.Select(symbol => new JProperty(symbol.Name.Text, symbol.FileName)).ToArray<object>()))).
-                ToArray<object>());
-
-        var tw = new StreamWriter(stream, Encoding.UTF8);
-        var jw = new JsonTextWriter(tw);
-        jw.Formatting = Formatting.Indented;
-
-        symbolsByDirective.WriteTo(jw);
-
-        jw.Flush();
-    }
-    
     public AddResults Add(
         string archiveFilePath,
         SymbolTableModes symbolTableMode,
@@ -110,7 +81,7 @@ public sealed class Archiver
                     {
                         if (archive != null)
                         {
-                            using var ofs = OpenStream(objectFilePath, false);
+                            using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
                             
                             var fileName = Path.GetExtension(objectFilePath) == ".s" ?
                                 (Path.GetFileNameWithoutExtension(objectFilePath) + ".o") :
@@ -146,6 +117,8 @@ public sealed class Archiver
         var symbols = symbolLists.
             SelectMany(symbols => symbols).
             Distinct(SymbolComparer.Instance).
+            OrderBy(symbol => symbol.Directive.Text).
+            ThenBy(symbol => symbol.Name.Text).
             ToArray();
 
         if (archive != null)
@@ -155,7 +128,7 @@ public sealed class Archiver
                             
             using var afs = symbolTableEntry.Open();
 
-            WriteSymbolTable(afs, symbols);
+            ArchiverUtilities.WriteSymbolTable(afs, symbols);
         }
 
         return updated ? AddResults.Updated : AddResults.Created;

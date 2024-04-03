@@ -10,6 +10,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Xml;
 using chibicc.toolchain.Tokenizing;
 
 namespace chibicc.toolchain.Archiving;
@@ -56,5 +59,17 @@ public static class ArchiverUtilities
                 }
             }
         }
+    }
+    
+    public static void WriteSymbolTable(Stream stream, Symbol[] symbols)
+    {
+        var tw = new StreamWriter(stream, Encoding.UTF8);
+
+        foreach (var symbol in symbols)
+        {
+            tw.WriteLine($".{symbol.Directive.Text} {symbol.Name.Text} {symbol.FileName}");
+        }
+
+        tw.Flush();
     }
 }
