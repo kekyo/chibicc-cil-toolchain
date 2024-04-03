@@ -119,9 +119,9 @@ usage: cil-chibild [options] <input path> [<input path> ...]
   -h, --help        Show this help
 ```
 
-* chibild assembles multiple input files (objects '*.o', CIL sources '*.s', and archives '*.a')
- pointed out on the command line into a single .NET assembly.
-* Reference assembly paths `-l` evaluates last-to-first order, same as `ld` looking up.
+* chibild assembles multiple input files (objects '*.o' and CIL sources '*.s')
+  pointed out on the command line into a single .NET assembly.
+* The reference library name `-l` is evaluated from the beginning, including the archive file path ('*.a').
   This feature applies to duplicated symbols (function/global variables).
   Library file names are assumed to be prefixed with `lib` as in the native toolchain,
   and also assumes the filename as specified in fallbacks.

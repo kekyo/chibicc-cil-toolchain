@@ -40,10 +40,8 @@ public sealed class Archiver
         {
             using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
 
-            var tr = new StreamReader(ofs, Encoding.UTF8, true);
-
             var fileName = Path.GetFileNameWithoutExtension(objectFilePath) + ".o";
-            var symbols = ArchiverUtilities.EnumerateSymbols(tr, fileName).
+            var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(ofs, fileName).
                 Distinct(SymbolComparer.Instance).
                 OrderBy(symbol => symbol.Directive.Text).
                 ThenBy(symbol => symbol.Name.Text).

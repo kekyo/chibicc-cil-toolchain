@@ -18,7 +18,7 @@ public static class LinkerExtension
         this Linker linker,
         string outputAssemblyPath,
         string[] referenceAssemblyBasePaths,
-        string[] referenceAssemblyNames,
+        ILibraryReference[] libraryReferences,
         AssemblyTypes assemblyType,
         DebugSymbolTypes debugSymbolType,
         AssembleOptions options,
@@ -30,8 +30,8 @@ public static class LinkerExtension
             outputAssemblyPath,
             new()
             {
-                ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
-                ReferenceAssemblyNames = referenceAssemblyNames,
+                LibraryReferenceBasePaths = referenceAssemblyBasePaths,
+                LibraryReferences = libraryReferences,
                 CreationOptions = new()
                 {
                     Options = options,

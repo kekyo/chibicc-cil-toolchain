@@ -7,13 +7,14 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Logging;
 using chibild.Internal;
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using chibicc.toolchain.Logging;
 
 namespace chibild.cli;
 
@@ -48,8 +49,8 @@ public sealed class CliOptions
     public static CliOptions Parse(string[] args, string defaultTargetFrameworkMoniker)
     {
         var options = new CliOptions();
-        var referenceAssemblyBasePaths = new List<string>();
-        var referenceAssemblyNames = new List<string>();
+        var libraryBasePaths = new List<string>();
+        var libraryReferences = new List<ILibraryReference>();
 
         options.LinkerOptions.CreationOptions!.TargetFramework =
             TargetFramework.TryParse(defaultTargetFrameworkMoniker, out var tf) ?
@@ -85,14 +86,14 @@ public sealed class CliOptions
                             {
                                 var referenceAssemblyBasePath =
                                     Path.GetFullPath(arg.Substring(2));
-                                referenceAssemblyBasePaths.Add(referenceAssemblyBasePath);
+                                libraryBasePaths.Add(referenceAssemblyBasePath);
                                 continue;
                             }
                             else if (args.Length >= index)
                             {
                                 var referenceAssemblyBasePath =
                                     Path.GetFullPath(args[++index]);
-                                referenceAssemblyBasePaths.Add(referenceAssemblyBasePath);
+                                libraryBasePaths.Add(referenceAssemblyBasePath);
                                 continue;
                             }
                             break;
@@ -100,13 +101,13 @@ public sealed class CliOptions
                             if (arg.Length >= 3)
                             {
                                 var referenceAssemblyName = arg.Substring(2);
-                                referenceAssemblyNames.Add(referenceAssemblyName);
+                                libraryReferences.Add(new LibraryNameReference(referenceAssemblyName));
                                 continue;
                             }
                             else if (args.Length >= index)
                             {
                                 var referenceAssemblyName = args[index + 1];
-                                referenceAssemblyNames.Add(referenceAssemblyName);
+                                libraryReferences.Add(new LibraryNameReference(referenceAssemblyName));
                                 index++;
                                 continue;
                             }
@@ -313,9 +314,18 @@ public sealed class CliOptions
                     throw new InvalidOptionException($"Invalid option: {arg}");
                 }
 
-                var inputFilePath =
-                    arg != "-" ? Path.GetFullPath(arg) : arg;
-                options.InputFilePaths.Add(inputFilePath);
+                if (arg == "-")
+                {
+                    options.InputFilePaths.Add("-");
+                }
+                else if (Path.GetExtension(arg) == ".a")
+                {
+                    libraryReferences.Add(new LibraryPathReference(Path.GetFullPath(arg)));
+                }
+                else
+                {
+                    options.InputFilePaths.Add(Path.GetFullPath(arg));
+                }
             }
             catch (InvalidOptionException)
             {
@@ -363,10 +373,10 @@ public sealed class CliOptions
                 break;
         }
 
-        options.LinkerOptions.ReferenceAssemblyBasePaths = referenceAssemblyBasePaths.
+        options.LinkerOptions.LibraryReferenceBasePaths = libraryBasePaths.
             Distinct().
             ToArray();
-        options.LinkerOptions.ReferenceAssemblyNames = referenceAssemblyNames.
+        options.LinkerOptions.LibraryReferences = libraryReferences.
             Distinct().
             ToArray();
 
@@ -382,14 +392,14 @@ public sealed class CliOptions
 
         logger.Information($"OutputAssemblyPath={this.OutputAssemblyPath}");
 
-        foreach (var path in this.LinkerOptions.ReferenceAssemblyBasePaths)
+        foreach (var path in this.LinkerOptions.LibraryReferenceBasePaths)
         {
             logger.Information($"ReferenceAssemblyBasePath={path}");
         }
 
-        foreach (var name in this.LinkerOptions.ReferenceAssemblyNames)
+        foreach (var lr in this.LinkerOptions.LibraryReferences)
         {
-            logger.Information($"ReferenceAssemblyName={name}");
+            logger.Information($"ReferenceAssemblyName={lr}");
         }
 
         logger.Information($"DebugSymbolType={this.LinkerOptions.DebugSymbolType}");

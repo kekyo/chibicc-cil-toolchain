@@ -14,15 +14,15 @@ namespace chibicc.toolchain.Archiving;
 public readonly struct Symbol
 {
     public readonly Token Directive;
-    public readonly Token Scope;
+    public readonly Token? Scope;
     public readonly Token Name;
-    public readonly string FileName;
+    public readonly string ArchiveItemName;
 
-    public Symbol(Token directive, Token scope, Token name, string fileName)
+    public Symbol(Token directive, Token? scope, Token name, string archiveItemName)
     {
         this.Directive = directive;
         this.Scope = scope;
         this.Name = name;
-        this.FileName = fileName;
+        this.ArchiveItemName = archiveItemName;
     }
 }

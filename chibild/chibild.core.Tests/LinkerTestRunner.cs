@@ -63,13 +63,14 @@ internal static class LinkerTestRunner
                     Select(Utilities.GetDirectoryPath).
                     Distinct().
                     ToArray();
-                var referenceAssemblyNames = new[]
+                var libraryReferences = new[]
                     {
                         coreLibPath, tmp2Path,
                     }.
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
                     Select(Path.GetFileNameWithoutExtension).
                     Distinct().
+                    Select(path => (ILibraryReference)new LibraryNameReference(path!)).
                     ToArray();
 
                 var assember = new Linker(logger);
@@ -81,8 +82,8 @@ internal static class LinkerTestRunner
                     outputAssemblyPath,
                     new()
                     {
-                        ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
-                        ReferenceAssemblyNames = referenceAssemblyNames!,
+                        LibraryReferenceBasePaths = referenceAssemblyBasePaths,
+                        LibraryReferences = libraryReferences!,
                         DebugSymbolType = DebugSymbolTypes.Embedded,
                         IsDeterministic = true,
                         ApplyOptimization = false,

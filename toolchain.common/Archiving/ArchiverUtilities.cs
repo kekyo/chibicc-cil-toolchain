@@ -21,19 +21,13 @@ public static class ArchiverUtilities
 {
     public static readonly string SymbolTableFileName = "__symtable$";
     
-    public static IEnumerable<Symbol> EnumerateSymbols(TextReader tr, string fileName)
+    public static IEnumerable<Symbol> EnumerateSymbolsFromObjectFile(
+        Stream objectFileStream, string pairedFileName)
     {
-        var tokenizer = new Tokenizer();
+        var tr = new StreamReader(objectFileStream, Encoding.UTF8, true);
 
-        while (true)
+        foreach (var tokens in Tokenizer.TokenizeAll(tr))
         {
-            var line = tr.ReadLine();
-            if (line == null)
-            {
-                break;
-            }
-
-            var tokens = tokenizer.TokenizeLine(line);
             if (tokens.Length >= 3)
             {
                 var directive = tokens[0];
@@ -49,11 +43,11 @@ public static class ArchiverUtilities
                         case "enumeration":
                             if (tokens.Length >= 4)
                             {
-                                yield return new(directive, scope, tokens[3], fileName);
+                                yield return new(directive, scope, tokens[3], pairedFileName);
                             }
                             break;
                         case "structure":
-                            yield return new(directive, scope, tokens[2], fileName);
+                            yield return new(directive, scope, tokens[2], pairedFileName);
                             break;
                     }
                 }
@@ -61,80 +55,64 @@ public static class ArchiverUtilities
         }
     }
     
-    public static void WriteSymbolTable(Stream stream, Symbol[] symbols)
+    public static void WriteSymbolTable(Stream symbolTableStream, Symbol[] symbols)
     {
-        var tw = new StreamWriter(stream, Encoding.UTF8);
+        var tw = new StreamWriter(symbolTableStream, Encoding.UTF8);
 
         foreach (var symbol in symbols)
         {
-            tw.WriteLine($".{symbol.Directive.Text} {symbol.Name.Text} {symbol.FileName}");
+            tw.WriteLine($".{symbol.Directive.Text} {symbol.Name.Text} {symbol.ArchiveItemName}");
         }
 
         tw.Flush();
     }
-
-    public static string[] EnumerateArchiveItem(string archiveFilePath)
+    
+    public static IEnumerable<Symbol> EnumerateSymbolTable(string archiveFilePath)
     {
         using var archive = ZipFile.Open(
             archiveFilePath,
             ZipArchiveMode.Read,
             Encoding.UTF8);
 
-        return archive.Entries.
-            Where(entry => entry.Name != SymbolTableFileName).
-            Select(entry => entry.Name).
-            ToArray();
+        if (archive.GetEntry(SymbolTableFileName) is { } entry)
+        {
+            using var stream = entry.Open();
+            var tr = new StreamReader(stream, Encoding.UTF8, true);
+        
+            foreach (var tokens in Tokenizer.TokenizeAll(tr).
+                Where(tokens => tokens.Length >= 3))
+            {
+                var directive = tokens[0];
+                var name = tokens[1];
+                var archiveItemName = tokens[2];
+
+                if (directive.Type == TokenTypes.Directive &&
+                    name.Type == TokenTypes.Identity &&
+                    archiveItemName.Type == TokenTypes.Identity)
+                {
+                    yield return new(directive, null, name, archiveItemName.Text);
+                }
+            }
+        }
     }
 
-    private sealed class ArchiveItemStream : Stream
+    public static IEnumerable<string> EnumerateArchiveItemNames(string archiveFilePath)
     {
-        private readonly ZipArchive archive;
-        private readonly Stream parent;
-        
-        public ArchiveItemStream(ZipArchive archive, Stream parent)
+        using var archive = ZipFile.Open(
+            archiveFilePath,
+            ZipArchiveMode.Read,
+            Encoding.UTF8);
+
+        foreach (var entry in archive.Entries.
+            Where(entry => entry.Name != SymbolTableFileName))
         {
-            this.archive = archive;
-            this.parent = parent;
+            yield return entry.Name;
         }
-
-        protected override void Dispose(bool disposing)
-        {
-            base.Dispose(disposing);
-            this.parent.Dispose();
-            this.archive.Dispose();
-        }
-
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => false;
-        public override long Length => throw new NotImplementedException();
-
-        public override long Position
-        {
-            get => throw new NotImplementedException();
-            set => throw new NotImplementedException();
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) =>
-            this.parent.Read(buffer, offset, count);
-
-        public override long Seek(long offset, SeekOrigin origin) =>
-            throw new System.NotImplementedException();
-
-        public override void SetLength(long value) =>
-            throw new System.NotImplementedException();
-
-        public override void Write(byte[] buffer, int offset, int count) =>
-            throw new System.NotImplementedException();
     }
 
     public static Stream OpenArchiveItem(string archiveFilePath, string itemName)
     {
-        using var archive = ZipFile.Open(
+        var archive = ZipFile.Open(
             archiveFilePath,
             ZipArchiveMode.Read,
             Encoding.UTF8);

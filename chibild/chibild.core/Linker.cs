@@ -33,39 +33,66 @@ public sealed class Linker
 
     private TypeDefinitionCache LoadPublicTypesFrom(
         AssemblyDefinition? injectTargetAssembly,
-        string[] referenceAssemblyBasePaths,
-        string[] referenceAssemblyNames,
+        string[] libraryReferenceBasePaths,
+        ILibraryReference[] libraryReferences,
         ReaderParameters readerParameters)
     {
         var assemblies = (injectTargetAssembly != null ?
             new[] { injectTargetAssembly! } : new AssemblyDefinition[0]).
             Concat(
-                referenceAssemblyNames.
+                libraryReferences.
                 Distinct().
-                Collect(name =>
+                Collect(lr =>
                 {
                     try
                     {
-                        if (referenceAssemblyBasePaths.
-                            SelectMany(basePath => new[] { $"{name}.dll", $"lib{name}.dll" }.
-                                Select(n => Path.Combine(basePath, n))).
-                            Where(File.Exists).
-                            FirstOrDefault() is not { } path)
+                        string path;
+                        switch (lr)
                         {
-                            this.logger.Warning(
-                                $"Unable to find reference assembly: {name}");
-                            return null;
+                            case LibraryNameReference(var name):
+                                if (libraryReferenceBasePaths.
+                                    SelectMany(basePath =>
+                                        new[] { $"lib{name}.a", $"lib{name}.dll", $"{name}.a", $"{name}.dll" }.
+                                        Select(n => Path.Combine(basePath, n))).
+                                    Where(File.Exists).
+                                    FirstOrDefault() is not { } p1)
+                                {
+                                    this.logger.Warning(
+                                        $"Unable to find the library: {lr}");
+                                    return null;
+                                }
+                                path = p1;
+                                break;
+                            case LibraryPathReference(var p2):
+                                if (!File.Exists(p2))
+                                {
+                                    this.logger.Warning(
+                                        $"Unable to find the library: {lr}");
+                                    return null;
+                                }
+                                path = p2;
+                                break;
+                            default:
+                                return null;
                         }
 
-                        var assembly = AssemblyDefinition.ReadAssembly(path, readerParameters);
-                        this.logger.Information(
-                            $"Read reference assembly: {path}");
-                        return assembly;
+                        if (Path.GetExtension(path) == ".a")
+                        {
+                            // TODO:
+                            return null;
+                        }
+                        else
+                        {
+                            var assembly = AssemblyDefinition.ReadAssembly(path, readerParameters);
+                            this.logger.Information(
+                                $"Read reference assembly: {path}");
+                            return assembly;
+                        }
                     }
                     catch (Exception ex)
                     {
                         this.logger.Warning(
-                            $"Unable to read reference assembly: {name}, {ex.GetType().FullName}: {ex.Message}");
+                            $"Unable to read the library: {lr}, {ex.GetType().FullName}: {ex.Message}");
                         return null;
                     }
                 }))
@@ -162,8 +189,7 @@ public sealed class Linker
         IInputFileItem[] inputFileItems)
     {
         // Avoid nothing object files.
-        if (inputFileItems.Length == 0 ||
-            inputFileItems.All(inputFileItem => inputFileItem.IsArchive))
+        if (inputFileItems.Length == 0)
         {
             return false;
         }
@@ -171,7 +197,7 @@ public sealed class Linker
         //////////////////////////////////////////////////////////////
 
         using var assemblyResolver = new AssemblyResolver(
-            this.logger, options.ReferenceAssemblyBasePaths);
+            this.logger, options.LibraryReferenceBasePaths);
 
         var readerParameters = new ReaderParameters(ReadingMode.Immediate)
         {
@@ -281,8 +307,8 @@ public sealed class Linker
         // Load all public CABI symbols from reference assemblies.
         var referenceTypes = this.LoadPublicTypesFrom(
             injectTargetAssembly,
-            options.ReferenceAssemblyBasePaths,
-            options.ReferenceAssemblyNames,
+            options.LibraryReferenceBasePaths,
+            options.LibraryReferences,
             readerParameters);
 
         // Aggregates CABI symbols.
@@ -304,16 +330,13 @@ public sealed class Linker
         // Process input files except archives.
         foreach (var inputFileItem in inputFileItems)
         {
-            if (!inputFileItem.IsArchive)
-            {
-                this.logger.Information(
-                    $"Linking: {inputFileItem.ObjectFilePathDebuggerHint}");
-                    
-                this.ParseFromInputFile(
-                    parser,
-                    baseSourcePath,
-                    inputFileItem);
-            }
+            this.logger.Information(
+                $"Linking: {inputFileItem.ObjectFilePathDebuggerHint}");
+                
+            this.ParseFromInputFile(
+                parser,
+                baseSourcePath,
+                inputFileItem);
         }
 
         //////////////////////////////////////////////////////////////
@@ -486,44 +509,35 @@ public sealed class Linker
 
         //////////////////////////////////////////////////////////////
 
-        var inputFileItems = inputFileFullPaths.SelectMany(inputFileFullPath =>
-        {
-            if (inputFileFullPath == "-")
+        var inputFileItems = inputFileFullPaths.
+            Select(inputFileFullPath =>
             {
-                return new IInputFileItem?[] { new InputStdInItem() };
-            }
-            
-            if (!File.Exists(inputFileFullPath))
-            {
-                this.logger.Error(
-                    $"Unable to find input file: {inputFileFullPath}");
-                return new IInputFileItem?[] { null };
-            }
-
-            try
-            {
-                // All archive items.
-                if (Path.GetExtension(inputFileFullPath) == ".a")
+                if (inputFileFullPath == "-")
                 {
-                    return ArchiverUtilities.EnumerateArchiveItem(inputFileFullPath).
-                        Select(itemName => (IInputFileItem?)new InputArchiveFileItem(inputFileFullPath, itemName));
+                    return (IInputFileItem)new InputStdInItem();
                 }
-                // This input file (maybe object file)
-                else
+                
+                if (!File.Exists(inputFileFullPath))
+                {
+                    this.logger.Error(
+                        $"Unable to find input file: {inputFileFullPath}");
+                    return null;
+                }
+
+                if (File.Exists(inputFileFullPath))
                 {
                     var hint = inputFileFullPath.
                         Substring(baseInputFilePath.Length + 1);
-                    return new IInputFileItem?[] { new InputObjectFileItem(inputFileFullPath, hint) };
+                    return new InputObjectFileItem(inputFileFullPath, hint);
                 }
-            }
-            catch (Exception ex)
-            {
-                this.logger.Error(ex,
-                    $"Unable to open object file: {inputFileFullPath}");
-                return new IInputFileItem?[] { null };
-            }
-        }).
-        ToArray();
+                else
+                {
+                    this.logger.Error(
+                        $"Unable to open object file: {inputFileFullPath}");
+                    return null;
+                }
+            }).
+            ToArray();
 
         if (inputFileItems.Any(inputFileItem => inputFileItem == null))
         {

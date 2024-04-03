@@ -7,7 +7,6 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using chibicc.toolchain.Archiving;
 using chibicc.toolchain.IO;
 using System;
 using System.IO;
@@ -17,7 +16,6 @@ namespace chibild;
 
 public interface IInputFileItem
 {
-    bool IsArchive { get; }
     string ObjectFilePathDebuggerHint { get; }
     TextReader Open();
 }
@@ -33,7 +31,6 @@ public class InputTextReaderItem : IInputFileItem
         this.ObjectFilePathDebuggerHint = objectFilePathDebuggerHint;
     }
 
-    public virtual bool IsArchive => false;
     public string ObjectFilePathDebuggerHint { get; }
 
     public TextReader Open() =>
@@ -59,19 +56,4 @@ public sealed class InputStdInItem : InputTextReaderItem
         base(() => Console.In, "<stdin>")
     {
     }
-}
-
-public sealed class InputArchiveFileItem : InputTextReaderItem
-{
-    public InputArchiveFileItem(
-        string archiveFilePath, string itemName) :
-        base(() =>
-        {
-            var stream = ArchiverUtilities.OpenArchiveItem(archiveFilePath, itemName);
-            return new StreamReader(stream, Encoding.UTF8, true, 65536, false);
-        }, itemName)
-    {
-    }
-
-    public override bool IsArchive => true;
 }
