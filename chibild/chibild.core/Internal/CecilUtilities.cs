@@ -16,14 +16,6 @@ using System.Text;
 
 namespace chibild.Internal;
 
-internal enum ScopeDescriptors
-{
-    Public,
-    Internal,
-    File,
-    _Module_,   // For internal use only.
-}
-
 internal static class CecilUtilities
 {
     private static readonly Dictionary<string, OpCode> opCodes =
@@ -33,49 +25,6 @@ internal static class CecilUtilities
             field.FieldType.FullName == "Mono.Cecil.Cil.OpCode").
         Select(field => (OpCode)field.GetValue(null)!).
         ToDictionary(opCode => opCode.Name.Replace('_', '.').ToLowerInvariant());
-
-    private static readonly Dictionary<string, string> aliasTypeNames =
-        new Dictionary<string, string>()
-    {
-        { "void", "System.Void" },
-        { "uint8", "System.Byte" },
-        { "int8", "System.SByte" },
-        { "int16", "System.Int16" },
-        { "uint16", "System.UInt16" },
-        { "int32", "System.Int32" },
-        { "uint32", "System.UInt32" },
-        { "int64", "System.Int64" },
-        { "uint64", "System.UInt64" },
-        { "float32", "System.Single" },
-        { "float64", "System.Double" },
-        { "nint", "System.IntPtr" },
-        { "nuint", "System.UIntPtr" },
-        { "bool", "System.Boolean" },
-        { "char", "System.Char" },
-        { "object", "System.Object" },
-        { "string", "System.String" },
-        { "typedref", "System.TypedReference" },
-        { "byte", "System.Byte" },
-        { "sbyte", "System.SByte" },
-        { "short", "System.Int16" },
-        { "ushort", "System.UInt16" },
-        { "int", "System.Int32" },
-        { "uint", "System.UInt32" },
-        { "long", "System.Int64" },
-        { "ulong", "System.UInt64" },
-        { "single", "System.Single" },
-        { "float", "System.Single" },
-        { "double", "System.Double" },
-        { "char16", "System.Char" },
-        { "intptr", "System.IntPtr" },
-        { "uintptr", "System.UIntPtr" },
-    };
-
-    private static readonly HashSet<string> enumerationUnderlyingTypes = new HashSet<string>()
-    {
-        "System.Byte", "System.SByte", "System.Int16", "System.UInt16",
-        "System.Int32", "System.UInt32", "System.Int64", "System.UInt64",
-    };
 
     private static readonly HashSet<char> invalidMemberNameChars = new()
     {
@@ -148,26 +97,6 @@ internal static class CecilUtilities
             sb.Remove(sb.Length - 2, 2);
         }
         return sb.ToString();
-    }
-
-    public static bool TryLookupScopeDescriptorName(
-        string scopeDescriptorName,
-        out ScopeDescriptors scopeDescriptor) =>
-        Enum.TryParse(scopeDescriptorName, true, out scopeDescriptor);
-
-    public static bool TryLookupOriginTypeName(
-        string typeName,
-        out string originTypeName) =>
-        aliasTypeNames.TryGetValue(typeName, out originTypeName!);
-
-    public static bool IsEnumerationUnderlyingType(
-        string typeName)
-    {
-        if (TryLookupOriginTypeName(typeName, out var originName))
-        {
-            typeName = originName;
-        }
-        return enumerationUnderlyingTypes.Contains(typeName);
     }
 
     public static bool TryParseOpCode(

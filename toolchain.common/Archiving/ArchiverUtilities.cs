@@ -26,7 +26,7 @@ public static class ArchiverUtilities
     {
         var tr = new StreamReader(objectFileStream, Encoding.UTF8, true);
 
-        foreach (var tokens in Tokenizer.TokenizeAll(tr))
+        foreach (var tokens in CilTokenizer.TokenizeAll("", SymbolTableFileName, tr))
         {
             if (tokens.Length >= 3)
             {
@@ -79,7 +79,7 @@ public static class ArchiverUtilities
             using var stream = entry.Open();
             var tr = new StreamReader(stream, Encoding.UTF8, true);
         
-            foreach (var tokens in Tokenizer.TokenizeAll(tr).
+            foreach (var tokens in CilTokenizer.TokenizeAll("", SymbolTableFileName, tr).
                 Where(tokens => tokens.Length >= 3))
             {
                 var directive = tokens[0];

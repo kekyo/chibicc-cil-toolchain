@@ -9,9 +9,9 @@
 
 using chibicc.toolchain.Archiving;
 using chibicc.toolchain.Logging;
+using chibicc.toolchain.Parsing;
 using chibicc.toolchain.Tokenizing;
 using chibild.Internal;
-using chibild.Parsing;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Mdb;
@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace chibild;
 
@@ -163,24 +164,6 @@ public sealed class Linker
             Distinct(MemberReferenceComparer.Instance));
     }
 
-    private void ParseFromInputFile(
-        Parser parser,
-        string? baseObjectFilePath,
-        IInputFileItem inputFileItem)
-    {
-        parser.BeginNewCilSourceCode(
-            baseObjectFilePath,
-            inputFileItem.ObjectFilePathDebuggerHint,
-            true);
-
-        using var objectFileReader = inputFileItem.Open();
-        
-        foreach (var tokens in Tokenizer.TokenizeAll(objectFileReader))
-        {
-             parser.Parse(tokens);
-        }
-    }
-
     private bool InternalLink(
         string outputAssemblyPath,
         LinkerOptions options,
@@ -318,26 +301,23 @@ public sealed class Linker
         //////////////////////////////////////////////////////////////
 
         // Parse CIL object files.
-        var parser = new Parser(
-            this.logger,
-            module,
-            cabiSpecificSymbols,
-            referenceTypes,
-            produceExecutable,
-            options.DebugSymbolType != DebugSymbolTypes.None,
-            injectTargetModule);
-
-        // Process input files except archives.
-        foreach (var inputFileItem in inputFileItems)
+        var parsedResults = new DeclarationNode[inputFileItems.Length][];
+        Parallel.ForEach(inputFileItems, (inputFileItem, _, index) =>
         {
             this.logger.Information(
-                $"Linking: {inputFileItem.ObjectFilePathDebuggerHint}");
+                $"Parsing: {inputFileItem.ObjectFilePathDebuggerHint}");
                 
-            this.ParseFromInputFile(
-                parser,
-                baseSourcePath,
-                inputFileItem);
-        }
+            using var inputFileReader = inputFileItem.Open();
+
+            var parser = new CilParser(this.logger);
+            
+            parsedResults[index] = parser.Parse(
+                CilTokenizer.TokenizeAll(
+                    baseSourcePath,
+                    inputFileItem.ObjectFilePathDebuggerHint,
+                    inputFileReader)).
+                ToArray();
+        });
 
         //////////////////////////////////////////////////////////////
 

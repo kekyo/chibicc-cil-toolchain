@@ -15,7 +15,7 @@ using System.Text;
 
 namespace chibicc.toolchain.Tokenizing;
 
-public sealed class Tokenizer
+public sealed class CilTokenizer
 {
     private enum EscapeStates
     {
@@ -27,7 +27,16 @@ public sealed class Tokenizer
         Byte0,
     }
 
+    private readonly string? basePath;
+    private readonly string relativePath;
+    
     private uint lineIndex;
+
+    public CilTokenizer(string? basePath, string relativePath)
+    {
+        this.basePath = basePath;
+        this.relativePath = relativePath;
+    }
 
     public Token[] TokenizeLine(string line)
     {
@@ -60,6 +69,8 @@ public sealed class Tokenizer
                     tokens.Add(new(
                         TokenTypes.Directive,
                         line.Substring(start, index - start),
+                        this.basePath,
+                        this.relativePath,
                         this.lineIndex,
                         (uint)start,
                         (uint)index));
@@ -169,6 +180,8 @@ public sealed class Tokenizer
                     tokens.Add(new(
                         TokenTypes.String,
                         sb.ToString(),
+                        this.basePath,
+                        this.relativePath,
                         this.lineIndex,
                         (uint)start,
                         (uint)index));
@@ -194,6 +207,8 @@ public sealed class Tokenizer
                         tokens.Add(new(
                             TokenTypes.Label,
                             line.Substring(start, index - start - 1),
+                            this.basePath,
+                            this.relativePath,
                             this.lineIndex,
                             (uint)start,
                             (uint)index - 1));
@@ -203,6 +218,8 @@ public sealed class Tokenizer
                         tokens.Add(new(
                             TokenTypes.Identity,
                             line.Substring(start, index - start),
+                            this.basePath,
+                            this.relativePath,
                             this.lineIndex,
                             (uint)start,
                             (uint)index));
@@ -216,9 +233,12 @@ public sealed class Tokenizer
         return tokens.ToArray();
     }
 
-    public static IEnumerable<Token[]> TokenizeAll(TextReader tr)
+    public static IEnumerable<Token[]> TokenizeAll(
+        string? basePath,
+        string relativePath,
+        TextReader tr)
     {
-        var tokenizer = new Tokenizer();
+        var tokenizer = new CilTokenizer(basePath, relativePath);
 
         while (true)
         {

@@ -7,21 +7,36 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using Mono.Cecil.Cil;
+namespace chibicc.toolchain.Parsing;
 
-namespace chibild.Internal;
+public enum Language
+{
+    Other,
+    C,
+    Cpp,
+    CSharp,
+    Basic,
+    Java,
+    Cobol,
+    Pascal,
+    Cil,
+    JScript,
+    Smc,
+    MCpp,
+    FSharp,
+}
 
-internal sealed class FileDescriptor
+public sealed class FileDescriptor
 {
     public readonly string? BasePath;
     public readonly string RelativePath;
-    public readonly DocumentLanguage? Language;
+    public readonly Language? Language;
     public readonly bool IsVisible;
 
     public FileDescriptor(
         string? basePath,
         string relativePath,
-        DocumentLanguage? language,
+        Language? language,
         bool isVisible)
     {
         this.BasePath = basePath;
@@ -31,7 +46,7 @@ internal sealed class FileDescriptor
     }
 }
 
-internal sealed class Location
+public sealed class Location
 {
     public readonly FileDescriptor File;
     public readonly uint StartLine;
