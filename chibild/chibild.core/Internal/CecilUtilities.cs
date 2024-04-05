@@ -24,7 +24,7 @@ internal static class CecilUtilities
             field.IsPublic && field.IsStatic && field.IsInitOnly &&
             field.FieldType.FullName == "Mono.Cecil.Cil.OpCode").
         Select(field => (OpCode)field.GetValue(null)!).
-        ToDictionary(opCode => opCode.Name.Replace('_', '.').ToLowerInvariant());
+        ToDictionary(opCode => opCode.Name.Replace('_', '.'), StringComparer.OrdinalIgnoreCase);
 
     private static readonly HashSet<char> invalidMemberNameChars = new()
     {

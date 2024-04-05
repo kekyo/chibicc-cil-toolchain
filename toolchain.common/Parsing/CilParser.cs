@@ -15,6 +15,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+
+// System.Reflection.Emit declarations are used only referring OpCode metadata.
 using System.Reflection.Emit;
 
 namespace chibicc.toolchain.Parsing;
@@ -53,22 +55,15 @@ public sealed class CilParser
         this.logger = logger;
     }
 
+    /////////////////////////////////////////////////////////////////////
+
     public bool CaughtError =>
         this.caughtError;
-
-    /////////////////////////////////////////////////////////////////////
 
     private void OutputError(Token token, string message)
     {
         this.caughtError = true;
         this.logger.Error(
-            $"{token.RelativePath}:{token.Line + 1}:{token.StartColumn + 1}: {message}");
-    }
-
-    private void OutputWarning(Token token, string message)
-    {
-        this.caughtError = true;
-        this.logger.Warning(
             $"{token.RelativePath}:{token.Line + 1}:{token.StartColumn + 1}: {message}");
     }
 
@@ -179,15 +174,9 @@ public sealed class CilParser
 
         var localTypeNameToken = tokens[1];
 
-        if (localTypeNameToken.Type != TokenTypes.Identity)
-        {
-            this.OutputError(
-                localTypeNameToken,
-                $"Invalid local variable type name: {localTypeNameToken}");
-            return null;
-        }
-        
-        if (!TypeParser.TryParse(localTypeNameToken, out var localType))
+        if (localTypeNameToken.Type != TokenTypes.Identity ||
+            !TypeParser.TryParse(localTypeNameToken, out var localType) ||
+            localType is FunctionSignatureNode)
         {
             this.OutputError(
                 localTypeNameToken,
@@ -239,6 +228,474 @@ public sealed class CilParser
         }
     }
 
+    private Label? ParseLabel(
+        Token[] tokens)
+    {
+        if (tokens.Length > 1)
+        {
+            this.OutputError(
+                tokens[1],
+                $"Too many operands: {tokens[1]}");
+            return null;
+        }
+
+        var labelToken = tokens[0];
+        
+        return new(
+            new(labelToken),
+            this.currentLocation);
+    }
+
+    private Instruction? ParseIdentityInstruction(
+        Token[] tokens,
+        string displayName,
+        Func<IdentityNode, IdentityNode, Location?, Instruction?> generator)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 3)
+        {
+            this.OutputError(
+                tokens[3],
+                $"Too many operand: {tokens[3]}");
+            return null;
+        }
+                
+        var identityToken = tokens[1];
+        if (identityToken.Type != TokenTypes.Identity)
+        {
+            this.OutputError(
+                identityToken,
+                $"Invalid {displayName}: {identityToken}");
+        }
+
+        return generator(
+            new(tokens[0]),
+            new(identityToken),
+            this.currentLocation);
+    }
+
+    private TypeInstruction? ParseTypeInstruction(
+        Token[] tokens)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 3)
+        {
+            this.OutputError(
+                tokens[3],
+                $"Too many operand: {tokens[3]}");
+            return null;
+        }
+                
+        var typeNameToken = tokens[1];
+        if (typeNameToken.Type != TokenTypes.Identity)
+        {
+            this.OutputError(
+                typeNameToken,
+                $"Invalid type name: {typeNameToken}");
+        }
+        if (!TypeParser.TryParse(typeNameToken, out var type) ||
+            type is FunctionSignatureNode)
+        {
+            this.OutputError(
+                typeNameToken,
+                $"Invalid type name: {typeNameToken}");
+        }
+
+        return new(
+            new(tokens[0]),
+            type,
+            this.currentLocation);
+    }
+
+    private NumericValueInstruction? ParseNumericValueInstruction(
+        Token[] tokens,
+        Func<string, object?> numericParser)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 2)
+        {
+            this.OutputError(
+                tokens[2],
+                $"Too many operand: {tokens[2]}");
+            return null;
+        }
+                
+        var valueToken = tokens[1];
+        if (valueToken.Type != TokenTypes.Identity ||
+            numericParser(valueToken.Text) is not { } value)
+        {
+            this.OutputError(
+                valueToken,
+                $"Invalid numeric value: {valueToken}");
+            return null;
+        }
+
+        return new(
+            new(tokens[0]),
+            new(value, valueToken),
+            this.currentLocation);
+    }
+
+    private StringValueInstruction? ParseStringValueInstruction(
+        Token[] tokens)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 2)
+        {
+            this.OutputError(
+                tokens[2],
+                $"Too many operand: {tokens[2]}");
+            return null;
+        }
+                
+        var valueToken = tokens[1];
+        if (valueToken.Type != TokenTypes.String)
+        {
+            this.OutputError(
+                valueToken,
+                $"Invalid string value: {valueToken}");
+            return null;
+        }
+
+        return new(
+            new(tokens[0]),
+            new(valueToken),
+            this.currentLocation);
+    }
+
+    private VariableInstruction? ParseVariableInstruction(
+        Token[] tokens, bool isShort)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 2)
+        {
+            this.OutputError(
+                tokens[2],
+                $"Too many operand: {tokens[2]}");
+            return null;
+        }
+                
+        var variableIdentityToken = tokens[1];
+        if (variableIdentityToken.Type != TokenTypes.Identity)
+        {
+            this.OutputError(
+                variableIdentityToken,
+                $"Invalid variable identity: {variableIdentityToken}");
+            return null;
+        }
+
+        if (isShort && byte.TryParse(
+            variableIdentityToken.Text,
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var u8))
+        {
+            return new VariableIndexInstruction(
+                new(tokens[0]),
+                new(u8, variableIdentityToken),
+                this.currentLocation);
+        }
+        
+        if (!isShort && uint.TryParse(
+            variableIdentityToken.Text,
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var u32))
+        {
+            return new VariableIndexInstruction(
+                new(tokens[0]),
+                new(u32, variableIdentityToken),
+                this.currentLocation);
+        }
+        
+        return new VariableNameInstruction(
+            new(tokens[0]),
+            new(variableIdentityToken),
+            this.currentLocation);
+    }
+
+    private CallInstruction? ParseCallInstruction(
+        Token[] tokens)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 3)
+        {
+            this.OutputError(
+                tokens[3],
+                $"Too many operand: {tokens[3]}");
+            return null;
+        }
+
+        if (tokens.Length == 3)
+        {
+            var signatureToken = tokens[1];
+            if (signatureToken.Type != TokenTypes.Identity)
+            {
+                this.OutputError(
+                    signatureToken,
+                    $"Invalid function signature: {signatureToken}");
+            }
+            if (!TypeParser.TryParse(signatureToken, out var signature) ||
+                signature is not FunctionSignatureNode fsn)
+            {
+                this.OutputError(
+                    signatureToken,
+                    $"Invalid function signature: {signatureToken}");
+                return null;
+            }
+
+            var functionToken = tokens[2];
+            if (functionToken.Type != TokenTypes.Identity)
+            {
+                this.OutputError(
+                    functionToken,
+                    $"Invalid operand: {functionToken}");
+            }
+
+            return new(
+                new(tokens[0]),
+                new(functionToken),
+                fsn,
+                this.currentLocation);
+        }
+        else
+        {
+            var functionToken = tokens[1];
+            if (functionToken.Type != TokenTypes.Identity)
+            {
+                this.OutputError(
+                    functionToken,
+                    $"Invalid operand: {functionToken}");
+            }
+
+            return new(
+                new(tokens[0]),
+                new(functionToken),
+                null,
+                this.currentLocation);
+        }
+    }
+
+    private SignatureInstruction? ParseSignatureInstruction(
+        Token[] tokens)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 2)
+        {
+            this.OutputError(
+                tokens[2],
+                $"Too many operand: {tokens[2]}");
+            return null;
+        }
+
+        var signatureToken = tokens[1];
+        if (signatureToken.Type != TokenTypes.Identity)
+        {
+            this.OutputError(
+                signatureToken,
+                $"Invalid function signature: {signatureToken}");
+        }
+        if (!TypeParser.TryParse(signatureToken, out var signature) ||
+            signature is not FunctionSignatureNode fsn)
+        {
+            this.OutputError(
+                signatureToken,
+                $"Invalid function signature: {signatureToken}");
+            return null;
+        }
+
+        return new(
+            new(tokens[0]),
+            fsn,
+            this.currentLocation);
+    }
+
+    private Instruction? ParseInstruction(
+        Token[] tokens)
+    {
+        if (tokens.Length > 2)
+        {
+            this.OutputError(
+                tokens[2],
+                $"Too many operands: {tokens[2]}");
+            return null;
+        }
+
+        var opCodeToken = tokens[0];
+        if (!opCodes.TryGetValue(opCodeToken.Text, out var opCode))
+        {
+            this.OutputError(
+                opCodeToken,
+                $"Invalid opcode: {opCodeToken}");
+            return null;
+        }
+
+        switch (opCode.OperandType)
+        {
+            case OperandType.InlineBrTarget:
+            case OperandType.ShortInlineBrTarget:
+                return this.ParseIdentityInstruction(
+                    tokens,
+                    "function name",
+                    (ot, it, loc) => new BranchInstruction(ot, it, loc));
+ 
+            case OperandType.InlineField:
+                return this.ParseIdentityInstruction(
+                    tokens,
+                    "field name",
+                    (ot, it, loc) => new FieldInstruction(ot, it, loc));
+   
+            case OperandType.InlineTok:
+                return this.ParseIdentityInstruction(
+                    tokens,
+                    "metadata token",
+                    (ot, it, loc) => new MetadataTokenInstruction(ot, it, loc));
+   
+            case OperandType.InlineType:
+                return this.ParseTypeInstruction(
+                    tokens);
+
+            case OperandType.InlineI:
+                return this.ParseNumericValueInstruction(
+                    tokens,
+                    str => int.TryParse(
+                        str,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out var v) ? v : null);
+
+            case OperandType.ShortInlineI:
+                return opCode == OpCodes.Ldc_I4_S ?
+                    this.ParseNumericValueInstruction(
+                        tokens,
+                        str => sbyte.TryParse(
+                            str,
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out var v) ? v : null) :
+                    this.ParseNumericValueInstruction(
+                        tokens,
+                        str => byte.TryParse(
+                            str,
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out var v) ? v : null);
+  
+            case OperandType.InlineI8:
+                return this.ParseNumericValueInstruction(
+                    tokens,
+                    str => long.TryParse(
+                        str,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out var v) ? v : null);
+  
+            case OperandType.InlineR:
+                return this.ParseNumericValueInstruction(
+                    tokens,
+                    str => double.TryParse(
+                        str,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var v) ? v : null);
+
+            case OperandType.ShortInlineR:
+                return this.ParseNumericValueInstruction(
+                    tokens,
+                    str => float.TryParse(
+                        str,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var v) ? v : null);
+
+            case OperandType.InlineString:
+                return this.ParseStringValueInstruction(
+                    tokens);
+   
+            case OperandType.InlineVar:
+                return this.ParseVariableInstruction(
+                    tokens,
+                    false);
+            
+            case OperandType.ShortInlineVar:
+                return this.ParseVariableInstruction(
+                    tokens,
+                    true);
+
+            case OperandType.InlineMethod:
+                return this.ParseCallInstruction(
+                    tokens);
+            
+            case OperandType.InlineSig:
+                return this.ParseSignatureInstruction(
+                    tokens);
+ 
+            case OperandType.InlineNone:
+                if (tokens.Length > 1)
+                {
+                    this.OutputError(
+                        tokens[1],
+                        $"Invalid operand: {tokens[1]}");
+                    return null;
+                }
+                
+                return new SingleInstruction(
+                    new(opCodeToken),
+                    this.currentLocation);
+            
+            //case OperandType.InlineSwitch:
+            //  break;
+            
+            default:
+                this.OutputError(
+                    opCodeToken,
+                    $"Unsupported opcode: {opCodeToken}");
+                return null;
+        }
+    }
+
     private FunctionBodyResults ParseFunctionBody(
         TokensIterator tokensIterator)
     {
@@ -252,54 +709,18 @@ public sealed class CilParser
             {
                 // Label:
                 case (TokenTypes.Label, _):
-                    if (tokens.Length > 1)
+                    if (this.ParseLabel(tokens) is { } label)
                     {
-                        this.OutputError(
-                            tokens[1],
-                            $"Too many operands: {tokens[1]}");
-                        continue;
+                        instructions.Add(label);
                     }
-                    instructions.Add(new Label(
-                        new(token0),
-                        this.currentLocation));
                     continue;
 
-                // Opcodes:
+                // Instruction:
                 case (TokenTypes.Identity, _):
-                    if (tokens.Length > 2)
+                    if (this.ParseInstruction(tokens) is { } instruction)
                     {
-                        this.OutputError(
-                            tokens[2],
-                            $"Too many operands: {tokens[2]}");
-                        continue;
+                        instructions.Add(instruction);
                     }
-                    if (!opCodes.TryGetValue(token0.Text, out var opCode))
-                    {
-                        this.OutputError(
-                            token0,
-                            $"Invalid opcode: {token0}");
-                        continue;
-                    }
-                    if (opCode.OperandType == OperandType.InlineNone &&
-                        tokens.Length == 2)
-                    {
-                        this.OutputError(
-                            tokens[1],
-                            $"Invalid operand: {tokens[1]}");
-                        continue;
-                    }
-                    if (opCode.OperandType != OperandType.InlineNone &&
-                        tokens.Length == 1)
-                    {
-                        this.OutputError(
-                            token0,
-                            $"Missing operand: {token0}");
-                        continue;
-                    }
-                    instructions.Add(new Instruction(
-                        new(token0),
-                        tokens.Length == 2 ? new IdentityNode(tokens[1]) : null,
-                        this.currentLocation));
                     continue;
 
                 // Local variable directive:
@@ -370,7 +791,6 @@ public sealed class CilParser
         }
 
         var scopeToken = tokens[1];
-        
         if (!TryLookupScopeDescriptorName(
             scopeToken,
             out var scope))
@@ -382,16 +802,8 @@ public sealed class CilParser
         }
 
         var functionSignatureToken = tokens[2];
-
-        if (!TypeParser.TryParse(functionSignatureToken, out var rootTypeNode))
-        {
-            this.OutputError(
-                functionSignatureToken,
-                $"Invalid function signature: {functionSignatureToken}");
-            return null;
-        }
-
-        if (!(rootTypeNode is FunctionSignatureNode fsn))
+        if (!TypeParser.TryParse(functionSignatureToken, out var type) ||
+            type is not FunctionSignatureNode fsn)
         {
             this.OutputError(
                 functionSignatureToken,
@@ -400,7 +812,6 @@ public sealed class CilParser
         }
         
         var functionNameToken = tokens[3];
-
         if (functionNameToken.Type != TokenTypes.Identity)
         {
             this.OutputError(
@@ -412,7 +823,7 @@ public sealed class CilParser
         var (localVariables, instructions) = this.ParseFunctionBody(
             tokensIterator);
         
-        return new FunctionNode(
+        return new(
             new(functionNameToken),
             scope,
             fsn,
@@ -424,7 +835,8 @@ public sealed class CilParser
     /////////////////////////////////////////////////////////////////////
 
     private InitializerNode? ParseInitializerDirective(
-        TokensIterator tokensIterator, Token[] tokens)
+        TokensIterator tokensIterator,
+        Token[] tokens)
     {
         if (tokens.Length < 2)
         {
@@ -443,7 +855,6 @@ public sealed class CilParser
         }
 
         var scopeToken = tokens[1];
-        
         if (!TryLookupScopeDescriptorName(
             scopeToken,
             out var scope) ||
@@ -468,7 +879,8 @@ public sealed class CilParser
     /////////////////////////////////////////////////////////////////////
 
     private VariableNode? ParseVariableDirective(
-        Token[] tokens, bool isConstant)
+        Token[] tokens,
+        bool isConstant)
     {
         var valueTypeDisplayName = isConstant ? "constant" : "global variable";
         
@@ -482,7 +894,6 @@ public sealed class CilParser
         }
 
         var scopeToken = tokens[1];
-        
         if (!TryLookupScopeDescriptorName(
             scopeToken,
             out var scope))
@@ -494,10 +905,8 @@ public sealed class CilParser
         }
 
         var globalTypeNameToken = tokens[2];
-
-        if (!TypeParser.TryParse(
-            globalTypeNameToken,
-            out var globalType))
+        if (!TypeParser.TryParse(globalTypeNameToken, out var globalType) ||
+            globalType is FunctionSignatureNode)
         {
             this.OutputError(
                 globalTypeNameToken,
@@ -506,7 +915,6 @@ public sealed class CilParser
         }
 
         var valueNameToken = tokens[3];
-
         if (valueNameToken.Type != TokenTypes.Identity)
         {
             this.OutputError(
@@ -567,7 +975,8 @@ public sealed class CilParser
     /////////////////////////////////////////////////////////////////////
 
     private EnumerationValue[] ParseEnumerationValues(
-        TokensIterator tokensIterator, string underlyingTypeName)
+        TokensIterator tokensIterator,
+        Func<string, object?> converter)
     {
         var enumerationValues = new List<EnumerationValue>();
 
@@ -588,15 +997,8 @@ public sealed class CilParser
                     if (tokens.Length == 2)
                     {
                         var valueToken = tokens[1];
-                        if (valueToken.Type != TokenTypes.Identity)
-                        {
-                            this.OutputError(
-                                tokens[2],
-                                $"Invalid value: {valueToken}");
-                            continue;
-                        }
-                        if (!toUnderlyingTypedValues.TryGetValue(underlyingTypeName, out var f) ||
-                            f(valueToken.Text) is not { } v)
+                        if (valueToken.Type != TokenTypes.Identity ||
+                            converter(valueToken.Text) is not { } v)
                         {
                             this.OutputError(
                                 tokens[2],
@@ -655,7 +1057,6 @@ public sealed class CilParser
         }
 
         var scopeToken = tokens[1];
-        
         if (!TryLookupScopeDescriptorName(
             scopeToken,
             out var scope))
@@ -667,10 +1068,9 @@ public sealed class CilParser
         }
 
         var underlyingTypeNameToken = tokens[2];
-
         if (!TypeParser.TryParse(underlyingTypeNameToken, out var underlyingType) ||
             underlyingType is not TypeIdentityNode(var underlyingTypeName) ||
-            TypeParser.IsEnumerationUnderlyingType(underlyingTypeName))
+            !toUnderlyingTypedValues.TryGetValue(underlyingTypeName, out var converter))
         {
             this.OutputError(
                 underlyingTypeNameToken,
@@ -679,7 +1079,6 @@ public sealed class CilParser
         }
         
         var enumerationNameToken = tokens[3];
-
         if (enumerationNameToken.Type != TokenTypes.Identity)
         {
             this.OutputError(
@@ -689,7 +1088,8 @@ public sealed class CilParser
         }
 
         var enumerationValues = this.ParseEnumerationValues(
-            tokensIterator, underlyingTypeName);
+            tokensIterator,
+            converter);
 
         return new(
             new(enumerationNameToken),
@@ -739,9 +1139,8 @@ public sealed class CilParser
                         continue;
                     }
                     var memberTypeNameToken = tokens[1];
-                    if (!TypeParser.TryParse(
-                        memberTypeNameToken,
-                        out var memberType))
+                    if (!TypeParser.TryParse(memberTypeNameToken, out var memberType) ||
+                        memberType is FunctionSignatureNode)
                     {
                         this.OutputError(
                             memberTypeNameToken,
@@ -836,7 +1235,6 @@ public sealed class CilParser
         }
 
         var scopeToken = tokens[1];
-        
         if (!TryLookupScopeDescriptorName(
             scopeToken,
             out var scope))
@@ -891,7 +1289,6 @@ public sealed class CilParser
         }
 
         var structureNameToken = tokens[2];
-
         if (structureNameToken.Type != TokenTypes.Identity)
         {
             this.OutputError(
@@ -956,7 +1353,6 @@ public sealed class CilParser
         }
 
         var languageToken = tokens[3];
-        
         if (!Enum.TryParse<Language>(languageToken.Text, true, out var language))
         {
             this.OutputError(
@@ -983,6 +1379,7 @@ public sealed class CilParser
     {
         this.files.Clear();
         this.currentLocation = null;
+        this.caughtError = false;
         
         using var tokenIterator = new TokensIterator(tokenLists);
         

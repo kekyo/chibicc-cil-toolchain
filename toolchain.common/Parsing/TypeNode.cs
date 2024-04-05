@@ -133,6 +133,7 @@ public enum MethodCallingConvention
     VarArg,
 }
 
+// Be careful, `FunctionSignatureNode` is not a type.
 public sealed class FunctionSignatureNode : TypeNode
 {
     public readonly TypeNode ReturnType;

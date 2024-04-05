@@ -7,7 +7,6 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using System.Reflection.Emit;
 using chibicc.toolchain.Tokenizing;
 
 namespace chibicc.toolchain.Parsing;
@@ -22,16 +21,9 @@ public abstract class Node
         this.Token = token;
 }
 
-public abstract class ValueNode : Node
-{
-    protected ValueNode(
-        Token token) :
-        base(token)
-    {
-    }
-}
+/////////////////////////////////////////////////////////////////////
 
-public sealed class IdentityNode : ValueNode
+public sealed class IdentityNode : Node
 {
     public string Identity =>
         this.Token.Text;
@@ -43,7 +35,7 @@ public sealed class IdentityNode : ValueNode
     }
 }
 
-public sealed class BooleanNode : ValueNode
+public sealed class BooleanNode : Node
 {
     public readonly bool Value;
 
@@ -54,7 +46,7 @@ public sealed class BooleanNode : ValueNode
         this.Value = value;
 }
 
-public sealed class NumericNode : ValueNode
+public sealed class NumericNode : Node
 {
     public readonly object Value;
 
@@ -63,6 +55,18 @@ public sealed class NumericNode : ValueNode
         Token token) :
         base(token) =>
         this.Value = value;
+}
+
+public sealed class StringNode : Node
+{
+    public string Text =>
+        this.Token.Text;
+
+    public StringNode(
+        Token token) :
+        base(token)
+    {
+    }
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -135,20 +139,160 @@ public sealed class Label : LogicalInstruction
         this.Name = name;
 }
 
-public sealed class Instruction : LogicalInstruction
+public abstract class Instruction : LogicalInstruction
 {
     public readonly IdentityNode OpCode;
-    public readonly IdentityNode? Operand;
 
-    public Instruction(
+    protected Instruction(
         IdentityNode opCode,
-        IdentityNode? operand,
         Location? location) :
-        base(location)
-    {
+        base(location) =>
         this.OpCode = opCode;
-        this.Operand = operand;
+}
+
+public sealed class SingleInstruction : Instruction
+{
+    public SingleInstruction(
+        IdentityNode opCode,
+        Location? location) :
+        base(opCode, location)
+    {
     }
+}
+
+public sealed class BranchInstruction : Instruction
+{
+    public readonly IdentityNode Label;
+
+    public BranchInstruction(
+        IdentityNode opCode,
+        IdentityNode label,
+        Location? location) :
+        base(opCode, location) =>
+        this.Label = label;
+}
+
+public sealed class FieldInstruction : Instruction
+{
+    public readonly IdentityNode Field;
+
+    public FieldInstruction(
+        IdentityNode opCode,
+        IdentityNode field,
+        Location? location) :
+        base(opCode, location) =>
+        this.Field = field;
+}
+
+public sealed class TypeInstruction : Instruction
+{
+    public readonly TypeNode Type;
+
+    public TypeInstruction(
+        IdentityNode opCode,
+        TypeNode type,
+        Location? location) :
+        base(opCode, location) =>
+        this.Type = type;
+}
+
+public sealed class MetadataTokenInstruction : Instruction
+{
+    public readonly IdentityNode Identity;
+
+    public MetadataTokenInstruction(
+        IdentityNode opCode,
+        IdentityNode identity,
+        Location? location) :
+        base(opCode, location) =>
+        this.Identity = identity;
+}
+
+public sealed class NumericValueInstruction : Instruction
+{
+    public readonly NumericNode Value;
+
+    public NumericValueInstruction(
+        IdentityNode opCode,
+        NumericNode value,
+        Location? location) :
+        base(opCode, location) =>
+        this.Value = value;
+}
+
+public sealed class StringValueInstruction : Instruction
+{
+    public readonly StringNode Value;
+
+    public StringValueInstruction(
+        IdentityNode opCode,
+        StringNode value,
+        Location? location) :
+        base(opCode, location) =>
+        this.Value = value;
+}
+
+public abstract class VariableInstruction : Instruction
+{
+    public VariableInstruction(
+        IdentityNode opCode,
+        Location? location) :
+        base(opCode, location)
+    {
+    }
+}
+
+public sealed class VariableIndexInstruction : VariableInstruction
+{
+    public readonly NumericNode Index;
+
+    public VariableIndexInstruction(
+        IdentityNode opCode,
+        NumericNode index,
+        Location? location) :
+        base(opCode, location) =>
+        this.Index = index;
+}
+
+public sealed class VariableNameInstruction : VariableInstruction
+{
+    public readonly IdentityNode Name;
+
+    public VariableNameInstruction(
+        IdentityNode opCode,
+        IdentityNode name,
+        Location? location) :
+        base(opCode, location) =>
+        this.Name = name;
+}
+
+public sealed class CallInstruction : Instruction
+{
+    public readonly IdentityNode Function;
+    public readonly FunctionSignatureNode? Signature;
+
+    public CallInstruction(
+        IdentityNode opCode,
+        IdentityNode function,
+        FunctionSignatureNode? signature,
+        Location? location) :
+        base(opCode, location)
+    {
+        this.Function = function;
+        this.Signature = signature;
+    }
+}
+
+public sealed class SignatureInstruction : Instruction
+{
+    public readonly FunctionSignatureNode? Signature;
+
+    public SignatureInstruction(
+        IdentityNode opCode,
+        FunctionSignatureNode? signature,
+        Location? location) :
+        base(opCode, location) =>
+        this.Signature = signature;
 }
 
 /////////////////////////////////////////////////////////////////////
