@@ -54,12 +54,6 @@ public static class TypeParser
         { "uintptr", "System.UIntPtr" },
     };
 
-    private static readonly HashSet<string> enumerationUnderlyingTypes = new()
-    {
-        "System.Byte", "System.SByte", "System.Int16", "System.UInt16",
-        "System.Int32", "System.UInt32", "System.Int64", "System.UInt64",
-    };
-
     private readonly struct OuterNode
     {
         public readonly TypeNode Node;
@@ -94,23 +88,6 @@ public static class TypeParser
             node = this.Node;
             parameters = this.Parameters;
         }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-
-    public static bool TryLookupOriginTypeName(
-        string typeName,
-        out string originTypeName) =>
-        aliasTypeNames.TryGetValue(typeName, out originTypeName!);
-
-    public static bool IsEnumerationUnderlyingType(
-        string typeName)
-    {
-        if (TryLookupOriginTypeName(typeName, out var originName))
-        {
-            typeName = originName;
-        }
-        return enumerationUnderlyingTypes.Contains(typeName);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -254,7 +231,7 @@ public static class TypeParser
                 }
 
                 var ((returnNode, name), lastParameters) = nodeStack.Pop();
-                if (parameters.LastOrDefault() is FunctionParameter(TypeIdentityNode("..."), _))
+                if (parameters.LastOrDefault() is (TypeIdentityNode("..."), _))
                 {
                     currentNode = new FunctionSignatureNode(
                         returnNode,
@@ -317,7 +294,10 @@ public static class TypeParser
                 }
                 else
                 {
-                    currentNode = new TypeIdentityNode(sb.ToString(), token);
+                    currentNode = new TypeIdentityNode(
+                        aliasTypeNames.TryGetValue(sb.ToString(), out var normalizedName) ?
+                            normalizedName : sb.ToString(),
+                        token);
                 }
                 sb.Clear();
             }
