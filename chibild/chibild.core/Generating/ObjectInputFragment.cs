@@ -189,14 +189,16 @@ internal abstract class ObjectInputFragment :
         {
             lock (this.fileVariableDeclarations)
             {
-                this.fileVariableDeclarations.Add(variable.Name, variable);
+                this.fileVariableDeclarations.TryAdd(
+                    variable.Name, variable);
             }
         }
         else
         {
             lock (this.variableDeclarations)
             {
-                this.variableDeclarations.Add(variable.Name, variable);
+                this.variableDeclarations.TryAdd(
+                    variable.Name, variable);
             }
         }
     }
@@ -207,14 +209,16 @@ internal abstract class ObjectInputFragment :
         {
             lock (this.fileConstantDeclarations)
             {
-                this.fileConstantDeclarations.Add(constant.Name, constant);
+                this.fileConstantDeclarations.TryAdd(
+                    constant.Name, constant);
             }
         }
         else
         {
             lock (this.constantDeclarations)
             {
-                this.constantDeclarations.Add(constant.Name, constant);
+                this.constantDeclarations.TryAdd(
+                    constant.Name, constant);
             }
         }
     }
