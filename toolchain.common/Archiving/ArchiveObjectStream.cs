@@ -13,14 +13,14 @@ using System.IO.Compression;
 
 namespace chibicc.toolchain.Archiving;
 
-internal sealed class ArchiveItemStream : Stream
+internal sealed class ArchiveObjectStream : Stream
 {
     // Automatic closer for parent ZipArchive.
     
     private readonly ZipArchive archive;
     private readonly Stream parent;
         
-    public ArchiveItemStream(ZipArchive archive, Stream parent)
+    public ArchiveObjectStream(ZipArchive archive, Stream parent)
     {
         this.archive = archive;
         this.parent = parent;

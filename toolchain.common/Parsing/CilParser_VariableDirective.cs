@@ -7,16 +7,16 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Tokenizing;
 using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 
 namespace chibicc.toolchain.Parsing;
 
 public sealed partial class CilParser
 {
-    private VariableNode? ParseVariableDirective(
+    private VariableDeclarationNode? ParseVariableDirective(
         Token[] tokens,
         bool isConstant)
     {
@@ -34,7 +34,8 @@ public sealed partial class CilParser
         var scopeToken = tokens[1];
         if (!TryLookupScopeDescriptorName(
             scopeToken,
-            out var scope))
+            out var scope) ||
+            scope.Scope is Scopes.__Module__)
         {
             this.OutputError(
                 scopeToken,
@@ -76,10 +77,8 @@ public sealed partial class CilParser
                                 $"Invalid data operand: {token}");
                             return (byte)0;
                         }
-                        if (!byte.TryParse(
+                        if (!CommonUtilities.TryParseUInt8(
                             token.Text,
-                            NumberStyles.Integer,
-                            CultureInfo.InvariantCulture,
                             out var value))
                         {
                             this.OutputError(

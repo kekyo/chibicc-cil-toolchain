@@ -7,10 +7,11 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Tokenizing;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
+using System.ComponentModel;
 using System.Linq;
 
 // System.Reflection.Emit declarations are used only referring OpCode metadata.
@@ -20,15 +21,30 @@ namespace chibicc.toolchain.Parsing;
 
 partial class CilParser
 {
+    // TODO: static generating from Mono.Cecil.
     private static readonly Dictionary<string, OpCode> opCodes =
         typeof(OpCodes).GetFields().
             Where(field =>
                 field.IsPublic && field.IsStatic && field.IsInitOnly &&
                 field.FieldType.FullName == "System.Reflection.Emit.OpCode").
             Select(field => (OpCode)field.GetValue(null)!).
+            Where(opCode => opCode.OpCodeType != OpCodeType.Nternal).
             ToDictionary(
-                opCode => opCode.Name!.Replace('_', '.'),
+                opCode => opCode.Name!.Replace('_', '.').TrimEnd('.').ToLowerInvariant(),
                 StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> isArgumentIndirectingOpCode =
+        new(opCodes.Where(entry =>
+            entry.Value.OperandType != OperandType.InlineNone &&
+            (entry.Key.StartsWith("ldarg") || entry.Key.StartsWith("starg"))).
+            Select(entry => entry.Key),
+            StringComparer.OrdinalIgnoreCase);
+
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public static IReadOnlyDictionary<short, string> GetOpCodeTranslator() =>
+        opCodes.ToDictionary(
+            entry => entry.Value.Value,
+            entry => entry.Key);
 
     /////////////////////////////////////////////////////////////////////
 
@@ -63,10 +79,8 @@ partial class CilParser
 
         var vs = tokens.
             Skip(2).
-            Select(token => uint.TryParse(
+            Select(token => CommonUtilities.TryParseUInt32(
                 token.Text,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
                 out var vi) ? vi : default(uint?)).
             Where(v => v.HasValue).
             Select(v => v!.Value).
@@ -144,17 +158,17 @@ partial class CilParser
                 return null;
             }
 
-            return new(localType, new(localNameToken), tokens[0]);
+            return new(localType, new(localNameToken));
         }
         else
         {
-            return new(localType, null, tokens[0]);
+            return new(localType, null);
         }
     }
 
     /////////////////////////////////////////////////////////////////////
 
-    private Label? ParseLabel(
+    private LabelNode? ParseLabel(
         Token[] tokens)
     {
         if (tokens.Length > 1)
@@ -168,14 +182,15 @@ partial class CilParser
         var labelToken = tokens[0];
         
         return new(
-            new(labelToken),
-            this.currentLocation);
+            labelToken.Text,
+            labelToken);
     }
 
-    private Instruction? ParseIdentityInstruction(
+    private InstructionNode? ParseIdentityInstruction(
         Token[] tokens,
         string displayName,
-        Func<IdentityNode, IdentityNode, Location?, Instruction?> generator)
+        Func<IdentityNode, IdentityNode, Location?, InstructionNode?> generator,
+        Location? location)
     {
         if (tokens.Length < 2)
         {
@@ -203,11 +218,13 @@ partial class CilParser
         return generator(
             new(tokens[0]),
             new(identityToken),
-            this.currentLocation);
+            location);
     }
 
-    private TypeInstruction? ParseTypeInstruction(
-        Token[] tokens)
+    private TypeInstructionNode? ParseTypeInstruction(
+        Token[] tokens,
+        LabelNode[] labels,
+        Location? location)
     {
         if (tokens.Length < 2)
         {
@@ -242,12 +259,91 @@ partial class CilParser
         return new(
             new(tokens[0]),
             type,
-            this.currentLocation);
+            labels,
+            location);
     }
 
-    private NumericValueInstruction? ParseNumericValueInstruction(
+    private InstructionNode? ParseMetadataTokenInstruction(
         Token[] tokens,
-        Func<string, object?> numericParser)
+        LabelNode[] labels,
+        Location? location)
+    {
+        if (tokens.Length < 2)
+        {
+            this.OutputError(
+                tokens[0],
+                $"Missing operand: {tokens[0]}");
+            return null;
+        }
+        if (tokens.Length > 3)
+        {
+            this.OutputError(
+                tokens[3],
+                $"Too many operand: {tokens[3]}");
+            return null;
+        }
+
+        if (tokens.Length == 3)
+        {
+            var signatureToken = tokens[1];
+            if (signatureToken.Type != TokenTypes.Identity)
+            {
+                this.OutputError(
+                    signatureToken,
+                    $"Invalid metadata token signature: {signatureToken}");
+                return null;
+            }
+
+            if (!TypeParser.TryParse(signatureToken, out var signature) ||
+                signature is not FunctionSignatureNode fsn)
+            {
+                this.OutputError(
+                    signatureToken,
+                    $"Invalid function signature: {signatureToken}");
+                return null;
+            }
+
+            var identityToken = tokens[2];
+            if (identityToken.Type != TokenTypes.Identity)
+            {
+                this.OutputError(
+                    identityToken,
+                    $"Invalid metadata token: {identityToken}");
+                return null;
+            }
+
+            return new MetadataTokenInstructionNode(
+                new(tokens[0]),
+                new(identityToken),
+                fsn,
+                labels,
+                location);
+        }
+        else
+        {
+            var identityToken = tokens[1];
+            if (identityToken.Type != TokenTypes.Identity)
+            {
+                this.OutputError(
+                    identityToken,
+                    $"Invalid metadata token: {identityToken}");
+                return null;
+            }
+
+            return new MetadataTokenInstructionNode(
+                new(tokens[0]),
+                new(identityToken),
+                null,
+                labels,
+                location);
+        }
+    }
+
+    private NumericValueInstructionNode? ParseNumericValueInstruction(
+        Token[] tokens,
+        Func<string, object?> numericParser,
+        LabelNode[] labels,
+        Location? location)
     {
         if (tokens.Length < 2)
         {
@@ -263,7 +359,7 @@ partial class CilParser
                 $"Too many operand: {tokens[2]}");
             return null;
         }
-                
+
         var valueToken = tokens[1];
         if (valueToken.Type != TokenTypes.Identity ||
             numericParser(valueToken.Text) is not { } value)
@@ -277,11 +373,14 @@ partial class CilParser
         return new(
             new(tokens[0]),
             new(value, valueToken),
-            this.currentLocation);
+            labels,
+            location);
     }
 
-    private StringValueInstruction? ParseStringValueInstruction(
-        Token[] tokens)
+    private StringValueInstructionNode? ParseStringValueInstruction(
+        Token[] tokens,
+        LabelNode[] labels,
+        Location? location)
     {
         if (tokens.Length < 2)
         {
@@ -297,7 +396,7 @@ partial class CilParser
                 $"Too many operand: {tokens[2]}");
             return null;
         }
-                
+
         var valueToken = tokens[1];
         if (valueToken.Type != TokenTypes.String)
         {
@@ -310,11 +409,15 @@ partial class CilParser
         return new(
             new(tokens[0]),
             new(valueToken),
-            this.currentLocation);
+            labels,
+            location);
     }
 
-    private VariableInstruction? ParseVariableInstruction(
-        Token[] tokens, bool isShort)
+    private IndirectReferenceInstructionNode? ParseVariableInstruction(
+        Token[] tokens,
+        bool isShort,
+        LabelNode[] labels,
+        Location? location)
     {
         if (tokens.Length < 2)
         {
@@ -330,7 +433,7 @@ partial class CilParser
                 $"Too many operand: {tokens[2]}");
             return null;
         }
-                
+
         var variableIdentityToken = tokens[1];
         if (variableIdentityToken.Type != TokenTypes.Identity)
         {
@@ -340,38 +443,45 @@ partial class CilParser
             return null;
         }
 
-        if (isShort && byte.TryParse(
+        var isArgumentIndirection = isArgumentIndirectingOpCode.
+            Contains(tokens[0].Text);
+
+        if (isShort && CommonUtilities.TryParseUInt8(
             variableIdentityToken.Text,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
             out var u8))
         {
-            return new VariableIndexInstruction(
+            return new IndexReferenceInstructionNode(
                 new(tokens[0]),
+                isArgumentIndirection,
                 new(u8, variableIdentityToken),
-                this.currentLocation);
+                labels,
+                location);
         }
-        
-        if (!isShort && uint.TryParse(
+
+        if (!isShort && CommonUtilities.TryParseUInt32(
             variableIdentityToken.Text,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
             out var u32))
         {
-            return new VariableIndexInstruction(
+            return new IndexReferenceInstructionNode(
                 new(tokens[0]),
+                isArgumentIndirection,
                 new(u32, variableIdentityToken),
-                this.currentLocation);
+                labels,
+                location);
         }
-        
-        return new VariableNameInstruction(
+
+        return new NameReferenceInstructionNode(
             new(tokens[0]),
+            isArgumentIndirection,
             new(variableIdentityToken),
-            this.currentLocation);
+            labels,
+            location);
     }
 
-    private CallInstruction? ParseCallInstruction(
-        Token[] tokens)
+    private CallInstructionNode? ParseCallInstruction(
+        Token[] tokens,
+        LabelNode[] labels,
+        Location? location)
     {
         if (tokens.Length < 2)
         {
@@ -418,7 +528,8 @@ partial class CilParser
                 new(tokens[0]),
                 new(functionToken),
                 fsn,
-                this.currentLocation);
+                labels,
+                location);
         }
         else
         {
@@ -434,12 +545,15 @@ partial class CilParser
                 new(tokens[0]),
                 new(functionToken),
                 null,
-                this.currentLocation);
+                labels,
+                location);
         }
     }
 
-    private SignatureInstruction? ParseSignatureInstruction(
-        Token[] tokens)
+    private SignatureInstructionNode? ParseSignatureInstruction(
+        Token[] tokens,
+        LabelNode[] labels,
+        Location? location)
     {
         if (tokens.Length < 2)
         {
@@ -475,17 +589,20 @@ partial class CilParser
         return new(
             new(tokens[0]),
             fsn,
-            this.currentLocation);
+            labels,
+            location);
     }
 
-    private Instruction? ParseInstruction(
-        Token[] tokens)
+    private InstructionNode? ParseInstruction(
+        Token[] tokens,
+        LabelNode[] labels,
+        Location? location)
     {
-        if (tokens.Length > 2)
+        if (tokens.Length > 3)
         {
             this.OutputError(
-                tokens[2],
-                $"Too many operands: {tokens[2]}");
+                tokens[3],
+                $"Too many operands: {tokens[3]}");
             return null;
         }
 
@@ -505,98 +622,112 @@ partial class CilParser
                 return this.ParseIdentityInstruction(
                     tokens,
                     "function name",
-                    (ot, it, loc) => new BranchInstruction(ot, it, loc));
+                    (ot, it, loc) => new BranchInstructionNode(ot, it, labels, loc),
+                    location);
  
             case OperandType.InlineField:
                 return this.ParseIdentityInstruction(
                     tokens,
                     "field name",
-                    (ot, it, loc) => new FieldInstruction(ot, it, loc));
+                    (ot, it, loc) => new FieldInstructionNode(ot, it, labels, loc),
+                    location);
    
             case OperandType.InlineTok:
-                return this.ParseIdentityInstruction(
+                return this.ParseMetadataTokenInstruction(
                     tokens,
-                    "metadata token",
-                    (ot, it, loc) => new MetadataTokenInstruction(ot, it, loc));
+                    labels,
+                    location);
    
             case OperandType.InlineType:
                 return this.ParseTypeInstruction(
-                    tokens);
+                    tokens,
+                    labels,
+                    location);
 
             case OperandType.InlineI:
                 return this.ParseNumericValueInstruction(
                     tokens,
-                    str => int.TryParse(
+                    str => CommonUtilities.TryParseInt32(
                         str,
-                        NumberStyles.Integer,
-                        CultureInfo.InvariantCulture,
-                        out var v) ? v : null);
+                        out var v) ? v : null,
+                    labels,
+                    location);
 
             case OperandType.ShortInlineI:
                 return opCode == OpCodes.Ldc_I4_S ?
                     this.ParseNumericValueInstruction(
                         tokens,
-                        str => sbyte.TryParse(
+                        str => CommonUtilities.TryParseInt8(
                             str,
-                            NumberStyles.Integer,
-                            CultureInfo.InvariantCulture,
-                            out var v) ? v : null) :
+                            out var v) ? v : null,
+                        labels,
+                        location) :
                     this.ParseNumericValueInstruction(
                         tokens,
-                        str => byte.TryParse(
+                        str => CommonUtilities.TryParseUInt8(
                             str,
-                            NumberStyles.Integer,
-                            CultureInfo.InvariantCulture,
-                            out var v) ? v : null);
+                            out var v) ? v : null,
+                        labels,
+                        location);
   
             case OperandType.InlineI8:
                 return this.ParseNumericValueInstruction(
                     tokens,
-                    str => long.TryParse(
+                    str => CommonUtilities.TryParseInt64(
                         str,
-                        NumberStyles.Integer,
-                        CultureInfo.InvariantCulture,
-                        out var v) ? v : null);
+                        out var v) ? v : null,
+                    labels,
+                    location);
   
             case OperandType.InlineR:
                 return this.ParseNumericValueInstruction(
                     tokens,
-                    str => double.TryParse(
+                    str => CommonUtilities.TryParseFloat64(
                         str,
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        out var v) ? v : null);
+                        out var v) ? v : null,
+                    labels,
+                    location);
 
             case OperandType.ShortInlineR:
                 return this.ParseNumericValueInstruction(
                     tokens,
-                    str => float.TryParse(
+                    str => CommonUtilities.TryParseFloat32(
                         str,
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        out var v) ? v : null);
+                        out var v) ? v : null,
+                    labels,
+                    location);
 
             case OperandType.InlineString:
                 return this.ParseStringValueInstruction(
-                    tokens);
+                    tokens,
+                    labels,
+                    location);
    
             case OperandType.InlineVar:
                 return this.ParseVariableInstruction(
                     tokens,
-                    false);
+                    false,
+                    labels,
+                    location);
             
             case OperandType.ShortInlineVar:
                 return this.ParseVariableInstruction(
                     tokens,
-                    true);
+                    true,
+                    labels,
+                    location);
 
             case OperandType.InlineMethod:
                 return this.ParseCallInstruction(
-                    tokens);
+                    tokens,
+                    labels,
+                    location);
             
             case OperandType.InlineSig:
                 return this.ParseSignatureInstruction(
-                    tokens);
+                    tokens,
+                    labels,
+                    location);
  
             case OperandType.InlineNone:
                 if (tokens.Length > 1)
@@ -607,10 +738,12 @@ partial class CilParser
                     return null;
                 }
                 
-                return new SingleInstruction(
+                return new SingleInstructionNode(
                     new(opCodeToken),
-                    this.currentLocation);
+                    labels,
+                    location);
             
+            // TODO:
             //case OperandType.InlineSwitch:
             //  break;
             
@@ -627,11 +760,11 @@ partial class CilParser
     private readonly struct FunctionBodyResults
     {
         public readonly LocalVariableNode[] LocalVariables;
-        public readonly LogicalInstruction[] Instructions;
+        public readonly InstructionNode[] Instructions;
 
         public FunctionBodyResults(
             LocalVariableNode[] localVariables,
-            LogicalInstruction[] instructions)
+            InstructionNode[] instructions)
         {
             this.LocalVariables = localVariables;
             this.Instructions = instructions;
@@ -639,7 +772,7 @@ partial class CilParser
 
         public void Deconstruct(
             out LocalVariableNode[] localVariables,
-            out LogicalInstruction[] instructions)
+            out InstructionNode[] instructions)
         {
             localVariables = this.LocalVariables;
             instructions = this.Instructions;
@@ -650,7 +783,11 @@ partial class CilParser
         TokensIterator tokensIterator)
     {
         var localVariables = new List<LocalVariableNode>();
-        var instructions = new List<LogicalInstruction>();
+        var instructions = new List<InstructionNode>();
+        var currentInstructionLabels = new List<LabelNode>();
+        var overallLabelNames = new HashSet<string>();
+
+        Location? currentLocation = null;
 
         while (tokensIterator.TryGetNext(out var tokens))
         {
@@ -661,16 +798,40 @@ partial class CilParser
                 case (TokenTypes.Label, _):
                     if (this.ParseLabel(tokens) is { } label)
                     {
-                        instructions.Add(label);
+                        if (!overallLabelNames.Add(label.Name))
+                        {
+                            this.OutputError(
+                                label.Token,
+                                $"Duplicated label: {label}");
+                        }
+                        else
+                        {
+                            currentInstructionLabels.Add(label);
+                        }
                     }
                     continue;
 
                 // Instruction:
                 case (TokenTypes.Identity, _):
-                    if (this.ParseInstruction(tokens) is { } instruction)
+                    if (this.locationMode == LocationModes.OriginSource)
+                    {
+                        var lastToken = tokens.Last();
+                        currentLocation = new(
+                            new(token0.BasePath, token0.RelativePath, Language.Cil, true),
+                            token0.Line,
+                            token0.StartColumn,
+                            lastToken.Line,
+                            lastToken.EndColumn);
+                    }
+                    if (this.ParseInstruction(
+                        tokens,
+                        currentInstructionLabels.ToArray(),
+                        currentLocation) is { } instruction)
                     {
                         instructions.Add(instruction);
                     }
+                    currentInstructionLabels.Clear();
+                    currentLocation = null;
                     continue;
 
                 // Local variable directive:
@@ -685,7 +846,8 @@ partial class CilParser
                 case (TokenTypes.Directive, "location"):
                     if (this.ParseLocationDirective(tokens) is { } location)
                     {
-                        this.currentLocation = location;
+                        this.locationMode = LocationModes.Directive;
+                        currentLocation = location;
                     }
                     continue;
                 
@@ -693,7 +855,8 @@ partial class CilParser
                 case (TokenTypes.Directive, "hidden"):
                     if (this.ParseHiddenDirective(tokens))
                     {
-                        this.currentLocation = null;
+                        this.locationMode = LocationModes.Hide;
+                        currentLocation = null;
                     }
                     continue;
                 

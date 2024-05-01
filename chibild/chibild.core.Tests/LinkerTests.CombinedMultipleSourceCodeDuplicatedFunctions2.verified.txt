@@ -25,19 +25,6 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit '<source1>$'
-       extends [mscorlib]System.Object
-{
-  .method public static int32  foo(int32 A_0) cil managed
-  {
-    // Code size       2 (0x2)
-    .maxstack  8
-    IL_0000:  ldarg.0
-    IL_0001:  ret
-  } // end of method '<source1>$'::foo
-
-} // end of class '<source1>$'
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
@@ -46,7 +33,7 @@
     // Code size       7 (0x7)
     .maxstack  8
     IL_0000:  ldc.i4.1
-    IL_0001:  call       int32 C.text::foo(int32)
+    IL_0001:  call       int32 '<source1>$'::foo(int32)
     IL_0006:  ret
   } // end of method text::main
 
@@ -59,6 +46,19 @@
   } // end of method text::foo
 
 } // end of class C.text
+
+.class private abstract auto ansi sealed beforefieldinit '<source1>$'
+       extends [mscorlib]System.Object
+{
+  .method public static int32  foo(int32 A_0) cil managed
+  {
+    // Code size       2 (0x2)
+    .maxstack  8
+    IL_0000:  ldarg.0
+    IL_0001:  ret
+  } // end of method '<source1>$'::foo
+
+} // end of class '<source1>$'
 
 
 // =============================================================

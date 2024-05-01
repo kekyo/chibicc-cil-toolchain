@@ -9,9 +9,7 @@
 
 using chibicc.toolchain.Logging;
 using chibild.Internal;
-
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -40,17 +38,20 @@ public sealed class CliOptions
     public string? InjectToAssemblyPath;
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
-    public readonly List<string> InputFilePaths = new();
+    public string BaseInputPath = Directory.GetCurrentDirectory();
+    public InputReference[] InputReferences = Utilities.Empty<InputReference>();
 
     private CliOptions()
     {
     }
 
-    public static CliOptions Parse(string[] args, string defaultTargetFrameworkMoniker)
+    public static CliOptions Parse(
+        string[] args,
+        string defaultTargetFrameworkMoniker)
     {
         var options = new CliOptions();
         var libraryBasePaths = new List<string>();
-        var libraryReferences = new List<ILibraryReference>();
+        var inputReferences = new List<InputReference>();
 
         options.LinkerOptions.CreationOptions!.TargetFramework =
             TargetFramework.TryParse(defaultTargetFrameworkMoniker, out var tf) ?
@@ -101,13 +102,13 @@ public sealed class CliOptions
                             if (arg.Length >= 3)
                             {
                                 var referenceAssemblyName = arg.Substring(2);
-                                libraryReferences.Add(new LibraryNameReference(referenceAssemblyName));
+                                inputReferences.Add(new LibraryNameReference(referenceAssemblyName));
                                 continue;
                             }
                             else if (args.Length >= index)
                             {
                                 var referenceAssemblyName = args[index + 1];
-                                libraryReferences.Add(new LibraryNameReference(referenceAssemblyName));
+                                inputReferences.Add(new LibraryNameReference(referenceAssemblyName));
                                 index++;
                                 continue;
                             }
@@ -129,11 +130,38 @@ public sealed class CliOptions
                             options.LinkerOptions.CreationOptions = null;
                             continue;
                         case 'a':
-                            if (args.Length >= index)
+                            if (arg.Length >= 3)
+                            {
+                                if (options.LinkerOptions.CreationOptions is { } co2)
+                                {
+                                    co2.AppHostTemplatePath = arg.Substring(2);
+                                }
+                                continue;
+                            }
+                            else if (args.Length >= index)
                             {
                                 if (options.LinkerOptions.CreationOptions is { } co2)
                                 {
                                     co2.AppHostTemplatePath = args[index + 1];
+                                }
+                                index++;
+                                continue;
+                            }
+                            break;
+                        case 'e':
+                            if (arg.Length >= 3)
+                            {
+                                if (options.LinkerOptions.CreationOptions is { } co2)
+                                {
+                                    co2.EntryPointSymbol = arg.Substring(2);
+                                }
+                                continue;
+                            }
+                            else if (args.Length >= index)
+                            {
+                                if (options.LinkerOptions.CreationOptions is { } co2)
+                                {
+                                    co2.EntryPointSymbol = args[index + 1];
                                 }
                                 index++;
                                 continue;
@@ -316,15 +344,15 @@ public sealed class CliOptions
 
                 if (arg == "-")
                 {
-                    options.InputFilePaths.Add("-");
+                    inputReferences.Add(new ObjectFilePathReference("-"));
                 }
                 else if (Path.GetExtension(arg) == ".a")
                 {
-                    libraryReferences.Add(new LibraryPathReference(Path.GetFullPath(arg)));
+                    inputReferences.Add(new LibraryPathReference(Path.GetFullPath(arg)));
                 }
                 else
                 {
-                    options.InputFilePaths.Add(Path.GetFullPath(arg));
+                    inputReferences.Add(new ObjectFilePathReference(Path.GetFullPath(arg)));
                 }
             }
             catch (InvalidOptionException)
@@ -351,13 +379,14 @@ public sealed class CliOptions
                                 : Path.GetFullPath("a.out.dll");
                         break;
                     default:
-                        switch (options.InputFilePaths.FirstOrDefault())
+                        switch (options.InputReferences.
+                            FirstOrDefault(ir => ir is ObjectFilePathReference))
                         {
                             case null:
-                            case "-":
+                            case ObjectFilePathReference("-"):
                                 options.OutputAssemblyPath = Path.GetFullPath("a.out.dll");
                                 break;
-                            case { } path:
+                            case ObjectFilePathReference(var path):
                                 options.OutputAssemblyPath = Path.Combine(
                                     Utilities.GetDirectoryPath(path),
                                     Path.GetFileNameWithoutExtension(path) + ".dll");
@@ -376,7 +405,7 @@ public sealed class CliOptions
         options.LinkerOptions.LibraryReferenceBasePaths = libraryBasePaths.
             Distinct().
             ToArray();
-        options.LinkerOptions.LibraryReferences = libraryReferences.
+        options.InputReferences = inputReferences.
             Distinct().
             ToArray();
 
@@ -385,7 +414,7 @@ public sealed class CliOptions
 
     public void Write(ILogger logger)
     {
-        foreach (var inputFilePath in this.InputFilePaths)
+        foreach (var inputFilePath in this.InputReferences)
         {
             logger.Information($"InputFilePaths={inputFilePath}");
         }
@@ -397,9 +426,9 @@ public sealed class CliOptions
             logger.Information($"ReferenceAssemblyBasePath={path}");
         }
 
-        foreach (var lr in this.LinkerOptions.LibraryReferences)
+        foreach (var lr in this.InputReferences)
         {
-            logger.Information($"ReferenceAssemblyName={lr}");
+            logger.Information($"InputReference={lr}");
         }
 
         logger.Information($"DebugSymbolType={this.LinkerOptions.DebugSymbolType}");
@@ -411,8 +440,9 @@ public sealed class CliOptions
             logger.Information($"AssemblyType={co.AssemblyType}");
             logger.Information($"TargetWindowsArchitecture={co.TargetWindowsArchitecture}");
             logger.Information($"RuntimeConfiguration={co.RuntimeConfiguration}");
+            logger.Information($"EntryPointSymbol={co.EntryPointSymbol}");
             logger.Information($"Version={co.Version}");
-            logger.Information($"TargetFrameworkMoniker={co.TargetFramework}");
+            logger.Information($"TargetFramework={co.TargetFramework}");
             logger.Information($"AppHostTemplatePath={(co.AppHostTemplatePath ?? "(null)")}");
         }
         else
@@ -446,6 +476,7 @@ public sealed class CliOptions
         tw.WriteLine("  -s, -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
+        tw.WriteLine("  -e <symbol>       Entry point symbol (defaulted: _start)");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -m <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
         tw.WriteLine("  -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)");

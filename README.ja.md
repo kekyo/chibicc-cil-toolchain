@@ -84,7 +84,7 @@ $ dotnet tool install -g chibild-cli
 ```bash
 $ cil-chibild
 
-cil-chibild [0.51.0,net6.0] [...]
+cil-chibild [0.60.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
@@ -105,6 +105,7 @@ usage: cil-chibild [options] <input path> [<input path> ...]
   -s, -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
+  -e <symbol>       Entry point symbol (defaulted: _start)
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -m <tfm>          Target framework moniker (defaulted: net6.0)
   -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)
@@ -139,7 +140,7 @@ chibildを使って "Hello world" を実行してみましょう。
 新しいソースコード・ファイル `hello.s` を作り、以下のようにコードを書きます。この4行だけでOKです:
 
 ```
-.function public void() main
+.function public void() _start
     ldstr "Hello world with chibild!"
     call void(string) System.Console.WriteLine
     ret
@@ -148,7 +149,7 @@ chibildを使って "Hello world" を実行してみましょう。
 出来たら、chibildを呼び出します:
 
 ```bash
-$ cil-chibild -f net45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ cil-chibild -mnet45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 実行します:
@@ -167,7 +168,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 また、ビルトイン型（後述）だけを使用するコードをアセンブルした場合は、他のアセンブリへの参照は必要ありません:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4.1
     ldc.i4.2
     add
@@ -175,7 +176,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 ```
 
 ```bash
-$ cil-chibild -f net45 -o adder.exe adder.s
+$ cil-chibild -mnet45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -184,12 +185,12 @@ $ echo $?
 * 注意: この例では、アセンブル時に属性に関する警告が発生しますが、無視して構いません。
 * `main` 関数の `argc` や `argv` に相当する引数を使用する場合は、FCLである `mscorlib.dll` アセンブリへの参照が必要です。
 
-### .NET 6や.NET Coreなどで動かすには
+### .NET Coreなどで動かすには
 
 ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
 
 ```bash
-$ cil-chibild -f net6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
   -o hello.exe hello.s
 ```
 
@@ -247,7 +248,7 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 ### 最小でエントリーポイントのみ含む例
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123    ; これはコメントです
     ret
 ```
@@ -272,27 +273,35 @@ ILAsmと比較しても、はるかに簡単に書けるはずです。
 |`file`|現在のソースコードファイルからのみ参照可能。|
 
 * コマンドラインのオプションに `-mexe` を指定するなどして、実行可能形式を生成する場合、
-  関数名が `main` であれば、自動的にエントリポイントとみなされます。
-* エントリポイントのスコープ記述子は、`public`又は`internal`が必要です。
+  関数名が `_start` であれば、自動的にエントリポイントとみなされます。
+* `-efoo` と指定すると、エントリポイントのシンボルを `foo` に変更することが出来ます。
 
-`main`関数のシグネチャは、以下のバリエーションを受け付けます:
+エントリポイントのシグネチャは、CLRの要求に従います。つまり、以下の組み合わせが可能です:
 
-|関数シグネチャ|対応するC言語でのシグネチャ例|
+|関数シグネチャ|対応するC#でのシグネチャ例|
 |:----|:----|
-|`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32,argv:sbyte**)`|`void main(int argc, char** argv)`|
-|`int32()`|`int main(void)`|
-|`void()`|`void main(void)`|
+|`void()`|`static void _start()`|
+|`int32()`|`static int32 _start()`|
+|`void(string[])`|`static void _start(string[] args)`|
+|`int32(string[])`|`static int32 _start(string[] args)`|
 
-奇妙に思えるかもしれませんが、引数の`argv`は、現実にポインタへのポインタです。
-そしてその先は、終端文字を含むUTF-8文字列を示します。
+* 関数シグネチャについては、後述の解説を参照してください。
 
-chibildは`wmain`による、UTF-16LEワイド幅文字列を含むエントリポイントをサポートしていません。
+#### 補足: スタートアップコード
+
+chibiccを使う場合、エントリポイントはあくまでC言語の `main` 関数として定義する事を想定しています。
+例えば、 `int main(int argc, char **argv)` です。
+
+このシグネチャの違いは、スタートアップコードを含む `crt0.o` のようなオブジェクトファイルをchibiccが供給し、
+その中でC言語で必要な引数を生成することによって実現しています。
+
+このドキュメントでは、スタートアップコードを省いて解説しています。
+従って、スタートアップコードの規則は、常に上記の表に従います。
 
 ### リテラル
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123
     ldc.r8 1.234
     ldstr "abc\"def\"ghi"
@@ -311,7 +320,7 @@ chibildは`wmain`による、UTF-16LEワイド幅文字列を含むエントリ�
 ### ラベル
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123
     br NAME
     nop
@@ -400,7 +409,7 @@ string(int8,int32,...)*
 ### ローカル変数
 
 ```
-.function public int32() main
+.function public int32() _start
     .local int32
     .local int32 abc
     ldc.i4 1
@@ -444,7 +453,7 @@ string(int8,int32,...)*
 ### 別の関数を呼び出す
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -490,7 +499,7 @@ C#では、可変引数を.NET配列で受け取りますが、chibildではCIL�
 例えば、上記の`add_n`を呼び出す場合は:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4.s 123
     ldc.r8 123.456    ; <-- 追加引数
     ldstr "ABC"       ; <-- 追加引数
@@ -520,7 +529,7 @@ $ chibild -c test.s
 その後、以下のように、上記アセンブリの関数を呼び出します:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -534,7 +543,7 @@ $ chibild -ltest main.s
 関数（.NET CILメソッド）は、`C.text`という名前のクラス内に配置されます。
 そのマッピングは:
 
-* `int32() main` --> `public static int32 C.text::main()`
+* `int32() _start` --> `public static int32 C.text::main()`
 * `int32(a:int32,b:int32) add2` --> `public static int32 C.text::add2(int32 a, int32 b)`
 
 疑似的にC#で記述すると (test.dll):
@@ -584,7 +593,6 @@ CABIが適用されるのは、外部アセンブリから参照可能な場合�
 
 メソッドのシグネチャは、メソッドのオーバーロードを特定するために使用されます。
 シグネチャを指定せず、オーバーロードメソッドが複数存在する場合は、誤ったメソッドを選択する可能性があります。
-通常、戻り値の型は検証されませんが、 `op_Implicit` 及び `op_Explicit` メソッドの場合のみ、戻り値の型も一致する事が確認されます。
 
 .NETメソッドを参照するために、コマンドラインオプション `-l` で、メソッド定義を含むアセンブリを指定する必要があります。
 これは、最も標準的な `mscorlib.dll` や `System.Runtime.dll` にも当てはまります。
@@ -618,7 +626,7 @@ chibildでは、関数ポインタ型と同じような構文で指定します�
 `calli` オプコードで使用します:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldstr "123"
     ldftn int32(string) System.Int32.Parse
     calli int32(string)
@@ -631,7 +639,7 @@ chibildでは、関数ポインタ型と同じような構文で指定します�
 ただし、関数本体定義の外側に配置します:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123
     stsfld foo
     ldsfld foo
@@ -878,12 +886,34 @@ public struct foo
     public int32[*] c
 ```
 
-配列の要素数を`*`と指定すると、この値型配列は要素数を特定しない型となります。
+配列の要素数を`*`と指定すると、この値型配列は要素数を特定しない型（フレックス配列）となります。
 この型は特殊な値型配列で、配列のインデクサアクセスは、要素数の範囲外チェックが行われません。
 当然、存在しない要素にアクセスした場合の結果は未定義となるため、注意が必要です。
 
+フレックス配列は、構造体型の最後のメンバーに使用することを想定していますが、
+chibildはこのチェックを行いません。
+
 注意: 構造体型を使用するには、`System.ValueType` 型への参照が解決される必要があります。
 `mscorlib.dll` 又は `System.Private.CoreLib.dll` への参照を追加して下さい。
+
+### 型の参照について
+
+chibildは、任意の型・グローバル変数・関数（これらをメンバーと呼称します）を検索する際に、以下のように検索を実行します:
+
+1. 同一のオブジェクトファイル内に定義されたメンバーが見つかれば、それを参照します。
+2. 異なる入力に定義されたメンバーが見つかれば、それを参照します。
+3. 見つからないため、エラーが発生します。
+
+基本的には、同一のオブジェクトファイルに定義されたメンバーを優先して参照しますが、
+列挙体型・構造体型・値型の配列型定義は、例外的に以下のように取り扱います。
+
+1. 同一のオブジェクトファイル内に定義され、`file` スコープで定義された型定義は、その定義を優先して参照します。
+2. 異なる入力オブジェクトに定義された、 `public`または`internal` スコープの型定義、 
+   及び参照アセンブリに定義された `public` スコープの型定義が存在すれば、その定義を参照します。
+3. 見つからないため、エラーが発生します。
+
+上記に加えて、同名の型を定義したとしても、 `file` スコープではない場合は、その定義が無視されます。
+これは、 .NETでは一般的に、型定義は何れかのアセンブリにただ一つ存在することを想定しているため、混乱を避けるためです。
 
 ### 位置情報を明示する
 
@@ -895,7 +925,7 @@ public struct foo
 
 ```
 .file 1 "/home/kouji/Projects/test.c" c
-.function public int32() main
+.function public int32() _start
     .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456
@@ -918,6 +948,7 @@ public struct foo
   * 第4オペランド: 終了行のインデックス (0ベースのインデックス、かつ開始行以上)
   * 第5オペランド: 終了桁のインデックス (0ベースのインデックス、かつ開始桁より大きい)
   * `.location`ディレクティブは、関数本体でのみ宣言可能です。
+  * `.location`ディレクティブを指定した直後のオプコードにのみ、適用されます。
 
 言語名称の例（すべてではありません）:
 
@@ -933,12 +964,11 @@ public struct foo
 言語名称は、[Mono.Cecil.Cil.DocumentLanguage](https://github.com/jbevain/cecil/blob/7b8ee049a151204997eecf587c69acc2f67c8405/Mono.Cecil.Cil/Document.cs#L27) に由来しています。
 
 これらのディレクティブを適用しなかった場合は、CILソースファイル自身を示すようなデバッグ情報を生成します。
-
-`.hidden`ディレクティブを使用すると、以降のコードでシーケンスポイントを生成しなくなります:
+しかし、`.hidden`ディレクティブを使用すると、以降のコードでシーケンスポイントを生成しなくなります:
 
 ```
 .hidden
-.function public int32() main
+.function public int32() _start
     ldc.i4 123     ; <-- シーケンスポイントは出力されない
     ldc.i4 456
     add

@@ -10,34 +10,19 @@
 using chibicc.toolchain.Tokenizing;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 
 namespace chibicc.toolchain.Parsing;
 
 partial class CilParser
 {
-    private static readonly Dictionary<string, Func<string, object?>> toUnderlyingTypedValues =
-        new()
-        {
-            { "System.Byte", str => byte.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-            { "System.Int16", str => short.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-            { "System.Int32", str => int.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-            { "System.Int64", str => long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-            { "System.SByte", str => sbyte.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-            { "System.UInt16", str => ushort.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-            { "System.UInt32", str => uint.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-            { "System.UInt64", str => ulong.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v) ? v : null },
-        };
-    
-    /////////////////////////////////////////////////////////////////////
-
-    private EnumerationValue[] ParseEnumerationValues(
+    private EnumerationValueNode[] ParseEnumerationValues(
         TokensIterator tokensIterator,
-        Func<string, object?> converter)
+        EnumerationMemberValueManipulator manipulator)
     {
-        var enumerationValues = new List<EnumerationValue>();
-
+        var enumerationValues = new List<EnumerationValueNode>();
+        var currentValue = manipulator.GetInitialMemberValue();
+        
         while (tokensIterator.TryGetNext(out var tokens))
         {
             var token0 = tokens[0];
@@ -55,8 +40,8 @@ partial class CilParser
                     if (tokens.Length == 2)
                     {
                         var valueToken = tokens[1];
-                        if (valueToken.Type != TokenTypes.Identity ||
-                            converter(valueToken.Text) is not { } v)
+                        if (valueToken is not (TokenTypes.Identity, _) ||
+                            !manipulator.TryParseMemberValue(valueToken, out currentValue))
                         {
                             this.OutputError(
                                 tokens[2],
@@ -65,13 +50,14 @@ partial class CilParser
                         }
                         enumerationValues.Add(new(
                             new(token0),
-                            new(v, valueToken)));
+                            new(currentValue, valueToken)));
                     }
                     else
                     {
                         enumerationValues.Add(new(
                             new(token0),
-                            null));
+                            new(currentValue, token0)));
+                        currentValue = manipulator.IncrementMemberValue(currentValue);
                     }
                     continue;
                 
@@ -96,7 +82,8 @@ partial class CilParser
     }
     
     private EnumerationNode? ParseEnumerationDirective(
-        TokensIterator tokensIterator, Token[] tokens)
+        TokensIterator tokensIterator,
+        Token[] tokens)
     {
         if (tokens.Length < 4)
         {
@@ -117,18 +104,19 @@ partial class CilParser
         var scopeToken = tokens[1];
         if (!TryLookupScopeDescriptorName(
             scopeToken,
-            out var scope))
+            out var scope) ||
+            scope.Scope is Scopes.__Module__)
         {
             this.OutputError(
                 scopeToken,
                 $"Invalid scope descriptor: {scopeToken}");
             return null;
         }
-
+        
         var underlyingTypeNameToken = tokens[2];
         if (!TypeParser.TryParse(underlyingTypeNameToken, out var underlyingType) ||
-            underlyingType is not TypeIdentityNode(var underlyingTypeName) ||
-            !toUnderlyingTypedValues.TryGetValue(underlyingTypeName, out var converter))
+            underlyingType is not TypeIdentityNode(var underlyingTypeName, _) ||
+            !EnumerationMemberValueManipulator.TryGetInstance(underlyingTypeName, out var manipulator))
         {
             this.OutputError(
                 underlyingTypeNameToken,
@@ -147,7 +135,7 @@ partial class CilParser
 
         var enumerationValues = this.ParseEnumerationValues(
             tokensIterator,
-            converter);
+            manipulator);
 
         return new(
             new(enumerationNameToken),

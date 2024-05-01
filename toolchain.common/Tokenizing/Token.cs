@@ -57,4 +57,13 @@ public sealed class Token
         type = this.Type;
         text = this.Text;
     }
+
+    public Token AsText(string text) =>
+        new(this.Type, text, this.BasePath, this.RelativePath, this.Line, this.StartColumn, this.EndColumn);
+
+    public static Token Identity(string text) =>
+        new(TokenTypes.Identity, text, null, "unknown", 0, 0, 0);
+    
+    public static readonly Token Unknown =
+        new(TokenTypes.Identity, "unknown", null, "unknown", 0, 0, 0);
 }

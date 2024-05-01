@@ -22,7 +22,7 @@ namespace chibild.Internal;
 // Imported from ILCompose project.
 // https://github.com/kekyo/ILCompose
 
-internal sealed class SymbolReaderProvider : ISymbolReaderProvider
+internal sealed class MultipleSymbolReaderProvider : ISymbolReaderProvider
 {
     // HACK: cecil will lock symbol file when uses defaulted reading method.
     //   Makes safer around entire building process.
@@ -35,7 +35,7 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
     private readonly HashSet<string> loaded = new();
     private readonly HashSet<string> notFound = new();
 
-    public SymbolReaderProvider(ILogger logger) =>
+    public MultipleSymbolReaderProvider(ILogger logger) =>
         this.logger = logger;
 
     private ISymbolReader? TryGetSymbolReader<TSymbolReaderProvider>(
@@ -64,6 +64,7 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
                 {
                     this.logger.Debug($"Symbol loaded from: {path}");
                 }
+                
                 return sr;
             }
         }
@@ -82,35 +83,44 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
             var fullPath = Path.GetFullPath(fileName);
 
             var header = module.GetDebugHeader();
-            if (header.Entries.
-                FirstOrDefault(e => e.Directory.Type == ImageDebugType.EmbeddedPortablePdb) is { } entry)
-            {
-                try
-                {
-                    var sr = embeddedProvider.GetSymbolReader(module, fullPath);
-                    if (this.loaded.Add(fullPath))
-                    {
-                        this.logger.Debug($"Embedded symbol loaded from: {fullPath}");
-                    }
-                    return sr;
-                }
-                catch (Exception ex)
-                {
-                    this.logger.Warning(ex);
-                }
-            }
-            else if (this.TryGetSymbolReader(mdbProvider, module, fullPath, ".dll.mdb") is { } sr1)
-            {
-                return sr1;
-            }
-            else if (this.TryGetSymbolReader(pdbProvider, module, fullPath, ".pdb") is { } sr3)
-            {
-                return sr3;
-            }
+            var entry = header.Entries.
+                FirstOrDefault(e => e.Directory.Type == ImageDebugType.EmbeddedPortablePdb);
 
-            if (this.notFound.Add(fileName))
+            lock (this.loaded)
             {
-                this.logger.Trace($"Symbol not found: {fileName}");
+                if (!this.notFound.Contains(fileName))
+                {
+                    if (entry != null)
+                    {
+                        try
+                        {
+                            var sr = embeddedProvider.GetSymbolReader(module, fullPath);
+                            if (this.loaded.Add(fullPath))
+                            {
+                                this.logger.Debug($"Embedded symbol loaded from: {fullPath}");
+                            }
+
+                            return sr;
+                        }
+                        catch (Exception ex)
+                        {
+                            this.logger.Warning(ex);
+                        }
+                    }
+                    else if (this.TryGetSymbolReader(mdbProvider, module, fullPath, ".dll.mdb") is { } sr1)
+                    {
+                        return sr1;
+                    }
+                    else if (this.TryGetSymbolReader(pdbProvider, module, fullPath, ".pdb") is { } sr3)
+                    {
+                        return sr3;
+                    }
+
+                    if (this.notFound.Add(fileName))
+                    {
+                        this.logger.Trace($"Symbol not found: {fileName}");
+                    }
+                }
             }
         }
 

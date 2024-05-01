@@ -24,7 +24,7 @@ public static class Program
                 args,
                 ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker);
 
-            if (options.ShowHelp || options.InputFilePaths.Count == 0)
+            if (options.ShowHelp || options.InputReferences.Length == 0)
             {
                 Console.WriteLine();
                 CliOptions.WriteUsage(Console.Out);
@@ -40,7 +40,7 @@ public static class Program
 
             options.Write(logger);
 
-            var linker = new Linker(logger);
+            var linker = new CilLinker(logger);
 
             if (linker.Link(options))
             {

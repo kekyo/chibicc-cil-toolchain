@@ -1,4 +1,4 @@
-
+﻿
 //  .NET IL Disassembler.  Version 8.0.0
 
 
@@ -25,15 +25,6 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private auto ansi sealed C.type.foo
-       extends [mscorlib]System.Enum
-{
-  .field public specialname rtspecialname uint64 value__
-  .field public static literal uint64 beef
-  .field public static literal uint64 poke
-  .field public static literal uint64 chicken
-} // end of class C.type.foo
-
 .class private abstract auto ansi sealed beforefieldinit '<source>$'
        extends [mscorlib]System.Object
 {
@@ -47,6 +38,15 @@
   } // end of method '<source>$'::main
 
 } // end of class '<source>$'
+
+.class private auto ansi sealed C.type.foo
+       extends [mscorlib]System.Enum
+{
+  .field public specialname rtspecialname uint64 value__
+  .field public static literal uint64 beef
+  .field public static literal uint64 poke
+  .field public static literal uint64 chicken
+} // end of class C.type.foo
 
 
 // =============================================================

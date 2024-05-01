@@ -16,10 +16,10 @@ namespace chibicc.toolchain.Parsing;
 
 partial class CilParser
 {
-    private StructureField[] ParseStructureFields(
+    private StructureFieldNode[] ParseStructureFields(
         TokensIterator tokensIterator, bool isExplicit)
     {
-        var structureFields = new List<StructureField>();
+        var structureFields = new List<StructureFieldNode>();
 
         while (tokensIterator.TryGetNext(out var tokens))
         {
@@ -46,7 +46,7 @@ partial class CilParser
                     if (!TryLookupScopeDescriptorName(
                         scopeToken,
                         out var scope) ||
-                        scope.Scope == Scopes.File)
+                        scope.Scope is Scopes.File or Scopes.__Module__)
                     {
                         this.OutputError(
                             scopeToken,
@@ -105,6 +105,7 @@ partial class CilParser
                         memberOffset = offset;
                     }
                     structureFields.Add(new(
+                        scope,
                         memberType,
                         new(memberNameToken),
                         memberOffset is { } mo ? new NumericNode(mo, tokens[3]) : null));
@@ -152,7 +153,8 @@ partial class CilParser
         var scopeToken = tokens[1];
         if (!TryLookupScopeDescriptorName(
             scopeToken,
-            out var scope))
+            out var scope) ||
+            scope.Scope is Scopes.__Module__)
         {
             this.OutputError(
                 scopeToken,

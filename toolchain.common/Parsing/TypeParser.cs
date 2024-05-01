@@ -75,15 +75,15 @@ public static class TypeParser
     private readonly struct FunctionDescriptor
     {
         public readonly OuterNode Node;
-        public readonly List<FunctionParameter> Parameters;
+        public readonly List<FunctionParameterNode> Parameters;
 
-        public FunctionDescriptor(OuterNode node, List<FunctionParameter> parameters)
+        public FunctionDescriptor(OuterNode node, List<FunctionParameterNode> parameters)
         {
             this.Node = node;
             this.Parameters = parameters;
         }
 
-        public void Deconstruct(out OuterNode node, out List<FunctionParameter> parameters)
+        public void Deconstruct(out OuterNode node, out List<FunctionParameterNode> parameters)
         {
             node = this.Node;
             parameters = this.Parameters;
@@ -95,7 +95,7 @@ public static class TypeParser
     public static bool TryParse(Token token, out TypeNode typeNode)
     {
         var nodeStack = new Stack<FunctionDescriptor>();
-        var parameters = new List<FunctionParameter>();
+        var parameters = new List<FunctionParameterNode>();
         var sb = new StringBuilder();
         TypeNode? currentNode = null;
         string? currentName = null;
@@ -158,7 +158,7 @@ public static class TypeParser
                 if (start == index)
                 {
                     index++;
-                    currentNode = new ArrayTypeNode(currentNode, null, token);
+                    currentNode = new ArrayTypeNode(currentNode, token);
                 }
                 // `foo[123]`
                 else if (int.TryParse(
@@ -169,13 +169,13 @@ public static class TypeParser
                     length >= 0)
                 {
                     index++;
-                    currentNode = new ArrayTypeNode(currentNode, length, token);
+                    currentNode = new FixedLengthArrayTypeNode(currentNode, length, token);
                 }
                 // `foo[*]`
                 else if (typeName.Substring(start, index - start) == "*")
                 {
                     index++;
-                    currentNode = new ArrayTypeNode(currentNode, -1, token);
+                    currentNode = new FixedLengthArrayTypeNode(currentNode, -1, token);
                 }
                 // `foo[-1]` `foo[abc]`
                 else
@@ -231,7 +231,7 @@ public static class TypeParser
                 }
 
                 var ((returnNode, name), lastParameters) = nodeStack.Pop();
-                if (parameters.LastOrDefault() is (TypeIdentityNode("..."), _))
+                if (parameters.LastOrDefault() is (TypeIdentityNode("...", _), _, _))
                 {
                     currentNode = new FunctionSignatureNode(
                         returnNode,
@@ -320,4 +320,113 @@ public static class TypeParser
         where T : TypeNode =>
         TryParse(token, out var typeNode) && typeNode is T node ?
             node : throw new ArgumentException();
+
+    ///////////////////////////////////////////////////////////////////////////
+
+    internal static string GetCilTypeName(TypeNode type)
+    {
+        // This method produces output similar to `TypeNode.ToString()`.
+        // The difference is that when a fixed length array type is included,
+        // the name of the corresponding .NET type.
+
+        static string InnerFixedLengthArrayElementTypeName(TypeNode type)
+        {
+            switch (type)
+            {
+                // .NET array type.
+                case ArrayTypeNode(var elementType, _):
+                    return $"{InnerFixedLengthArrayElementTypeName(elementType)}_arr";
+
+                // Fixed length array type.
+                case FixedLengthArrayTypeNode(var elementType, var length, _):
+                    var etn1 = InnerFixedLengthArrayElementTypeName(elementType);
+                    return length >= 0 ?
+                        $"{etn1}_len{length}" :  // Fixed length array type.
+                        throw new ArgumentException();
+
+                // Nested reference type.
+                case DerivedTypeNode(DerivedTypes.Reference, var elementType, _):
+                    return $"{InnerFixedLengthArrayElementTypeName(elementType)}_ref";
+
+                // Nested pointer type.
+                case DerivedTypeNode(DerivedTypes.Pointer, var elementType, _):
+                    return $"{InnerFixedLengthArrayElementTypeName(elementType)}_ptr";
+
+                // Function signature.
+                case FunctionSignatureNode(var returnType, var parameters, _, _):
+                    var rtn = InnerFixedLengthArrayElementTypeName(returnType);
+                    var ptns = parameters.
+                        Select(p => InnerFixedLengthArrayElementTypeName(p.ParameterType)).
+                        ToArray();
+                    // TODO: very weak mangling for any parameter types.
+                    return $"func_{rtn}_{string.Join("_", ptns)}";
+
+                default:
+                    return type.TypeIdentity;
+            }
+        }
+
+        static string InnerTypeName(TypeNode type)
+        {
+            switch (type)
+            {
+                // .NET array type.
+                case ArrayTypeNode(var elementType, _):
+                    return $"{InnerTypeName(elementType)}[]";
+
+                // Fixed length array type.
+                case FixedLengthArrayTypeNode(var elementType, var length, _):
+                    var etn1 = InnerFixedLengthArrayElementTypeName(elementType);
+                    return length >= 0 ?
+                        $"{etn1}_len{length}" :  // Fixed length array type.
+                        $"{etn1}_flex";          // Flex array type.
+
+                // Nested reference type.
+                case DerivedTypeNode(DerivedTypes.Reference, var elementType, _):
+                    return $"{InnerTypeName(elementType)}&";
+
+                // Nested pointer type.
+                case DerivedTypeNode(DerivedTypes.Pointer, var elementType, _):
+                    return $"{InnerTypeName(elementType)}*";
+
+                // Function signature.
+                case FunctionSignatureNode(var returnType, var parameters, _, _):
+                    var rtn = InnerTypeName(returnType);
+                    var ptns = parameters.Select(p => InnerTypeName(p.ParameterType));
+                    return $"{rtn}({string.Join(",", ptns)})";
+
+                default:
+                    return type.TypeIdentity;
+            }
+        }
+
+        return InnerTypeName(type);
+    }
+
+    public static string GetCilTypeName(Type type)
+    {
+        static string InnerTypeName(Type type)
+        {
+            switch (type)
+            {
+                // .NET array type.
+                case { IsArray: true }:
+                    return $"{InnerTypeName(type.GetElementType()!)}[]";
+
+                // Nested reference type.
+                case { IsByRef: true }:
+                    return $"{InnerTypeName(type.GetElementType()!)}&";
+
+                // Nested pointer type.
+                case { IsPointer: true }:
+                    return $"{InnerTypeName(type.GetElementType()!)}*";
+
+                default:
+                    return type.Namespace == "C.type" ?
+                        type.Name :
+                        type.FullName!;
+            }
+        }
+        return InnerTypeName(type);
+    }
 }

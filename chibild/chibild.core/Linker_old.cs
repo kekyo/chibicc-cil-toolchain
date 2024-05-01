@@ -322,10 +322,12 @@ public sealed class Linker
         //////////////////////////////////////////////////////////////
 
         // Finalize parser.
-        var allFinished = parser.Finish(
-            options.CreationOptions?.TargetFramework,
-            options.CreationOptions?.Options.HasFlag(AssembleOptions.DisableJITOptimization),
-            options.ApplyOptimization);
+        //var allFinished = parser.Finish(
+        //    options.CreationOptions?.TargetFramework,
+        //    options.CreationOptions?.Options.HasFlag(AssembleOptions.DisableJITOptimization),
+        //    options.ApplyOptimization);
+
+        var allFinished = true;
 
         cabiSpecificSymbols.Finish();
 

@@ -14,15 +14,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using chibicc.toolchain.Internal;
 
 namespace chibicc.toolchain.Parsing;
 
 public sealed partial class CilParser
 {
+    private enum LocationModes
+    {
+        OriginSource,
+        Directive,
+        Hide,
+    }
+
     private readonly ILogger logger;
     private readonly Dictionary<string, FileDescriptor> files = new();
 
-    private Location? currentLocation;
+    private LocationModes locationMode;
     private bool caughtError;
 
     public CilParser(ILogger logger) =>
@@ -46,7 +54,7 @@ public sealed partial class CilParser
         Token token,
         out ScopeDescriptorNode scope)
     {
-        if (!Enum.TryParse<Scopes>(token.Text, true, out var sd))
+        if (!CommonUtilities.TryParseEnum<Scopes>(token.Text, out var sd))
         {
             scope = null!;
             return false;
@@ -121,10 +129,12 @@ public sealed partial class CilParser
     /////////////////////////////////////////////////////////////////////
 
     public IEnumerable<DeclarationNode> Parse(
-        IEnumerable<Token[]> tokenLists)
+        IEnumerable<Token[]> tokenLists,
+        bool isLocationOriginSource)
     {
         this.files.Clear();
-        this.currentLocation = null;
+        this.locationMode = isLocationOriginSource ?
+            LocationModes.OriginSource : LocationModes.Hide;
         this.caughtError = false;
         
         using var tokenIterator = new TokensIterator(tokenLists);

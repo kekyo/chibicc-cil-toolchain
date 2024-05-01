@@ -7,18 +7,28 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Logging;
 using chibild.Internal;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
-using chibicc.toolchain.Logging;
+using DiffEngine;
 
 namespace chibild;
 
 internal static class LinkerTestRunner
 {
+    static LinkerTestRunner()
+    {
+        DiffTools.UseOrder(
+            DiffTool.WinMerge,
+            DiffTool.Meld,
+            DiffTool.VisualStudio,
+            DiffTool.Rider);        
+    }
+    
     public static readonly string ArtifactsBasePath = Path.GetFullPath(
         Path.Combine("..", "..", "..", "artifacts"));
     
@@ -29,7 +39,7 @@ internal static class LinkerTestRunner
         string[] chibildSourceCodes,
         string[]? additionalReferencePaths,
         string? injectToAssemblyPath,
-        Func<AssemblerCreationOptions?> creationOptions,
+        Func<AssemblerCreationOptions?> creationOptionsF,
         string memberName)
     {
         var basePath = Path.GetFullPath(
@@ -52,6 +62,7 @@ internal static class LinkerTestRunner
 
             try
             {
+                var crt0Path = Path.Combine(ArtifactsBasePath, "crt0.o");
                 var coreLibPath = Path.Combine(ArtifactsBasePath, "mscorlib.dll");
                 var tmp2Path = Path.Combine(ArtifactsBasePath, "tmp2.dll");
 
@@ -70,31 +81,45 @@ internal static class LinkerTestRunner
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
                     Select(Path.GetFileNameWithoutExtension).
                     Distinct().
-                    Select(path => (ILibraryReference)new LibraryNameReference(path!)).
+                    Select(path => (InputReference)new LibraryNameReference(path!)).
                     ToArray();
 
-                var assember = new Linker(logger);
+                var assember = new CilLinker(logger);
 
                 var outputAssemblyPath =
                     Path.Combine(basePath, "output.dll");
+
+                var creationOptions = creationOptionsF();
+
+                var sourceInputs = chibildSourceCodes.
+                    Select((sc, index) =>
+                        (InputReference)new ObjectReaderReference(
+                            index >= 1 ? $"source{index}.s" : "source.s",
+                            () => new StringReader(sc))).
+                    Concat(libraryReferences).
+                    ToArray();
+
+                if (creationOptions?.AssemblyType is
+                    AssemblyTypes.Exe or AssemblyTypes.WinExe)
+                {
+                    sourceInputs = sourceInputs.
+                        Prepend(new ObjectFilePathReference(crt0Path)).
+                        ToArray();
+                }
 
                 var succeeded = assember.Link(
                     outputAssemblyPath,
                     new()
                     {
                         LibraryReferenceBasePaths = referenceAssemblyBasePaths,
-                        LibraryReferences = libraryReferences!,
                         DebugSymbolType = DebugSymbolTypes.Embedded,
                         IsDeterministic = true,
                         ApplyOptimization = false,
-                        CreationOptions = creationOptions(),
+                        CreationOptions = creationOptions,
                     },
                     injectToAssemblyPath,
-                    chibildSourceCodes.Select((sc, index) =>
-                        (IInputFileItem)new InputTextReaderItem(
-                            () => new StringReader(sc),
-                            index >= 1 ? $"source{index}.s" : "source.s")).
-                        ToArray());
+                    basePath,
+                    sourceInputs);
 
                 var disassembledPath =
                     Path.Combine(basePath, "output.il");
@@ -130,6 +155,12 @@ internal static class LinkerTestRunner
                         break;
                     }
 
+                    if (line.IndexOf("initializer_$") is { } index && index >= 0)
+                    {
+                        var sb = new StringBuilder(line);
+                        sb.Remove(index + "initializer_$".Length, 32);   // 32: Guid string
+                        line = sb.ToString();
+                    }
                     if (!line.StartsWith("// Image base:") &&
                         !line.StartsWith("// MVID:") &&
                         !line.StartsWith("// WARNING: Created Win32 resource file"))

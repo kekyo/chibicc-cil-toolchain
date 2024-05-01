@@ -37,19 +37,6 @@
 
 } // end of class '<source>$'
 
-.class private abstract auto ansi sealed beforefieldinit '<source1>$'
-       extends [mscorlib]System.Object
-{
-  .class sequential ansi sealed nested public foo
-         extends [mscorlib]System.ValueType
-  {
-    .field public int32 v0
-    .field public int32 v1
-    .field public int32 v2
-  } // end of class foo
-
-} // end of class '<source1>$'
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
@@ -62,6 +49,19 @@
   } // end of method text::main
 
 } // end of class C.text
+
+.class private abstract auto ansi sealed beforefieldinit '<source1>$'
+       extends [mscorlib]System.Object
+{
+  .class sequential ansi sealed nested public foo
+         extends [mscorlib]System.ValueType
+  {
+    .field public int32 v0
+    .field public int32 v1
+    .field public int32 v2
+  } // end of class foo
+
+} // end of class '<source1>$'
 
 
 // =============================================================

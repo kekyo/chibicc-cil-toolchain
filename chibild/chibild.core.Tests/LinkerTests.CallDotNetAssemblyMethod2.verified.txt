@@ -25,12 +25,12 @@
 
 // ================== GLOBAL METHODS =========================
 
-.method assembly static void  _start() cil managed
+.method assembly static int32  _start() cil managed
 {
   .entrypoint
   // Code size       6 (0x6)
   .maxstack  8
-  IL_0000:  call       void C.text::main()
+  IL_0000:  call       int32 C.text::main()
   IL_0005:  ret
 } // end of global method _start
 
@@ -43,9 +43,9 @@
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
-  .method public static void  main() cil managed
+  .method public static int32  main() cil managed
   {
-    // Code size       14 (0xe)
+    // Code size       15 (0xf)
     .maxstack  8
     IL_0000:  ldc.i4.1
     IL_0001:  box        [mscorlib]System.Int32
@@ -53,7 +53,8 @@
     IL_0007:  call       valuetype [mscorlib]System.Runtime.InteropServices.GCHandle [mscorlib]System.Runtime.InteropServices.GCHandle::Alloc(object,
                                                                                                                                               valuetype [mscorlib]System.Runtime.InteropServices.GCHandleType)
     IL_000c:  pop
-    IL_000d:  ret
+    IL_000d:  ldc.i4.0
+    IL_000e:  ret
   } // end of method text::main
 
 } // end of class C.text

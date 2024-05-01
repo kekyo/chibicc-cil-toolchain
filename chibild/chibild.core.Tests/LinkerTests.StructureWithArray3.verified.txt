@@ -41,79 +41,6 @@
   .field public int32 c
 } // end of class C.type.bar
 
-.class public sequential ansi sealed System.SByte_len4
-       extends [mscorlib]System.ValueType
-{
-  .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
-  .field private int8 item0
-  .field private int8 item1
-  .field private int8 item2
-  .field private int8 item3
-  .method public hidebysig specialname instance int32 
-          get_Length() cil managed
-  {
-    // Code size       6 (0x6)
-    .maxstack  8
-    IL_0000:  ldc.i4     0x4
-    IL_0005:  ret
-  } // end of method SByte_len4::get_Length
-
-  .method public hidebysig specialname instance int8 
-          get_Item(int32 index) cil managed
-  {
-    // Code size       22 (0x16)
-    .maxstack  8
-    IL_0000:  ldarg.1
-    IL_0001:  ldc.i4     0x4
-    IL_0006:  clt
-    IL_0008:  brtrue.s   IL_0010
-
-    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
-    IL_000f:  throw
-
-    IL_0010:  ldarg.1
-    IL_0011:  ldarg.0
-    IL_0012:  conv.u
-    IL_0013:  add
-    IL_0014:  ldind.i1
-    IL_0015:  ret
-  } // end of method SByte_len4::get_Item
-
-  .method public hidebysig specialname instance void 
-          set_Item(int32 index,
-                   int8 'value') cil managed
-  {
-    // Code size       23 (0x17)
-    .maxstack  8
-    IL_0000:  ldarg.1
-    IL_0001:  ldc.i4     0x4
-    IL_0006:  clt
-    IL_0008:  brtrue.s   IL_0010
-
-    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
-    IL_000f:  throw
-
-    IL_0010:  ldarg.1
-    IL_0011:  ldarg.0
-    IL_0012:  conv.u
-    IL_0013:  add
-    IL_0014:  ldarg.2
-    IL_0015:  stind.i1
-    IL_0016:  ret
-  } // end of method SByte_len4::set_Item
-
-  .property instance callconv(8) int32 Length()
-  {
-    .get instance int32 System.SByte_len4::get_Length()
-  } // end of property SByte_len4::Length
-  .property instance callconv(8) int8 Item(int32)
-  {
-    .get instance int8 System.SByte_len4::get_Item(int32)
-    .set instance void System.SByte_len4::set_Item(int32,
-                                                   int8)
-  } // end of property SByte_len4::Item
-} // end of class System.SByte_len4
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
@@ -205,6 +132,79 @@
                                                  valuetype C.type.bar)
   } // end of property bar_len3::Item
 } // end of class C.type.bar_len3
+
+.class public sequential ansi sealed System.SByte_len4
+       extends [mscorlib]System.ValueType
+{
+  .custom instance void [mscorlib]System.Reflection.DefaultMemberAttribute::.ctor(string) = ( 01 00 04 49 74 65 6D 00 00 )                      // ...Item..
+  .field private int8 item0
+  .field private int8 item1
+  .field private int8 item2
+  .field private int8 item3
+  .method public hidebysig specialname instance int32 
+          get_Length() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldc.i4     0x4
+    IL_0005:  ret
+  } // end of method SByte_len4::get_Length
+
+  .method public hidebysig specialname instance int8 
+          get_Item(int32 index) cil managed
+  {
+    // Code size       22 (0x16)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  ldc.i4     0x4
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  ldarg.0
+    IL_0012:  conv.u
+    IL_0013:  add
+    IL_0014:  ldind.i1
+    IL_0015:  ret
+  } // end of method SByte_len4::get_Item
+
+  .method public hidebysig specialname instance void 
+          set_Item(int32 index,
+                   int8 'value') cil managed
+  {
+    // Code size       23 (0x17)
+    .maxstack  8
+    IL_0000:  ldarg.1
+    IL_0001:  ldc.i4     0x4
+    IL_0006:  clt
+    IL_0008:  brtrue.s   IL_0010
+
+    IL_000a:  newobj     instance void [mscorlib]System.IndexOutOfRangeException::.ctor()
+    IL_000f:  throw
+
+    IL_0010:  ldarg.1
+    IL_0011:  ldarg.0
+    IL_0012:  conv.u
+    IL_0013:  add
+    IL_0014:  ldarg.2
+    IL_0015:  stind.i1
+    IL_0016:  ret
+  } // end of method SByte_len4::set_Item
+
+  .property instance callconv(8) int32 Length()
+  {
+    .get instance int32 System.SByte_len4::get_Length()
+  } // end of property SByte_len4::Length
+  .property instance callconv(8) int8 Item(int32)
+  {
+    .get instance int8 System.SByte_len4::get_Item(int32)
+    .set instance void System.SByte_len4::set_Item(int32,
+                                                   int8)
+  } // end of property SByte_len4::Item
+} // end of class System.SByte_len4
 
 
 // =============================================================

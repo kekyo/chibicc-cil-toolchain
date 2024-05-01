@@ -38,7 +38,7 @@ partial class CilParser
         if (!TryLookupScopeDescriptorName(
             scopeToken,
             out var scope) ||
-            scope.Scope == Scopes.Public)
+            scope.Scope is Scopes.Public or Scopes.__Module__)
         {
             this.OutputError(
                 scopeToken,

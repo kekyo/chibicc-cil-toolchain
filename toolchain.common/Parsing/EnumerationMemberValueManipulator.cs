@@ -7,11 +7,11 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Tokenizing;
-using Mono.Cecil;
 using System.Collections.Generic;
 
-namespace chibild.Internal;
+namespace chibicc.toolchain.Parsing;
 
 internal abstract class EnumerationMemberValueManipulator
 {
@@ -35,8 +35,8 @@ internal abstract class EnumerationMemberValueManipulator
     public abstract bool TryParseMemberValue(Token memberValueToken, out object memberValue);
     public abstract object IncrementMemberValue(object memberValue);
 
-    public static EnumerationMemberValueManipulator GetInstance(TypeReference type) =>
-        instances[type.FullName];
+    public static bool TryGetInstance(string typeName, out EnumerationMemberValueManipulator manipulator) =>
+        instances.TryGetValue(typeName, out manipulator!);
 
     private sealed class ByteManipulator : EnumerationMemberValueManipulator
     {
@@ -45,7 +45,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseUInt8(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseUInt8(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;
@@ -68,7 +68,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseInt8(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseInt8(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;
@@ -91,7 +91,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseInt16(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseInt16(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;
@@ -114,7 +114,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseUInt16(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseUInt16(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;
@@ -137,7 +137,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseInt32(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseInt32(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;
@@ -160,7 +160,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseUInt32(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseUInt32(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;
@@ -183,7 +183,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseInt64(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseInt64(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;
@@ -206,7 +206,7 @@ internal abstract class EnumerationMemberValueManipulator
 
         public override bool TryParseMemberValue(Token memberValueToken, out object memberValue)
         {
-            if (Utilities.TryParseUInt64(memberValueToken.Text, out var value))
+            if (CommonUtilities.TryParseUInt64(memberValueToken.Text, out var value))
             {
                 memberValue = value;
                 return true;

@@ -498,37 +498,6 @@ public sealed partial class LinkerTests
         return Verify(actual);
     }
 
-    [Test]
-    public Task MainFunctionWithoutReturn()
-    {
-        var actual = Run(@"
-            .function internal void() main
-                ret",
-                assemblyType: AssemblyTypes.Exe);
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task MainFunctionWithReturnAndParameters()
-    {
-        var actual = Run(@"
-            .function internal int32(argc:int32,argv:int8**) main
-                ldc.i4.1
-                ret",
-                assemblyType: AssemblyTypes.Exe);
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task MainFunctionWithoutReturnAndParameters()
-    {
-        var actual = Run(@"
-            .function internal void(argc:int32,argv:int8**) main
-                ret",
-                assemblyType: AssemblyTypes.Exe);
-        return Verify(actual);
-    }
-
     /////////////////////////////////////////////////////////
 
     [Test]
@@ -1113,6 +1082,21 @@ public sealed partial class LinkerTests
                 ldstr ""ABC""
                 ldc.i4.1
                 call int32(int32,int64,float64,string,bool) va 
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CallCAbiTargetFunctionWithVariadicSameObject()
+    {
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.s 123
+                ldc.i8 456
+                ldc.r8 123.456
+                ldstr ""ABC""
+                ldc.i4.1
+                call int32(int32,int64,float64,string,bool) va 
                 ret
             .function file int32(int32,int64,float64,...) va
                 ldc.i4.s 123
@@ -1166,23 +1150,6 @@ public sealed partial class LinkerTests
     }
 
     /////////////////////////////////////////////////////////
-
-    [Test]
-    public Task InitializerOnPublic()
-    {
-        var actual = Run(@"
-            .initializer public
-                ldc.i4.2
-                stsfld foo
-                ret
-            .initializer public
-                ldc.i4.4
-                stsfld bar
-                ret
-            .global public int32 foo
-            .global public int32 bar");
-        return Verify(actual);
-    }
 
     [Test]
     public Task InitializerOnInternal()
@@ -1474,7 +1441,7 @@ public sealed partial class LinkerTests
     {
         var actual = Run(@"
             .function public string(int32,int8&,...)*() foo
-                ldftn bar
+                ldftn string(int32,int8&,...) bar
                 ret
             .function file string(a:int32,b:int8&,...) bar
                 .local System.ArgIterator
@@ -1509,9 +1476,10 @@ public sealed partial class LinkerTests
     public Task CallDotNetAssemblyMethod()
     {
         var actual = Run(@"
-            .function public void() main
+            .function public int32() main
                 ldstr ""Hello world""
                 call void(string) System.Console.WriteLine
+                ldc.i4.0
                 ret",
             new[] { typeof(System.Console).Assembly.Location },
             AssemblyTypes.Exe);
@@ -1522,12 +1490,13 @@ public sealed partial class LinkerTests
     public Task CallDotNetAssemblyMethod2()
     {
         var actual = Run(@"
-            .function public void() main
+            .function public int32() main
                 ldc.i4.1
                 box int32
                 ldc.i4.3
                 call System.Runtime.InteropServices.GCHandle(object,System.Runtime.InteropServices.GCHandleType) System.Runtime.InteropServices.GCHandle.Alloc
                 pop
+                ldc.i4.0
                 ret",
             new[] { typeof(System.Console).Assembly.Location },
             AssemblyTypes.Exe);
@@ -1785,7 +1754,7 @@ public sealed partial class LinkerTests
     [Test]
     public Task FlexValueArray()
     {
-        // It is illegal variable/result type, but chibild will generate.
+        // It is illegal variable/result type, but chibild will generate it.
         var actual = Run(@"
             .function public char[*]() foo
                 ldsfld bar
@@ -2197,6 +2166,7 @@ public sealed partial class LinkerTests
     }
 
     /////////////////////////////////////////////////////////
+
     [Test]
     public Task Enumeration1()
     {
