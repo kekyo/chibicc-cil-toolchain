@@ -29,139 +29,156 @@ partial class CodeGenerator
         TargetFramework? targetFramework,
         bool? disableJITOptimization)
     {
-        // TODO: Use context instead of delayed looking up.
-        var context = new LookupContext(
-            this.targetModule,
-            null,
-            inputFragments);
+        bool UnsafeGetCoreType(
+            string coreTypeName,
+            out TypeReference tr)
+        {
+            var coreType = new TypeIdentityNode(coreTypeName, Token.Unknown);
+            foreach (var fragment in inputFragments)
+            {
+                if (fragment.TryGetType(
+                    coreType,
+                    this.targetModule,
+                    out tr))
+                {
+                    return true;
+                }
+            }
+            tr = null!;
+            return false;
+        }
         
         // Apply TargetFrameworkAttribute if could be imported.
         if (targetFramework != null)
         {
-            this.DelayLookingUpMethod(
-                context,
-                IdentityNode.Create(
-                    "System.Runtime.Versioning.TargetFrameworkAttribute..ctor"),
-                TypeParser.UnsafeParse<FunctionSignatureNode>(
-                    Token.Identity("System.Void(System.String)")),
-                false,
-                (tfacr, _) =>
+            if (UnsafeGetCoreType(
+                "System.Runtime.Versioning.TargetFrameworkAttribute",
+                out var tfatr))
+            {
+                if (tfatr.Resolve().Methods.FirstOrDefault(m =>
+                    m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
+                    m.Parameters.Count == 1 &&
+                    m.Parameters[0].ParameterType.FullName == "System.String") is MethodReference ctor)
                 {
-                    var tfa = new CustomAttribute(
-                        context.SafeImport(tfacr));
+                    ctor = this.targetModule.SafeImport(ctor);
+                    
+                    var tfa = new CustomAttribute(ctor);
                     tfa.ConstructorArguments.Add(new(
-                        context.FallbackModule.TypeSystem.String,
+                        this.targetModule.TypeSystem.String,
                         targetFramework.ToString()));
-                    context.FallbackModule.Assembly.CustomAttributes.Add(tfa);
+                    this.targetModule.Assembly.CustomAttributes.Add(tfa);
 
                     this.logger.Trace(
                         "TargetFrameworkAttribute is applied.");
-                },
-                () =>
+                }
+                else
                 {
                     this.logger.Warning(
-                        "TargetFrameworkAttribute was not found, so not applied. Because maybe did not reference core library.");
-                });
+                        "TargetFrameworkAttribute constructor was not found.");
+                }
+            }
+            else
+            {
+                this.logger.Warning(
+                    "TargetFrameworkAttribute was not found, so not applied. Because maybe did not reference core library.");
+            }
         }
 
         // Apply DebuggableAttribute if could be imported.
         if (disableJITOptimization ?? false)
         {
-            this.DelayLookingUpType(
-                context,
-                IdentityNode.Create("System.Diagnostics.DebuggableAttribute.DebuggingModes"),
-                false,
-                dmtr =>
+            if (UnsafeGetCoreType(
+                "System.Diagnostics.DebuggableAttribute.DebuggingModes",
+                out var dadmtr) &&
+                UnsafeGetCoreType(
+                "System.Diagnostics.DebuggableAttribute",
+                out var datr))
+            {
+                if (datr.Resolve().Methods.FirstOrDefault(m =>
+                    m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
+                    m.Parameters.Count == 1 &&
+                    m.Parameters[0].ParameterType.FullName ==
+                    "System.Diagnostics.DebuggableAttribute.DebuggingModes") is MethodReference ctor)
                 {
-                    this.DelayLookingUpMethod(
-                        context,
-                        IdentityNode.Create("System.Diagnostics.DebuggableAttribute..ctor"),
-                        TypeParser.UnsafeParse<FunctionSignatureNode>(
-                            Token.Identity("System.Void(System.Diagnostics.DebuggableAttribute.DebuggingModes)")),
-                        false,
-                        (dacr, _) =>
-                        {
-                            var da = new CustomAttribute(
-                                context.SafeImport(dacr));
-                            da.ConstructorArguments.Add(new(
-                                context.SafeImport(dmtr),
-                                (int)(DebuggableAttribute.DebuggingModes.Default |
-                                      DebuggableAttribute.DebuggingModes.DisableOptimizations)));
-                            context.FallbackModule.Assembly.CustomAttributes.Add(da);
+                    dadmtr = this.targetModule.SafeImport(dadmtr);
+                    ctor = this.targetModule.SafeImport(ctor);
+                    
+                    var da = new CustomAttribute(ctor);
+                    da.ConstructorArguments.Add(new(
+                        dadmtr,
+                        (int)(DebuggableAttribute.DebuggingModes.Default |
+                              DebuggableAttribute.DebuggingModes.DisableOptimizations)));
+                    this.targetModule.Assembly.CustomAttributes.Add(da);
 
-                            this.logger.Trace(
-                                "DebuggableAttribute is applied.");
-                        },
-                        () =>
-                        {
-                            this.logger.Warning(
-                                "DebuggableAttribute was not found, so not applied. Because maybe did not reference core library.");
-                        });
-                },
-                () =>
+                    this.logger.Trace(
+                        "DebuggableAttribute is applied.");
+                }
+                else
                 {
                     this.logger.Warning(
-                        "DebuggableAttribute.DebuggingModes was not found, so not applied. Because maybe did not reference core library.");
-                });
+                        "DebuggableAttribute constructor was not found.");
+                }
+            }
+            else
+            {
+                this.logger.Warning(
+                    "DebuggableAttribute and/or DebuggingModes was not found, so not applied. Because maybe did not reference core library.");
+            }
         }
 
         // Apply pointer visualizers if could be imported.
-        this.DelayLookingUpType(
-            context,
-            IdentityNode.Create("C.type.__pointer_visualizer"),
-            false,
-            pvtr =>
+        if (UnsafeGetCoreType(
+                "System.Type",
+                out var sttr) &&
+            UnsafeGetCoreType(
+                "System.Diagnostics.DebuggerTypeProxyAttribute",
+                out var dtpatr) &&
+            UnsafeGetCoreType(
+                "C.type.__pointer_visualizer",
+                out var pvtr))
+        {
+            if (dtpatr.Resolve().Methods.FirstOrDefault(m =>
+                m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
+                m.Parameters.Count == 1 &&
+                m.Parameters[0].ParameterType.FullName ==
+                "System.Type") is MethodReference ctor)
             {
-                this.DelayLookingUpType(
-                    context,
-                    IdentityNode.Create("System.Type"),
-                    false,
-                    sttf =>
-                    {
-                        this.DelayLookingUpMethod(
-                            context,
-                            IdentityNode.Create("System.Diagnostics.DebuggerTypeProxyAttribute..ctor"),
-                            TypeParser.UnsafeParse<FunctionSignatureNode>(Token.Identity("System.Void(System.Type)")),
-                            false,
-                            (dtpacr, _) =>
-                            {
-                                dtpacr = context.SafeImport(dtpacr);
-                                pvtr = context.SafeImport(pvtr);
-                                sttf = context.SafeImport(sttf);
-                                
-                                foreach (var targetTypeName in new[]
-                                    { "System.Void*", "System.Byte*", "System.SByte*", })
-                                {
-                                    this.DelayLookingUpType(
-                                        context,
-                                        IdentityNode.Create(targetTypeName),
-                                        false,
-                                        ttr =>
-                                        {
-                                            var dtpa = new CustomAttribute(dtpacr);
-                                            dtpa.ConstructorArguments.Add(new(sttf, pvtr));
-                                            dtpa.Properties.Add(new(
-                                                "Target",
-                                                new(sttf, context.SafeImport(ttr))));
-                                            context.FallbackModule.Assembly.CustomAttributes.Add(dtpa);
+                sttr = this.targetModule.SafeImport(sttr);
+                pvtr = this.targetModule.SafeImport(pvtr);
+                ctor = this.targetModule.SafeImport(ctor);
 
-                                            this.logger.Trace(
-                                                $"DebuggerTypeProxyAttribute({ttr.FullName}) is applied.");
-                                        });
-                                }
-                            },
-                            () =>
-                            {
-                                this.logger.Warning(
-                                    "DebuggerTypeProxyAttribute was not found, so not applied. Because maybe did not reference core library.");
-                            });
-                    });
-            },
-            () =>
+                foreach (var targetTypeName in new[]
+                    { "System.Void", "System.Byte", "System.SByte", })
+                {
+                    if (UnsafeGetCoreType(
+                        targetTypeName,
+                        out var ttr))
+                    {
+                        var ptr = this.targetModule.SafeImport(ttr).MakePointerType();
+                        
+                        var dtpa = new CustomAttribute(ctor);
+                        dtpa.ConstructorArguments.Add(new(sttr, pvtr));
+                        dtpa.Properties.Add(new(
+                            "Target",
+                            new(sttr, ptr)));
+                        this.targetModule.Assembly.CustomAttributes.Add(dtpa);
+
+                        this.logger.Trace(
+                            $"DebuggerTypeProxyAttribute({ptr.FullName}) is applied.");
+                    }
+                    else
+                    {
+                        this.logger.Warning(
+                            "DebuggerTypeProxyAttribute was not found, so not applied. Because maybe did not reference core library.");
+                    }
+                }
+            }
+            else
             {
                 this.logger.Warning(
-                    "Pointer visualizer type was not found, so not applied. Because maybe did not reference libc.");
-            });
+                    "DebuggerTypeProxyAttribute and/or pointer visualizer type was not found, so not applied. Because maybe did not reference core library or libc.");
+            }
+        }
     }
 
     private void AssignEntryPoint(
