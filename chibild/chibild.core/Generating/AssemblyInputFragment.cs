@@ -136,13 +136,20 @@ internal sealed class AssemblyInputFragment :
         ModuleDefinition fallbackModule, MemberReference mr)
     {
         var anr = mr.Module.Assembly.Name;
-        if (!this.resolvedModules.TryGetValue(anr.Name, out var module))
+        
+        lock (this.resolvedModules)
         {
-            var assembly = fallbackModule.AssemblyResolver.Resolve(anr);
-            module = assembly.MainModule;
-            this.resolvedModules.Add(anr.Name, module);
+            if (!this.resolvedModules.TryGetValue(anr.Name, out var module))
+            {
+                lock (fallbackModule)
+                {
+                    var assembly = fallbackModule.AssemblyResolver.Resolve(anr);
+                    module = assembly.MainModule;
+                }
+                this.resolvedModules.Add(anr.Name, module);
+            }
+            return module;
         }
-        return module;
     }
 
     public override bool TryGetType(

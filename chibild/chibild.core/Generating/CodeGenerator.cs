@@ -178,7 +178,7 @@ internal sealed partial class CodeGenerator
         Parallel.ForEach(inputFragments, currentFragment =>
         {
             if (currentFragment is ObjectInputFragment ofif &&
-                ofif is not ArchivedFileInputFragment)
+                ofif is not ArchivedObjectInputFragment)
             {
                 this.ConsumeFragment(ofif, inputFragments);
             }
@@ -211,7 +211,7 @@ internal sealed partial class CodeGenerator
 #else
             Parallel.ForEach(inputFragments, currentFragment =>
             {
-                if (currentFragment is ArchivedFileInputFragment afif &&
+                if (currentFragment is ArchivedObjectInputFragment afif &&
                     afif.LoadObjectIfRequired(
                         this.logger,
                         isLocationOriginSource))
