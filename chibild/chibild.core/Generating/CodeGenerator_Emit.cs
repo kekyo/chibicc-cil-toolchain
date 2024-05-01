@@ -97,8 +97,7 @@ partial class CodeGenerator
                 if (datr.Resolve().Methods.FirstOrDefault(m =>
                     m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
                     m.Parameters.Count == 1 &&
-                    m.Parameters[0].ParameterType.FullName ==
-                    "System.Diagnostics.DebuggableAttribute.DebuggingModes") is MethodReference ctor)
+                    m.Parameters[0].ParameterType.FullName.EndsWith("DebuggingModes")) is MethodReference ctor)
                 {
                     dadmtr = this.targetModule.SafeImport(dadmtr);
                     ctor = this.targetModule.SafeImport(ctor);

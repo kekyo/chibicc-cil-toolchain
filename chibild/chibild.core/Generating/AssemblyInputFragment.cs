@@ -306,7 +306,7 @@ internal sealed class AssemblyInputFragment :
             Where(type => type.Namespace is "C.type").
             Select(type => (name: type.Name, type)).
             Concat(targetTypes.
-                Select(type => (name: type.FullName, type))).
+                Select(type => (name: type.FullName.Replace('/', '.'), type))).
             ToDictionary(entry => entry.name, entry => entry.type);
 
         var targetFields = targetTypes.
