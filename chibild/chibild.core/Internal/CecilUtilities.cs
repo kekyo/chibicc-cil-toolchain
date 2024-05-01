@@ -62,51 +62,6 @@ internal static class CecilUtilities
         Debug.Assert(translator.All(t => opCodes.ContainsKey(t.Value)));
     }
 
-    public static int GetOpCodeStackSize(StackBehaviour sb) =>
-        sb switch
-        {
-            StackBehaviour.Pop0 => 0,
-            StackBehaviour.Pop1 => -1,
-            StackBehaviour.Pop1_pop1 => -2,
-            StackBehaviour.Popi => -1,
-            StackBehaviour.Popi_pop1 => -2,
-            StackBehaviour.Popi_popi => -2,
-            StackBehaviour.Popi_popi8 => -2,
-            StackBehaviour.Popi_popi_popi => -3,
-            StackBehaviour.Popi_popr4 => -2,
-            StackBehaviour.Popi_popr8 => -2,
-            StackBehaviour.Popref => -1,
-            StackBehaviour.Popref_pop1 => -2,
-            StackBehaviour.Popref_popi => -2,
-            StackBehaviour.Popref_popi_popi => -3,
-            StackBehaviour.Popref_popi_popi8 => -3,
-            StackBehaviour.Popref_popi_popr4 => -3,
-            StackBehaviour.Popref_popi_popr8 => -3,
-            StackBehaviour.Popref_popi_popref => -3,
-            StackBehaviour.Varpop => -1,
-            StackBehaviour.Push0 => 0,
-            StackBehaviour.Push1 => 1,
-            StackBehaviour.Push1_push1 => 2,
-            StackBehaviour.Pushi => 1,
-            StackBehaviour.Pushi8 => 1,
-            StackBehaviour.Pushr4 => 1,
-            StackBehaviour.Pushr8 => 1,
-            StackBehaviour.Pushref => 1,
-            StackBehaviour.Varpush => 1,
-            _ => 0,
-        };
-
-    public static Instruction CreateInstruction(OpCode opCode, object operand) =>
-        operand switch
-        {
-            MethodReference method => Instruction.Create(opCode, method),
-            FieldReference field => Instruction.Create(opCode, field),
-            TypeReference type => Instruction.Create(opCode, type),
-            CallSite callSite => Instruction.Create(opCode, callSite),
-            Instruction instruction => Instruction.Create(opCode, instruction),
-            _ => throw new InvalidOperationException(),
-        };
-
     public static string SanitizeFileNameToMemberName(string fileName)
     {
         var sb = new StringBuilder(fileName);
@@ -128,32 +83,6 @@ internal static class CecilUtilities
         string word) =>
         opCodes[word];
 
-    public static bool TryMakeFunctionPointerType(
-        this MethodReference method,
-        out FunctionPointerType type)
-    {
-        if (method.HasThis)
-        {
-            type = null!;
-            return false;
-        }
-
-        type = new FunctionPointerType
-        {
-            ReturnType = method.ReturnType,
-            CallingConvention = method.CallingConvention,
-            HasThis = method.HasThis,
-            ExplicitThis = method.ExplicitThis,
-        };
-        foreach (var parameter in method.Parameters)
-        {
-            type.Parameters.Add(new(
-                parameter.Name, parameter.Attributes, parameter.ParameterType));
-        }
-
-        return true;
-    }
-
     public static TypeDefinition CreatePlaceholderType(int postfix) =>
         new("", $"<placeholder_type>_${postfix}",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
@@ -170,24 +99,6 @@ internal static class CecilUtilities
 
     public static Instruction CreatePlaceholderInstruction(int postfix) =>
         Instruction.Create(OpCodes.Ldc_I4, postfix);
-
-    private sealed class TypeReferenceComparer :
-        IEqualityComparer<TypeReference>
-    {
-        public bool Equals(TypeReference? lhs, TypeReference? rhs) =>
-            lhs is { } && rhs is { } &&
-            lhs.FullName.Equals(rhs.FullName);
-
-        public int GetHashCode(TypeReference obj) =>
-            obj.FullName.GetHashCode();
-
-        public static readonly TypeReferenceComparer Instance = new();
-    }
-
-    public static bool Equals(
-        TypeReference lhs,
-        TypeReference rhs) =>
-        TypeReferenceComparer.Instance.Equals(lhs, rhs);
 
     private sealed class ParameterReferenceComparer :
         IEqualityComparer<ParameterReference>
@@ -230,18 +141,6 @@ internal static class CecilUtilities
             _ => lhs.Parameters.
                 SequenceEqual(rhs.Parameters,
                     ParameterReferenceComparer.Instance),
-        };
-
-    public static bool IsValidCAbiParameter(
-        MethodReference method, string[] parameterTypeNames) =>
-        method.CallingConvention switch
-        {
-            Mono.Cecil.MethodCallingConvention.VarArg =>
-                method.Parameters.
-                    Zip(parameterTypeNames, (p, ptn) => p.ParameterType.FullName == ptn).
-                    All(eq => eq),
-            _ =>
-                parameterTypeNames.Length == 0,
         };
     
     public static void SetFieldType(

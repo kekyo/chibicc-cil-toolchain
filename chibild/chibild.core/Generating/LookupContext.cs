@@ -17,6 +17,9 @@ namespace chibild.Generating;
 
 internal sealed class LookupContext
 {
+    // For use type/field/method member lookup
+    // and restricted access to direct member acquisition.
+    
     private readonly ModuleDefinition targetModule;
 
     public readonly ObjectInputFragment? CurrentFragment;
@@ -46,14 +49,8 @@ internal sealed class LookupContext
     public MethodReference SafeImport(MethodReference mr) =>
         this.targetModule.SafeImport(mr);
 
-    public MemberReference SafeImport(MemberReference member) =>
-        member switch
-        {
-            TypeReference type => this.SafeImport(type),
-            FieldReference field => this.SafeImport(field),
-            MethodReference method => this.SafeImport(method),
-            _ => throw new InvalidOperationException(),
-        };
+    public MemberReference SafeImport(MemberReference mr) =>
+        this.targetModule.SafeImport(mr);
 
     //////////////////////////////////////////////////////////////
 
@@ -62,6 +59,8 @@ internal sealed class LookupContext
         out TypeReference tr)
     {
         // This getter is only used for looking up core library types.
+        // Type may not be obtained if used in unexpected situations.
+        
         var coreType = new TypeIdentityNode(coreTypeName, Token.Unknown);
         
         if (this.CurrentFragment?.TryGetType(
@@ -88,6 +87,8 @@ internal sealed class LookupContext
     }
 
     //////////////////////////////////////////////////////////////
+    
+    // Add the generated member to the current fragment.
     
     public void AddVariable(FieldDefinition variable, bool isFileScope) =>
         this.CurrentFragment!.AddVariable(variable, isFileScope);

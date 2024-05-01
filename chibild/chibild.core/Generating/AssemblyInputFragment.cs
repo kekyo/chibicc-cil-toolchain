@@ -133,7 +133,8 @@ internal sealed class AssemblyInputFragment :
     //////////////////////////////////////////////////////////////
 
     private ModuleDefinition ResovleOnFallbackModule(
-        ModuleDefinition fallbackModule, MemberReference mr)
+        ModuleDefinition fallbackModule,
+        MemberReference mr)
     {
         var anr = mr.Module.Assembly.Name;
         
