@@ -13,10 +13,10 @@ using chibild.Internal;
 using Mono.Cecil;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Diagnostics;
 
 namespace chibild.Generating;
 
@@ -56,7 +56,7 @@ internal sealed class AssemblyInputFragment :
     {
         if (this.types.TryGetValue(type.TypeIdentity, out _))
         {
-            scope = Scopes.Public;
+            scope = Scopes.Public;   // Contains only public members.
             return true;
         }
         scope = default;
@@ -64,8 +64,17 @@ internal sealed class AssemblyInputFragment :
     }
 
     public override bool ContainsVariableAndSchedule(
-        IdentityNode variable) =>
-        this.fields.ContainsKey(variable.Identity);
+        IdentityNode variable,
+        out Scopes scope)
+    {
+        if (this.fields.TryGetValue(variable.Identity, out _))
+        {
+            scope = Scopes.Public;   // Contains only public members.
+            return true;
+        }
+        scope = default;
+        return false;
+    }
 
     private static bool TryGetMatchedMethodIndex(
         FunctionSignatureNode signature,
@@ -126,9 +135,18 @@ internal sealed class AssemblyInputFragment :
 
     public override bool ContainsFunctionAndSchedule(
         IdentityNode function,
-        FunctionSignatureNode? signature) =>
-        this.methods.TryGetValue(function.Identity, out var overloads) &&
-        (signature == null || TryGetMatchedMethodIndex(signature, overloads, out _));
+        FunctionSignatureNode? signature,
+        out Scopes scope)
+    {
+        if (this.methods.TryGetValue(function.Identity, out var overloads) &&
+            (signature == null || TryGetMatchedMethodIndex(signature, overloads, out _)))
+        {
+            scope = Scopes.Public;   // Contains only public members.
+            return true;
+        }
+        scope = default;
+        return false;
+    }
 
     //////////////////////////////////////////////////////////////
 

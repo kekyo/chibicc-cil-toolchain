@@ -400,7 +400,10 @@ public static class TypeParser
             }
         }
 
-        return InnerTypeName(type);
+        var typeName = InnerTypeName(type);
+        return typeName.IndexOf('.') == -1 ?
+            $"C.type.{typeName}" :
+            typeName;
     }
 
     public static string GetCilTypeName(Type type)
@@ -422,11 +425,13 @@ public static class TypeParser
                     return $"{InnerTypeName(type.GetElementType()!)}*";
 
                 default:
-                    return type.Namespace == "C.type" ?
-                        type.Name :
-                        type.FullName!;
+                    return type.FullName!;
             }
         }
-        return InnerTypeName(type);
+
+        var typeName = InnerTypeName(type);
+        return typeName.IndexOf('.') == -1 ?
+            $"C.type.{typeName}" :
+            typeName;
     }
 }

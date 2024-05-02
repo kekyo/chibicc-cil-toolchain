@@ -39,11 +39,13 @@ internal abstract class InputFragment
         out Scopes scope);
 
     public abstract bool ContainsVariableAndSchedule(
-        IdentityNode variable);
+        IdentityNode variable,
+        out Scopes scope);
 
     public abstract bool ContainsFunctionAndSchedule(
         IdentityNode function,
-        FunctionSignatureNode? signature);
+        FunctionSignatureNode? signature,
+        out Scopes scope);
 
     //////////////////////////////////////////////////////////////
 

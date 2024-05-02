@@ -33,7 +33,7 @@
     // Code size       7 (0x7)
     .maxstack  8
     IL_0000:  ldc.i4.1
-    IL_0001:  call       int32 '<source1>$'::foo(int32)
+    IL_0001:  call       int32 C.text::foo(int32)
     IL_0006:  ret
   } // end of method text::main
 

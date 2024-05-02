@@ -40,6 +40,19 @@ partial class CodeGenerator
         LookupContext context,
         GlobalVariableNode globalVariable)
     {
+        // Check public variable already declared in another fragment.
+        if (this.ContainsPriorityVariableDeclaration(
+            context,
+            globalVariable.Name,
+            out var declaredFragment) &&
+            declaredFragment != context.CurrentFragment)
+        {
+            this.OutputTrace(
+                globalVariable.Name.Token,
+                $"Declaration ignored, because already declared in: {declaredFragment.ObjectPath}");
+            return;
+        }
+        
         var fa = globalVariable.Scope.Scope switch
         {
             Scopes.Public => FieldAttributes.Public | FieldAttributes.Static,
@@ -90,6 +103,19 @@ partial class CodeGenerator
         LookupContext context,
         GlobalConstantNode globalConstant)
     {
+        // Check public variable already declared in another fragment.
+        if (this.ContainsPriorityVariableDeclaration(
+            context,
+            globalConstant.Name,
+            out var declaredFragment) &&
+            declaredFragment != context.CurrentFragment)
+        {
+            this.OutputTrace(
+                globalConstant.Name.Token,
+                $"Declaration ignored, because already declared in: {declaredFragment.ObjectPath}");
+            return;
+        }
+        
         var fa = globalConstant.Scope.Scope switch
         {
             Scopes.Public => FieldAttributes.Public | FieldAttributes.Static | FieldAttributes.InitOnly,
@@ -614,7 +640,7 @@ partial class CodeGenerator
 
     private void ConsumeFunction(
         LookupContext context,
-        FunctionNode function)
+        FunctionDeclarationNode function)
     {
         var ma = function.Scope.Scope switch
         {
@@ -730,7 +756,7 @@ partial class CodeGenerator
 
     private void ConsumeInitializer(
         LookupContext context,
-        InitializerNode initializer)
+        InitializerDeclarationNode initializer)
     {
         var method = this.SetupMethodDefinition(
             $"initializer_${Guid.NewGuid():N}",

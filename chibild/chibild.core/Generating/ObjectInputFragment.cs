@@ -11,6 +11,7 @@ using chibicc.toolchain.Parsing;
 using chibild.Internal;
 using Mono.Cecil;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace chibild.Generating;
 
@@ -27,7 +28,7 @@ internal abstract class ObjectInputFragment :
     private readonly Dictionary<string, FieldDefinition> fileConstantDeclarations = new();
     private readonly Dictionary<string, MethodDefinition> functionDeclarations = new();
     private readonly Dictionary<string, MethodDefinition> fileFunctionDeclarations = new();
-    private readonly List<MethodDefinition> moduleFunctionDeclarations = new();
+    private readonly Dictionary<string, MethodDefinition> moduleFunctionDeclarations = new();
     private readonly List<MethodDefinition> initializerDeclaraions = new();
     private readonly List<MethodDefinition> fileInitializerDeclaraions = new();
 
@@ -46,9 +47,9 @@ internal abstract class ObjectInputFragment :
 
     public abstract GlobalConstantNode[] GlobalConstants { get; }
 
-    public abstract FunctionNode[] Functions { get; }
+    public abstract FunctionDeclarationNode[] Functions { get; }
 
-    public abstract InitializerNode[] Initializers { get; }
+    public abstract InitializerDeclarationNode[] Initializers { get; }
 
     public abstract EnumerationNode[] Enumerations { get; }
 
@@ -229,14 +230,14 @@ internal abstract class ObjectInputFragment :
         {
             lock (this.fileFunctionDeclarations)
             {
-                this.fileFunctionDeclarations.Add(function.Name, function);
+                this.fileFunctionDeclarations.TryAdd(function.Name, function);
             }
         }
         else
         {
             lock (this.functionDeclarations)
             {
-                this.functionDeclarations.Add(function.Name, function);
+                this.functionDeclarations.TryAdd(function.Name, function);
             }
         }
     }
@@ -245,7 +246,7 @@ internal abstract class ObjectInputFragment :
     {
         lock (this.moduleFunctionDeclarations)
         {
-            this.moduleFunctionDeclarations.Add(function);
+            this.moduleFunctionDeclarations.TryAdd(function.Name, function);
         }
     }
     
@@ -295,7 +296,7 @@ internal abstract class ObjectInputFragment :
             this.functionDeclarations.Values;
 
     public IEnumerable<MethodDefinition> GetDeclaredModuleFunctions() =>
-        this.moduleFunctionDeclarations;
+        this.moduleFunctionDeclarations.Values;
 
     public IEnumerable<MethodDefinition> GetDeclaredInitializer(bool isFileScope) =>
         isFileScope ?

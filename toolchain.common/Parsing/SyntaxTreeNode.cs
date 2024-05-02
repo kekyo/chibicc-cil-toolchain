@@ -729,12 +729,12 @@ public abstract class NamedDeclarationNode : DeclarationNode
 
 /////////////////////////////////////////////////////////////////////
 
-public abstract class FunctionDescriptorNode : NamedDeclarationNode
+public abstract class FunctionNode : NamedDeclarationNode
 {
     public readonly LocalVariableNode[] LocalVariables;
     public readonly InstructionNode[] Instructions;
 
-    protected FunctionDescriptorNode(
+    protected FunctionNode(
         IdentityNode name,
         ScopeDescriptorNode scope,
         LocalVariableNode[] localVariables,
@@ -747,7 +747,7 @@ public abstract class FunctionDescriptorNode : NamedDeclarationNode
     }
 
     public override bool Equals(Node? rhs) =>
-        rhs is FunctionDescriptorNode r &&
+        rhs is FunctionNode r &&
         this.Scope.Equals(r.Scope) &&
         this.LocalVariables.SequenceEqual(r.LocalVariables) &&
         this.Instructions.SequenceEqual(r.Instructions);
@@ -758,11 +758,11 @@ public abstract class FunctionDescriptorNode : NamedDeclarationNode
         CalculateHashCode(this.Instructions);
 }
 
-public sealed class FunctionNode : FunctionDescriptorNode
+public sealed class FunctionDeclarationNode : FunctionNode
 {
     public readonly FunctionSignatureNode Signature;
 
-    public FunctionNode(
+    public FunctionDeclarationNode(
         IdentityNode name,
         ScopeDescriptorNode scope,
         FunctionSignatureNode signature,
@@ -773,7 +773,7 @@ public sealed class FunctionNode : FunctionDescriptorNode
         this.Signature = signature;
 
     public override bool Equals(Node? rhs) =>
-        rhs is FunctionNode r &&
+        rhs is FunctionDeclarationNode r &&
         this.Name.Equals(r.Name) &&
         this.Signature.Equals(r.Signature) &&
         base.Equals(r);
@@ -803,12 +803,12 @@ public sealed class FunctionNode : FunctionDescriptorNode
         $".function {this.Scope} {this.Signature} {this.Name} LV={this.LocalVariables.Length} INSTS={this.Instructions.Length}";
 }
 
-public sealed class InitializerNode : FunctionDescriptorNode
+public sealed class InitializerDeclarationNode : FunctionNode
 {
     private static readonly IdentityNode name = 
         IdentityNode.Create("initializer");
     
-    public InitializerNode(
+    public InitializerDeclarationNode(
         ScopeDescriptorNode scope,
         LocalVariableNode[] localVariables,
         InstructionNode[] instructions,
@@ -818,7 +818,7 @@ public sealed class InitializerNode : FunctionDescriptorNode
     }
 
     public override bool Equals(Node? rhs) =>
-        rhs is InitializerNode r &&
+        rhs is InitializerDeclarationNode r &&
         base.Equals(r);
 
     public override int GetHashCode() =>

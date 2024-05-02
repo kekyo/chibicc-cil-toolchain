@@ -66,6 +66,35 @@ partial class CodeGenerator
         declaredFragment = null!;
         return false;
     }
+
+    private bool ContainsPriorityVariableDeclaration(
+        LookupContext context,
+        IdentityNode variable,
+        out InputFragment declaredFragment)
+    {
+        // Step 1: Check on current fragment (file scoped).
+        if ((context.CurrentFragment?.
+            ContainsVariableAndSchedule(variable, out var scope) ?? false) &&
+            scope == Scopes.File)
+        {
+            declaredFragment = context.CurrentFragment;
+            return true;
+        }
+
+        // Step 2: Check on entire fragments.
+        foreach (var fragment in context.InputFragments)
+        {
+            if (fragment.ContainsVariableAndSchedule(variable, out scope) &&
+                scope is Scopes.Public or Scopes.Internal)  // Internal only in another object.
+            {
+                declaredFragment = fragment;
+                return true;
+            }
+        }
+
+        declaredFragment = null!;
+        return false;
+    }
     
     //////////////////////////////////////////////////////////////
     
@@ -287,8 +316,10 @@ partial class CodeGenerator
         Action<FieldReference> action,
         Action? didNotResolve = null)
     {
-        // Step 1: Check on current fragment.
-        if (context.CurrentFragment?.ContainsVariableAndSchedule(field) ?? false)
+        // Step 1: Check on current fragment (file scoped).
+        if ((context.CurrentFragment?.
+            ContainsVariableAndSchedule(field, out var scope) ?? false) &&
+            scope == Scopes.File)
         {
             this.DelayLookingUpAction2(() =>
             {
@@ -313,8 +344,8 @@ partial class CodeGenerator
             InputFragment? foundFragment = null;
             foreach (var fragment in context.InputFragments)
             {
-                if (fragment != context.CurrentFragment &&
-                    fragment.ContainsVariableAndSchedule(field))
+                if (fragment.ContainsVariableAndSchedule(field, out scope) &&
+                    scope is Scopes.Public or Scopes.Internal)  // Internal only in another object.
                 {
                     // Found the symbol.
                     foundFragment = fragment;
@@ -378,10 +409,10 @@ partial class CodeGenerator
             }
         }
         
-        // Step 1: Check on current fragment.
-        if (context.CurrentFragment?.ContainsFunctionAndSchedule(
-            function,
-            signature) ?? false)
+        // Step 1: Check on current fragment (file scoped).
+        if ((context.CurrentFragment?.
+            ContainsFunctionAndSchedule(function, signature, out var scope) ?? false) &&
+            scope == Scopes.File)
         {
             this.DelayLookingUpAction2(() =>
             {
@@ -409,10 +440,8 @@ partial class CodeGenerator
             InputFragment? foundFragment = null;
             foreach (var fragment in context.InputFragments)
             {
-                if (fragment != context.CurrentFragment &&
-                    fragment.ContainsFunctionAndSchedule(
-                        function,
-                        signature))
+                if (fragment.ContainsFunctionAndSchedule(function, signature, out scope) &&
+                    scope is Scopes.Public or Scopes.Internal)  // Internal only in another object.
                 {
                     // Found the symbol.
                     foundFragment = fragment;
@@ -473,14 +502,15 @@ partial class CodeGenerator
         Action<MemberReference> action,
         Action? didNotResolve = null)
     {
-        // Step 1: Check on current fragment.
+        // Step 1: Check on current fragment (file scoped).
         TypeNode? type = null;
         if (functionSignature == null)
         {
             type = TypeParser.TryParse(member.Token, out var t) ? t : null;
             if (type != null &&
                 (context.CurrentFragment?.
-                 ContainsTypeAndSchedule(type, out _) ?? false))
+                 ContainsTypeAndSchedule(type, out var scope) ?? false) &&
+                scope == Scopes.File)
             {
                 this.DelayLookingUpAction1(() =>
                 {
@@ -499,7 +529,9 @@ partial class CodeGenerator
                 return;
             }
 
-            if (context.CurrentFragment?.ContainsVariableAndSchedule(member) ?? false)
+            if ((context.CurrentFragment?.
+                ContainsVariableAndSchedule(member, out scope) ?? false) &&
+                scope == Scopes.File)
             {
                 this.DelayLookingUpAction2(() =>
                 {
@@ -519,9 +551,9 @@ partial class CodeGenerator
             }
         }
 
-        if (context.CurrentFragment?.ContainsFunctionAndSchedule(
-            member,
-            functionSignature) ?? false)
+        if ((context.CurrentFragment?.ContainsFunctionAndSchedule(
+            member, functionSignature, out var scope2) ?? false) &&
+            scope2 == Scopes.File)
         {
             this.DelayLookingUpAction2(() =>
             {
@@ -551,30 +583,30 @@ partial class CodeGenerator
             {
                 foreach (var fragment in context.InputFragments)
                 {
-                    if (fragment != context.CurrentFragment)
+                    if (type != null &&
+                        fragment.ContainsTypeAndSchedule(type, out var scope3) &&
+                        scope3 is Scopes.Public or Scopes.Internal)  // Internal only in another object.
                     {
-                        if (type != null &&
-                            fragment.ContainsTypeAndSchedule(type, out _))
-                        {
-                            // Found the symbol.
-                            foundFragment = fragment;
-                            found = FoundMembers.Type;
-                            break;
-                        }
-                        if (fragment.ContainsVariableAndSchedule(member))
-                        {
-                            // Found the symbol.
-                            foundFragment = fragment;
-                            found = FoundMembers.Variable;
-                            break;
-                        }
-                        if (fragment.ContainsFunctionAndSchedule(member, null))
-                        {
-                            // Found the symbol.
-                            foundFragment = fragment;
-                            found = FoundMembers.Function;
-                            break;
-                        }
+                        // Found the symbol.
+                        foundFragment = fragment;
+                        found = FoundMembers.Type;
+                        break;
+                    }
+                    if (fragment.ContainsVariableAndSchedule(member, out scope3) &&
+                        scope3 is Scopes.Public or Scopes.Internal)  // Internal only in another object.
+                    {
+                        // Found the symbol.
+                        foundFragment = fragment;
+                        found = FoundMembers.Variable;
+                        break;
+                    }
+                    if (fragment.ContainsFunctionAndSchedule(member, null, out scope3) &&
+                        scope3 is Scopes.Public or Scopes.Internal)  // Internal only in another object.
+                    {
+                        // Found the symbol.
+                        foundFragment = fragment;
+                        found = FoundMembers.Function;
+                        break;
                     }
                 }
             }
@@ -582,10 +614,9 @@ partial class CodeGenerator
             {
                 foreach (var fragment in context.InputFragments)
                 {
-                    if (fragment != context.CurrentFragment &&
-                        fragment.ContainsFunctionAndSchedule(
-                            member,
-                            functionSignature))
+                    if (fragment.ContainsFunctionAndSchedule(
+                        member, functionSignature, out var scope4) &&
+                        scope4 is Scopes.Public or Scopes.Internal)  // Internal only in another object.
                     {
                         // Found the symbol.
                         foundFragment = fragment;

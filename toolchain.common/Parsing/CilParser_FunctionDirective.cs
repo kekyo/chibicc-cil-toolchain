@@ -14,7 +14,7 @@ namespace chibicc.toolchain.Parsing;
 
 partial class CilParser
 {
-    private FunctionNode? ParseFunctionDirective(
+    private FunctionDeclarationNode? ParseFunctionDirective(
         TokensIterator tokensIterator, Token[] tokens)
     {
         if (tokens.Length < 4)

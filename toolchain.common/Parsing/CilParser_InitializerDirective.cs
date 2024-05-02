@@ -14,7 +14,7 @@ namespace chibicc.toolchain.Parsing;
 
 partial class CilParser
 {
-    private InitializerNode? ParseInitializerDirective(
+    private InitializerDeclarationNode? ParseInitializerDirective(
         TokensIterator tokensIterator,
         Token[] tokens)
     {
@@ -49,7 +49,7 @@ partial class CilParser
         var (localVariables, instructions) = this.ParseFunctionBody(
             tokensIterator);
 
-        return new InitializerNode(
+        return new InitializerDeclarationNode(
             scope,
             localVariables,
             instructions,

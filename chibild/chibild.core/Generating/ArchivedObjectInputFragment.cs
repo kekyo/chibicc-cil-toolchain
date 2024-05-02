@@ -38,8 +38,8 @@ internal sealed class ArchivedObjectInputFragment :
 
     private GlobalVariableNode[] globalVariables = Utilities.Empty<GlobalVariableNode>();
     private GlobalConstantNode[] globalConstants = Utilities.Empty<GlobalConstantNode>();
-    private FunctionNode[] functions = Utilities.Empty<FunctionNode>();
-    private InitializerNode[] initializers = Utilities.Empty<InitializerNode>();
+    private FunctionDeclarationNode[] functions = Utilities.Empty<FunctionDeclarationNode>();
+    private InitializerDeclarationNode[] initializers = Utilities.Empty<InitializerDeclarationNode>();
     private EnumerationNode[] enumerations = Utilities.Empty<EnumerationNode>();
     private StructureNode[] structures = Utilities.Empty<StructureNode>();
 
@@ -78,10 +78,10 @@ internal sealed class ArchivedObjectInputFragment :
     public override GlobalConstantNode[] GlobalConstants =>
         this.globalConstants;
 
-    public override FunctionNode[] Functions =>
+    public override FunctionDeclarationNode[] Functions =>
         this.functions;
 
-    public override InitializerNode[] Initializers =>
+    public override InitializerDeclarationNode[] Initializers =>
         this.initializers;
 
     public override EnumerationNode[] Enumerations =>
@@ -96,10 +96,10 @@ internal sealed class ArchivedObjectInputFragment :
         TypeNode type,
         out Scopes scope)
     {
-        if (this.typeSymbols.TryGetValue(type.TypeIdentity, out var td))
+        if (this.typeSymbols.TryGetValue(type.TypeIdentity, out var ts))
         {
             this.isRequiredLoading = true;
-            CommonUtilities.TryParseEnum(td.Scope, out scope);
+            CommonUtilities.TryParseEnum(ts.Scope, out scope);
             return true;
         }
         scope = default;
@@ -107,26 +107,32 @@ internal sealed class ArchivedObjectInputFragment :
     }
 
     public override bool ContainsVariableAndSchedule(
-        IdentityNode variable)
+        IdentityNode variable,
+        out Scopes scope)
     {
-        if (this.variableSymbols.ContainsKey(variable.Identity))
+        if (this.variableSymbols.TryGetValue(variable.Identity, out var vs))
         {
             this.isRequiredLoading = true;
+            CommonUtilities.TryParseEnum(vs.Scope, out scope);
             return true;
         }
+        scope = default;
         return false;
     }
 
     public override bool ContainsFunctionAndSchedule(
         IdentityNode function,
-        FunctionSignatureNode? signature)
+        FunctionSignatureNode? signature,
+        out Scopes scope)
     {
         // Ignored the signature, because contains only CABI functions.
-        if (this.functionSymbols.ContainsKey(function.Identity))
+        if (this.functionSymbols.TryGetValue(function.Identity, out var fs))
         {
             this.isRequiredLoading = true;
+            CommonUtilities.TryParseEnum(fs.Scope, out scope);
             return true;
         }
+        scope = default;
         return false;
     }
 
@@ -153,8 +159,8 @@ internal sealed class ArchivedObjectInputFragment :
 
             this.globalVariables = declarations.OfType<GlobalVariableNode>().ToArray();
             this.globalConstants = declarations.OfType<GlobalConstantNode>().ToArray();
-            this.functions = declarations.OfType<FunctionNode>().ToArray();
-            this.initializers = declarations.OfType<InitializerNode>().ToArray();
+            this.functions = declarations.OfType<FunctionDeclarationNode>().ToArray();
+            this.initializers = declarations.OfType<InitializerDeclarationNode>().ToArray();
             this.enumerations = declarations.OfType<EnumerationNode>().ToArray();
             this.structures = declarations.OfType<StructureNode>().ToArray();
 

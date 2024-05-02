@@ -916,28 +916,21 @@ chibild does not perform this check.
 Note: To use an structure type, a reference to the `System.ValueType` type must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
 
-### About type references
+### About duplicate symbols
 
-When chibild searches for any type, global variable, or function (these are called "members"),
+When chibild searches for any type, global variable,
+or function (referred to as members),
 it performs the search as follows:
 
-1. If a defined member is found in the same object file, it will be referenced.
-2. If a member defined for a different input is found, it will be referenced.
-3. An error is generated because it cannot be found.
+1. Refer to a member when find the `file` scope defined in the same object file.
+2. Refer to a member when find the `public` or `internal` scope defined in any inputs.
+   In this case, search priority is the order of the input groups
+   (object files, archive files and assembly files) specified in the command line options.
+3. An error occurs because it is not found.
 
-Basically, preference is given to members defined in the same object file.
-But array, enumeration, structure and value array type are exceptionally handled as follows:
-
-1. Type declared of the `file` scope in same object,
-   referenced to those declaration.
-2. Type declared of the `public` or `internal` scope in different input objects
-   or type definitions of the `public` scope in the referenced assembly,
-   referenced to those declaration.
-3. An error is generated because it cannot be found.
-
-In addition to the above, if a type of the same name is declared but not in the `file` scope,
-the declaration is ignored.
-This is to avoid confusion, since .NET generally expects only one type declaration in any given assembly.
+Symbol names are searched according to their respective member types.
+Even if the symbol name is the same, the type, global variable,
+and function are treated separately.
 
 ### Explicitly location information
 
