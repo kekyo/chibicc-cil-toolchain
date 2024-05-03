@@ -302,8 +302,16 @@ partial class CodeGenerator
         public TypeDefinition GetFileScopedType() =>
             this.fileScopedType.Value;
 
+        public TypeDefinition? GetFileScopedTypeIfAvailable() =>
+            this.fileScopedType.IsValueCreated ?
+                this.fileScopedType.Value : null;
+
         public TypeDefinition GetDataType() =>
             this.dataType.Value;
+
+        public TypeDefinition? GetDataTypeIfAvailable() =>
+            this.dataType.IsValueCreated ?
+                this.dataType.Value : null;
 
         public TypeDefinition GetRDataType() =>
             this.rdataType.Value;
@@ -362,8 +370,21 @@ partial class CodeGenerator
                 Add(constant);
         }
 
+        var fileScopedInitializerNames = (holder.GetFileScopedTypeIfAvailable()?.
+            Methods.
+            Select(m => m.Name) ?? Utilities.Empty<string>()).
+            ToHashSet();
+        var subIndex = 1;
         foreach (var initializer in fragment.GetDeclaredInitializer(true).Reverse())
         {
+            // Change method name when initializer symbol name is duplicate.
+            var baseName = initializer.Name;
+            while (fileScopedInitializerNames.Contains(initializer.Name))
+            {
+                initializer.Name = $"{baseName}_{subIndex++}";
+            }
+            fileScopedInitializerNames.Add(initializer.Name);
+            
             holder.GetFileScopedType().
                 Methods.
                 Insert(0, initializer);
@@ -408,8 +429,21 @@ partial class CodeGenerator
                 Add(constant);
         }
 
+        var initializerNames = (holder.GetDataTypeIfAvailable()?.
+            Methods.
+            Select(m => m.Name) ?? Utilities.Empty<string>()).
+            ToHashSet();
+        subIndex = 1;
         foreach (var initializer in fragment.GetDeclaredInitializer(false).Reverse())
         {
+            // Change method name when initializer symbol name is duplicate.
+            var baseName = initializer.Name;
+            while (initializerNames.Contains(initializer.Name))
+            {
+                initializer.Name = $"{baseName}_{subIndex++}";
+            }
+            initializerNames.Add(initializer.Name);
+            
             holder.GetDataType().
                 Methods.
                 Insert(0, initializer);

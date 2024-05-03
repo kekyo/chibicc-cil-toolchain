@@ -754,13 +754,14 @@ partial class CodeGenerator
 
     //////////////////////////////////////////////////////////////
 
+    internal static readonly string IntiializerMethodName = "initializer_$";
+    
     private void ConsumeInitializer(
         LookupContext context,
         InitializerDeclarationNode initializer)
     {
         var method = this.SetupMethodDefinition(
-            // TODO: Avoid confliction with sequence number to make deterministic.
-            $"initializer_${Guid.NewGuid():N}",
+            IntiializerMethodName,
             this.CreatePlaceholderType(),
             Utilities.Empty<ParameterDefinition>(),
             MethodAttributes.Private | MethodAttributes.Static);

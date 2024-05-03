@@ -1185,6 +1185,53 @@ public sealed partial class LinkerTests
         return Verify(actual);
     }
 
+    [Test]
+    public Task InitializerOnBoth()
+    {
+        var actual = Run(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer internal
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global file int32 foo
+            .global public int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerConflict1()
+    {
+        var injectToAssemblyPath = Path.Combine(
+            LinkerTestRunner.ArtifactsBasePath, "initializertestbed.dll");
+        var actual = RunInjection(@"
+            .initializer internal
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global public int32 foo",
+            injectToAssemblyPath);
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerConflict2()
+    {
+        var injectToAssemblyPath = Path.Combine(
+            LinkerTestRunner.ArtifactsBasePath, "initializertestbed.dll");
+        var actual = RunInjection(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global file int32 foo",
+            injectToAssemblyPath);
+        return Verify(actual);
+    }
+
     /////////////////////////////////////////////////////////
 
     [Test]

@@ -25,37 +25,50 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class public abstract auto ansi sealed beforefieldinit C.data
+.class private abstract auto ansi sealed beforefieldinit '<source>$'
        extends [mscorlib]System.Object
 {
   .field public static int32 foo
-  .field public static int32 bar
   .method private static void  initializer_$1() cil managed
   {
     // Code size       7 (0x7)
     .maxstack  8
     IL_0000:  ldc.i4.2
-    IL_0001:  stsfld     int32 C.data::foo
+    IL_0001:  stsfld     int32 '<source>$'::foo
     IL_0006:  ret
-  } // end of method data::initializer_$1
+  } // end of method '<source>$'::initializer_$1
 
-  .method private static void  initializer_$2() cil managed
+  .method private hidebysig specialname rtspecialname static 
+          void  .cctor() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  call       void '<source>$'::initializer_$1()
+    IL_0005:  ret
+  } // end of method '<source>$'::.cctor
+
+} // end of class '<source>$'
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static int32 bar
+  .method private static void  initializer_$1() cil managed
   {
     // Code size       7 (0x7)
     .maxstack  8
     IL_0000:  ldc.i4.4
     IL_0001:  stsfld     int32 C.data::bar
     IL_0006:  ret
-  } // end of method data::initializer_$2
+  } // end of method data::initializer_$1
 
   .method private hidebysig specialname rtspecialname static 
           void  .cctor() cil managed
   {
-    // Code size       11 (0xb)
+    // Code size       6 (0x6)
     .maxstack  8
     IL_0000:  call       void C.data::initializer_$1()
-    IL_0005:  call       void C.data::initializer_$2()
-    IL_000a:  ret
+    IL_0005:  ret
   } // end of method data::.cctor
 
 } // end of class C.data

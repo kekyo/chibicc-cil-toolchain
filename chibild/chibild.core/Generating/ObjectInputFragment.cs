@@ -11,6 +11,7 @@ using chibicc.toolchain.Parsing;
 using chibild.Internal;
 using Mono.Cecil;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace chibild.Generating;
@@ -252,10 +253,16 @@ internal abstract class ObjectInputFragment :
     
     public void AddInitializer(MethodDefinition method, bool isFileScope)
     {
+        Debug.Assert(method.Name == CodeGenerator.IntiializerMethodName);
+        
+        // Here, the name with a temporary index number is applied to the initializer function.
+        // When generating the assembly later, duplicates may be detected and changed.
+        
         if (isFileScope)
         {
             lock (this.fileInitializerDeclaraions)
             {
+                method.Name = $"{CodeGenerator.IntiializerMethodName}{this.fileInitializerDeclaraions.Count + 1}";
                 this.fileInitializerDeclaraions.Add(method);
             }
         }
@@ -263,6 +270,7 @@ internal abstract class ObjectInputFragment :
         {
             lock (this.initializerDeclaraions)
             {
+                method.Name = $"{CodeGenerator.IntiializerMethodName}{this.initializerDeclaraions.Count + 1}";
                 this.initializerDeclaraions.Add(method);
             }
         }

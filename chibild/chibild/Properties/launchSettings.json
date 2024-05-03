@@ -2,6 +2,8 @@
   "profiles": {
     "chibild": {
       "commandName": "Project",
+      //"commandLineArgs": " -mnet45 -shared -o initializertestbed.dll initializertestbed.o -L/home/kouji/.nuget/packages/microsoft.netframework.referenceassemblies.net45/1.0.3/build/.NETFramework/v4.5 -lmscorlib",
+      //"workingDirectory": "/home/kouji/Projects/chibicc-cil-toolchain/chibild/chibild.core.Tests/artifacts"
       "commandLineArgs": "-o foo -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 /home/kouji/Projects/libc-cil/crt0/crt0_i_v.s main.o foo.a -lc-bootstrap -lSystem.Private.CoreLib",
       "workingDirectory": "/home/kouji/Projects/chibicc-cil/aaa"
     }

@@ -155,12 +155,6 @@ internal static class LinkerTestRunner
                         break;
                     }
 
-                    if (line.IndexOf("initializer_$") is { } index && index >= 0)
-                    {
-                        var sb = new StringBuilder(line);
-                        sb.Remove(index + "initializer_$".Length, 32);   // 32: Guid string
-                        line = sb.ToString();
-                    }
                     if (!line.StartsWith("// Image base:") &&
                         !line.StartsWith("// MVID:") &&
                         !line.StartsWith("// WARNING: Created Win32 resource file"))
