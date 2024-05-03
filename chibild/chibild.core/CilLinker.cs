@@ -50,14 +50,15 @@ public sealed class CilLinker
 
     private CachedAssemblyResolver CreateAssemblyResolver(
         ReadingMode readingMode,
-        string[] libraryReferenceBasePaths) =>
-        new(this.logger, readingMode, libraryReferenceBasePaths);
+        string[] assemblyReferenceBasePaths) =>
+        new(this.logger, readingMode, assemblyReferenceBasePaths);
 
     //////////////////////////////////////////////////////////////
 
     private InputFragment[] LoadInputReferences(
         string baseInputPath,
         string[] libraryReferenceBasePaths,
+        string[] assemblyReferenceBasePaths,
         InputReference[] inputReferences,
         bool isLocationOriginSource)
     {
@@ -145,7 +146,7 @@ public sealed class CilLinker
                             // At the cost of having to load it again later in the primary assembly resolver.
                             this.CreateAssemblyResolver(
                                 ReadingMode.Immediate,
-                                libraryReferenceBasePaths)),
+                                assemblyReferenceBasePaths)),
                     };
                     break;
 
@@ -179,7 +180,7 @@ public sealed class CilLinker
                                 // At the cost of having to load it again later in the primary assembly resolver.
                                 this.CreateAssemblyResolver(
                                     ReadingMode.Immediate,
-                                    libraryReferenceBasePaths)),
+                                    assemblyReferenceBasePaths)),
                         };
                     }
                     break;
@@ -286,6 +287,16 @@ public sealed class CilLinker
                 inputReferences.Prepend(new LibraryPathReference(injectPath)).ToArray() :
                 inputReferences;
 
+        // Aggregate assembly base paths from library reference paths.
+        var assemblyReferenceBasePaths = options.LibraryReferenceBasePaths.
+            Prepend(baseInputPath).
+            Concat(inputReferences.
+                OfType<LibraryPathReference>().
+                Where(ir => Path.GetExtension(ir.RelativePath) == ".dll").
+                Select(ir => Utilities.GetDirectoryPath(Path.Combine(baseInputPath, ir.RelativePath)))).
+            Distinct().
+            ToArray();
+        
         var produceDebuggingInformation =
             options.DebugSymbolType != DebugSymbolTypes.None;
 
@@ -293,6 +304,7 @@ public sealed class CilLinker
         var loadedFragments = this.LoadInputReferences(
             baseInputPath,
             options.LibraryReferenceBasePaths,
+            assemblyReferenceBasePaths,
             totalInputReferences,
             produceDebuggingInformation);
 
@@ -344,7 +356,7 @@ public sealed class CilLinker
                 options,
                 this.CreateAssemblyResolver(
                     ReadingMode.Deferred,
-                    options.LibraryReferenceBasePaths));
+                    assemblyReferenceBasePaths));
         }
 
         var targetModule = primaryAssembly.MainModule;

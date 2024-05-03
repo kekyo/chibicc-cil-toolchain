@@ -4,8 +4,10 @@
       "commandName": "Project",
       //"commandLineArgs": " -mnet45 -shared -o initializertestbed.dll initializertestbed.o -L/home/kouji/.nuget/packages/microsoft.netframework.referenceassemblies.net45/1.0.3/build/.NETFramework/v4.5 -lmscorlib",
       //"workingDirectory": "/home/kouji/Projects/chibicc-cil-toolchain/chibild/chibild.core.Tests/artifacts"
-      "commandLineArgs": "-o foo -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 /home/kouji/Projects/libc-cil/crt0/crt0_i_v.s main.o foo.a -lc-bootstrap -lSystem.Private.CoreLib",
-      "workingDirectory": "/home/kouji/Projects/chibicc-cil/aaa"
+      //"commandLineArgs": "-o foo -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 /home/kouji/Projects/libc-cil/crt0/crt0_i_v.s main.o foo.a -lc-bootstrap -lSystem.Private.CoreLib",
+      //"workingDirectory": "/home/kouji/Projects/chibicc-cil/aaa",
+      "commandLineArgs": "-o /tmp/chibicc-test-0/main -m net6.0 /home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0/crt0/crt0_i_v.o -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 /tmp/chibicc-mLDzTK /tmp/chibicc-test-0/foo.dll -lc-bootstrap -lSystem.Private.CoreLib -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost",
+      "workingDirectory": "/tmp/chibicc-test-0"
     }
   }
 }

@@ -346,13 +346,13 @@ public sealed class CliOptions
                 {
                     inputReferences.Add(new ObjectFilePathReference("-"));
                 }
-                else if (Path.GetExtension(arg) == ".a")
+                else if (Path.GetExtension(arg) is ".a" or ".so" or ".dylib" or ".dll")
                 {
-                    inputReferences.Add(new LibraryPathReference(Path.GetFullPath(arg)));
+                    inputReferences.Add(new LibraryPathReference(arg));
                 }
                 else
                 {
-                    inputReferences.Add(new ObjectFilePathReference(Path.GetFullPath(arg)));
+                    inputReferences.Add(new ObjectFilePathReference(arg));
                 }
             }
             catch (InvalidOptionException)
