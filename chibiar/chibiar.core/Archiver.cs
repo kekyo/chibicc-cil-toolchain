@@ -115,7 +115,7 @@ public sealed class Archiver
         if (archive != null)
         {
             var symbolTableEntry = archive.CreateEntry(
-                ArchiverUtilities.SymbolTableFileName, CompressionLevel.NoCompression);
+                ArchiverUtilities.SymbolTableFileName, CompressionLevel.Optimal);
                             
             using var afs = symbolTableEntry.Open();
 
