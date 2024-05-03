@@ -2,8 +2,8 @@
   "profiles": {
     "chibild": {
       "commandName": "Project",
-      "commandLineArgs": "-o test/alignof -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 test/alignof.o test/common.o -lc-bootstrap -lSystem.Private.CoreLib",
-      "workingDirectory": "/home/kouji/Projects/chibicc-cil"
+      "commandLineArgs": "-o foo -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 /home/kouji/Projects/libc-cil/crt0/crt0_i_v.s main.o foo.a -lc-bootstrap -lSystem.Private.CoreLib",
+      "workingDirectory": "/home/kouji/Projects/chibicc-cil/aaa"
     }
   }
 }

@@ -30,8 +30,7 @@ public static class ArchiverUtilities
         {
             if (tokens.Length >= 3 &&
                 tokens[0] is (TokenTypes.Directive, var directive) &&
-                tokens[1] is (TokenTypes.Identity, var scope) &&
-                scope is "public" or "internal")
+                tokens[1] is (TokenTypes.Identity, var scope))
             {
                 switch (directive)
                 {

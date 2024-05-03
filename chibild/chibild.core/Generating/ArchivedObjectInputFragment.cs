@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace chibild.Generating;
 
@@ -29,6 +30,13 @@ internal sealed class ArchivedObjectInputFragment :
     // When a symbol is referenced, it is recorded with `isRequiredLoading`
     // and the information originally needed for the base class is
     // loaded from the archive with `LoadObjectIfRequired()`.
+
+    private enum RequiredStates
+    {
+        Ignore,
+        Required,
+        Loaded,
+    }
 
     private readonly string archivedObjectName;
 
@@ -43,7 +51,7 @@ internal sealed class ArchivedObjectInputFragment :
     private EnumerationNode[] enumerations = Utilities.Empty<EnumerationNode>();
     private StructureNode[] structures = Utilities.Empty<StructureNode>();
 
-    private bool isRequiredLoading;
+    private int requiredState = (int)RequiredStates.Ignore;
 
     private ArchivedObjectInputFragment(
         string baseInputPath,
@@ -68,7 +76,7 @@ internal sealed class ArchivedObjectInputFragment :
     public override string ObjectPath { get; }
 
     public override string ToString() =>
-        $"ArchivedObject: {this.ObjectPath}";
+        $"ArchivedObject: {this.ObjectPath}, State={(RequiredStates)this.requiredState}";
 
     //////////////////////////////////////////////////////////////
 
@@ -98,7 +106,10 @@ internal sealed class ArchivedObjectInputFragment :
     {
         if (this.typeSymbols.TryGetValue(type.TypeIdentity, out var ts))
         {
-            this.isRequiredLoading = true;
+            Interlocked.CompareExchange(
+                ref this.requiredState,
+                (int)RequiredStates.Required,
+                (int)RequiredStates.Ignore);
             CommonUtilities.TryParseEnum(ts.Scope, out scope);
             return true;
         }
@@ -112,7 +123,10 @@ internal sealed class ArchivedObjectInputFragment :
     {
         if (this.variableSymbols.TryGetValue(variable.Identity, out var vs))
         {
-            this.isRequiredLoading = true;
+            Interlocked.CompareExchange(
+                ref this.requiredState,
+                (int)RequiredStates.Required,
+                (int)RequiredStates.Ignore);
             CommonUtilities.TryParseEnum(vs.Scope, out scope);
             return true;
         }
@@ -128,7 +142,10 @@ internal sealed class ArchivedObjectInputFragment :
         // Ignored the signature, because contains only CABI functions.
         if (this.functionSymbols.TryGetValue(function.Identity, out var fs))
         {
-            this.isRequiredLoading = true;
+            Interlocked.CompareExchange(
+                ref this.requiredState,
+                (int)RequiredStates.Required,
+                (int)RequiredStates.Ignore);
             CommonUtilities.TryParseEnum(fs.Scope, out scope);
             return true;
         }
@@ -142,7 +159,10 @@ internal sealed class ArchivedObjectInputFragment :
         ILogger logger,
         bool isLocationOriginSource)
     {
-        if (this.isRequiredLoading)
+        if (Interlocked.CompareExchange(
+            ref this.requiredState,
+            (int)RequiredStates.Loaded,
+            (int)RequiredStates.Required) == (int)RequiredStates.Required)
         {
             logger.Information($"Loading: {this.ObjectPath}");
 
@@ -164,7 +184,6 @@ internal sealed class ArchivedObjectInputFragment :
             this.enumerations = declarations.OfType<EnumerationNode>().ToArray();
             this.structures = declarations.OfType<StructureNode>().ToArray();
 
-            this.isRequiredLoading = false;
             return true;
         }
         return false;

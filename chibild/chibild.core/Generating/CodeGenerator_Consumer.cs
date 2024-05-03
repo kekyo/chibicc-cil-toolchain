@@ -759,6 +759,7 @@ partial class CodeGenerator
         InitializerDeclarationNode initializer)
     {
         var method = this.SetupMethodDefinition(
+            // TODO: Avoid confliction with sequence number to make deterministic.
             $"initializer_${Guid.NewGuid():N}",
             this.CreatePlaceholderType(),
             Utilities.Empty<ParameterDefinition>(),
