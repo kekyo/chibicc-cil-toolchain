@@ -55,7 +55,9 @@ partial class TypeGenerator
         out TypeDefinition atr,
         Action<Token, string> outputError)
     {
-        var elementType = requiredTypes[type.ElementType.CilTypeName];
+        var elementType = ConstructCilType(
+            type.ElementType,
+            requiredTypes);
         var length = type.Length;
 
         var vttr = requiredTypes["System.ValueType"];

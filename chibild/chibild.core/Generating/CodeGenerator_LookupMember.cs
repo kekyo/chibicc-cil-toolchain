@@ -239,14 +239,6 @@ partial class CodeGenerator
                 {
                     this.DelayLookingUpAction1(() =>
                     {
-                        var etr = TypeGenerator.ConstructCilType(
-                            flat.ElementType,
-                            resolvedTypeReferences);
-                    
-                        resolvedTypeReferences.TryAdd(
-                            flat.ElementType.CilTypeName,
-                            context.SafeImport(etr));
-                        
                         // At this point, the `resolvedTypeReferences` should contain
                         // all the `TypeReferences` needed to construct a fixed length array type.
                         if (TypeGenerator.TryGetFixedLengthArrayType(

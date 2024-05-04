@@ -342,7 +342,7 @@ public static class TypeParser
                     var etn1 = InnerFixedLengthArrayElementTypeName(elementType);
                     return length >= 0 ?
                         $"{etn1}_len{length}" :  // Fixed length array type.
-                        throw new ArgumentException();
+                        $"{etn1}_flex";          // Flex array type.
 
                 // Nested reference type.
                 case DerivedTypeNode(DerivedTypes.Reference, var elementType, _):
@@ -353,11 +353,14 @@ public static class TypeParser
                     return $"{InnerFixedLengthArrayElementTypeName(elementType)}_ptr";
 
                 // Function signature.
-                case FunctionSignatureNode(var returnType, var parameters, _, _):
+                case FunctionSignatureNode(var returnType, var parameters, var cc, _):
                     var rtn = InnerFixedLengthArrayElementTypeName(returnType);
                     var ptns = parameters.
-                        Select(p => InnerFixedLengthArrayElementTypeName(p.ParameterType)).
-                        ToArray();
+                        Select(p => InnerFixedLengthArrayElementTypeName(p.ParameterType));
+                    if (cc == MethodCallingConvention.VarArg)
+                    {
+                        ptns = ptns.Concat(new[] { "varg" });
+                    }
                     // TODO: very weak mangling for any parameter types.
                     return $"func_{rtn}_{string.Join("_", ptns)}";
 
@@ -390,42 +393,18 @@ public static class TypeParser
                     return $"{InnerTypeName(elementType)}*";
 
                 // Function signature.
-                case FunctionSignatureNode(var returnType, var parameters, _, _):
+                case FunctionSignatureNode(var returnType, var parameters, var cc, _):
                     var rtn = InnerTypeName(returnType);
-                    var ptns = parameters.Select(p => InnerTypeName(p.ParameterType));
+                    var ptns = parameters.
+                        Select(p => InnerTypeName(p.ParameterType));
+                    if (cc == MethodCallingConvention.VarArg)
+                    {
+                        ptns = ptns.Concat(new[] { "..." });
+                    }
                     return $"{rtn}({string.Join(",", ptns)})";
 
                 default:
                     return type.TypeIdentity;
-            }
-        }
-
-        var typeName = InnerTypeName(type);
-        return typeName.IndexOf('.') == -1 ?
-            $"C.type.{typeName}" :
-            typeName;
-    }
-
-    public static string GetCilTypeName(Type type)
-    {
-        static string InnerTypeName(Type type)
-        {
-            switch (type)
-            {
-                // .NET array type.
-                case { IsArray: true }:
-                    return $"{InnerTypeName(type.GetElementType()!)}[]";
-
-                // Nested reference type.
-                case { IsByRef: true }:
-                    return $"{InnerTypeName(type.GetElementType()!)}&";
-
-                // Nested pointer type.
-                case { IsPointer: true }:
-                    return $"{InnerTypeName(type.GetElementType()!)}*";
-
-                default:
-                    return type.FullName!;
             }
         }
 

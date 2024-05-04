@@ -38,39 +38,38 @@ public static partial class TypeGenerator
         // Resolving types in this order allows subsequent types in the list to be safely constructed.
 
         // Recursive crawler.
-        static void InnerFilter(TypeNode type, List<TypeNode> types)
+        static void InnerFilter(TypeNode type, List<TypeNode> prioritizedTypes)
         {
             switch (type)
             {
                 // Termination type.
                 case TypeIdentityNode _:
-                    types.Add(type);
+                    prioritizedTypes.Add(type);
                     return;
                 
                 // .NET array type.
                 case ArrayTypeNode(var elementType, _):
-                    InnerFilter(elementType, types);
+                    InnerFilter(elementType, prioritizedTypes);
                     return;
 
                 // Fixed length array type.
                 case FixedLengthArrayTypeNode(var elementType, _, _):
-                    InnerFilter(elementType, types);
-                    // Contains this.
-                    // Will construct fixed length array type by caller.
-                    types.Add(type);
+                    InnerFilter(elementType, prioritizedTypes);
+                    // Contains this, will construct fixed length array type by caller.
+                    prioritizedTypes.Add(type);
                     return;
 
                 // Reference/Pointer type.
                 case DerivedTypeNode(_, var elementType, _):
-                    InnerFilter(elementType, types);
+                    InnerFilter(elementType, prioritizedTypes);
                     return;
                 
                 // Function signature.
                 case FunctionSignatureNode(var returnType, var parameters, _, _):
-                    InnerFilter(returnType, types);
+                    InnerFilter(returnType, prioritizedTypes);
                     foreach (var parameter in parameters)
                     {
-                        InnerFilter(parameter.ParameterType, types);
+                        InnerFilter(parameter.ParameterType, prioritizedTypes);
                     }
                     return;
 
