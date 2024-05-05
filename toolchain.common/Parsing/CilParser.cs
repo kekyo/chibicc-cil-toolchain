@@ -41,6 +41,12 @@ public sealed partial class CilParser
     public bool CaughtError =>
         this.caughtError;
 
+    private void OutputWarning(Token token, string message)
+    {
+        this.logger.Warning(
+            $"{token.RelativePath}:{token.Line + 1}:{token.StartColumn + 1}: {message}");
+    }
+
     private void OutputError(Token token, string message)
     {
         this.caughtError = true;
@@ -117,6 +123,13 @@ public sealed partial class CilParser
 
         var fileId = tokens[1].Text;
         var path = tokens[2].Text;
+
+        if (path != "-" && !Path.IsPathRooted(path))
+        {
+            this.OutputWarning(
+                tokens[2],
+                $"Relative path declared: {tokens[2]}");
+        }
         
         return new(
             fileId,
