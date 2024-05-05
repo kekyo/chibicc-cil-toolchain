@@ -32,7 +32,7 @@ internal sealed partial class CodeGenerator
 
     private readonly Queue<Action> delayLookingUpEntries1 = new();
     private readonly Queue<Action> delayLookingUpEntries2 = new();
-    private readonly Queue<Action<Dictionary<string, Document>>> delayDebuggingInsertionEntries = new();
+    private readonly Queue<Action<Dictionary<string, Document>, bool>> delayDebuggingInsertionEntries = new();
 
     private bool caughtError;
     private int placeholderIndex;

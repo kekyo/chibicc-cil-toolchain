@@ -392,6 +392,7 @@ public sealed class CilLinker
         if (!codeGenerator.Emit(
             loadedFragments,
             options.ApplyOptimization,
+            options.DebugSymbolType == DebugSymbolTypes.Embedded,
             options.CreationOptions))
         {
             return false;

@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Logging;
 using chibicc.toolchain.Parsing;
 using chibild.Internal;
 using Mono.Cecil;
@@ -17,6 +18,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace chibild.Generating;
 
@@ -268,18 +270,49 @@ partial class CodeGenerator
     {
         lock (this.delayDebuggingInsertionEntries)
         {
-            this.delayDebuggingInsertionEntries.Enqueue(cachedDocuments =>
+            this.delayDebuggingInsertionEntries.
+                Enqueue((cachedDocuments, isEmbeddingSourceFile) =>
             {
                 if (!cachedDocuments.TryGetValue(location.File.RelativePath, out var document))
                 {
-                    document = new Document(location.File.BasePath is { } basePath ?
+                    var documentPath = location.File.BasePath is { } basePath ?
                         Path.Combine(basePath, location.File.RelativePath) :
-                        location.File.RelativePath);
+                        location.File.RelativePath;
+
+                    document = new Document(documentPath);
 
                     document.Type = DocumentType.Text;
+                    document.HashAlgorithm = DocumentHashAlgorithm.None;
+                    
                     if (location.File.Language is { } language)
                     {
                         document.Language = (DocumentLanguage)language;
+                    }
+
+                    try
+                    {
+                        if (File.Exists(documentPath))
+                        {
+                            var content = File.ReadAllBytes(documentPath);
+
+                            using var sha1 = SHA1.Create();
+                            var hash = sha1.ComputeHash(content);
+                            
+                            document.HashAlgorithm = DocumentHashAlgorithm.SHA1;
+                            document.Hash = hash;
+                            
+                            this.logger.Trace($"Emit source file hash: {documentPath}");
+
+                            if (isEmbeddingSourceFile)
+                            {
+                                document.EmbeddedSource = content;
+                                this.logger.Trace($"Embedded source file: {documentPath}");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this.logger.Warning($"Could not compute source file hash: {documentPath}, {ex.Message}");
                     }
 
                     cachedDocuments.Add(location.File.RelativePath, document);
@@ -621,7 +654,7 @@ partial class CodeGenerator
 
         lock (this.delayDebuggingInsertionEntries)
         {
-            this.delayDebuggingInsertionEntries.Enqueue(_ =>
+            this.delayDebuggingInsertionEntries.Enqueue((_, _) =>
             {
                 var scope = new ScopeDebugInformation(
                     method.Body.Instructions.First(),

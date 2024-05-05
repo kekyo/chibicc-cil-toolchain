@@ -718,6 +718,7 @@ partial class CodeGenerator
     public bool Emit(
         InputFragment[] inputFragments,
         bool applyOptimization,
+        bool isEmbeddingSourceFile,
         LinkerCreationOptions? creationOptions)
     {
         // Try add fundamental attributes.
@@ -785,7 +786,7 @@ partial class CodeGenerator
             while (this.delayDebuggingInsertionEntries.Count >= 1)
             {
                 var action = this.delayDebuggingInsertionEntries.Dequeue();
-                action(cachedDocuments);
+                action(cachedDocuments, isEmbeddingSourceFile);
             }
         }
 
