@@ -576,7 +576,7 @@ partial class CodeGenerator
         // and all related object files must be analyzed on the chibicc side,
         // which is quite difficult.
 
-        static string? GetCAbiStartUpObjectPostfix(MethodDefinition method)
+        static string? GetCAbiStartUpObjectFilePostfix(MethodDefinition method)
         {
             if (method is { IsStatic: true, Name: "main" } &&
                 method.Parameters.Count <= 3)
@@ -600,7 +600,7 @@ partial class CodeGenerator
         if (this.targetModule.Types.
             Where(type => type is { IsClass: true, FullName: "C.text" }).   // Priority search for 'C.text'.
             Concat(this.targetModule.Types.Where(type => type.IsClass && type.FullName != "C.text")).
-            SelectMany(type => type.Methods.Select(GetCAbiStartUpObjectPostfix).Where(p => p != null)).
+            SelectMany(type => type.Methods.Select(GetCAbiStartUpObjectFilePostfix).Where(p => p != null)).
             OrderByDescending(pf => pf!.Length).
             FirstOrDefault() is { } postfix)
         {
@@ -664,28 +664,13 @@ partial class CodeGenerator
         // and the entry point symbol (`_start` by default) is found and set with the following code.
         
         // Priority search for a module type.
-        var startup = this.targetModule.Types.
-            First(type => type is { IsClass: true, FullName: "<Module>" }).
-            Methods.
-            FirstOrDefault(method =>
-                method is { IsStatic: true } &&
-                method.Name == entryPointSymbol);
-
-        // Entire search when not found.
-        if (startup == null)
+        if (this.targetModule.Types.
+            Where(type => type is { IsClass: true, FullName: "<Module>" }).   // Priority search for module class.
+            Concat(this.targetModule.Types.Where(type => type.IsClass && type.FullName != "<Module>")).
+            SelectMany(type => type.Methods).
+            FirstOrDefault(method => method.IsStatic && method.Name == entryPointSymbol) is { } startup)
         {
-            // Because it is slower.
-            startup = this.targetModule.Types.
-                Where(type => type is { IsClass: true }).
-                SelectMany(type => type.Methods).
-                FirstOrDefault(method =>
-                    method is { IsStatic: true } &&
-                    method.Name == entryPointSymbol);
-        }
-
-        // Inject startup code when declared.
-        if (startup != null)
-        {
+            // Assign startup method when declared.
             this.targetModule.EntryPoint = startup;
             this.logger.Trace($"Found entry point: {startup.FullName}");
         }

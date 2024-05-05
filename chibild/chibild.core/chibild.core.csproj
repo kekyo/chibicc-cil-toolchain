@@ -22,23 +22,4 @@
     <EmbeddedResource Include="Internal\runtimeconfig.json" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="Parsing_old\**\*.cs" />
-    <None Include="Parsing_old\**\*" />
-    <Compile Remove="Linker_old.cs" />
-    <None Include="Linker_old.cs" />
-    <!--
-    <None Remove="Parsing\Embedding\_startup_i.s" />
-    <None Remove="Parsing\Embedding\_startup_i_v.s" />
-    <None Remove="Parsing\Embedding\_startup_v.s" />
-    <None Remove="Parsing\Embedding\_startup_v_v.s" />
-    <Compile Remove="Parsing\Embedding\_start.cs" />
-    <None Include="Parsing\Embedding\_start.cs" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_i_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_v_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_i.s" />
-    -->
-  </ItemGroup>
-
 </Project>
