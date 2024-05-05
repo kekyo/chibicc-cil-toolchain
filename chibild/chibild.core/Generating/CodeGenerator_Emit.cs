@@ -652,6 +652,10 @@ partial class CodeGenerator
                 return fragment;
             }
         }
+        else
+        {
+            this.logger.Warning("Could not find CABI startup function.");
+        }
 
         return null;
     }
@@ -784,10 +788,8 @@ partial class CodeGenerator
                 action(cachedDocuments);
             }
         }
-        else
-        {
-            Debug.Assert(this.delayDebuggingInsertionEntries.Count == 0);
-        }
+
+        Debug.Assert(this.delayDebuggingInsertionEntries.Count == 0);
         
         // Assign entry point.
         if (creationOptions is { } co2 &&
