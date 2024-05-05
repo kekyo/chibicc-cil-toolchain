@@ -20,6 +20,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace chibild;
@@ -55,16 +56,18 @@ public sealed class CilLinker
 
     //////////////////////////////////////////////////////////////
 
-    private InputFragment[] LoadInputReferences(
+    private bool TryLoadInputReferences(
         string baseInputPath,
         string[] libraryReferenceBasePaths,
         string[] assemblyReferenceBasePaths,
         InputReference[] inputReferences,
-        bool isLocationOriginSource)
+        bool isLocationOriginSource,
+        out InputFragment[] fragments)
     {
         // Load input files in parallelism.
         var loadedFragmentLists = new InputFragment[inputReferences.Length][];
-
+        var caughtErrorCount = 0;
+        
 #if DEBUG
         for (var index = 0; index < inputReferences.Length; index++)
         {
@@ -80,12 +83,17 @@ public sealed class CilLinker
                 case ObjectReaderReference(var path, var reader):
                     using (var tr = reader())
                     {
-                        loadedFragmentLists[index] = new[]
+                        if (!ObjectFileInputFragment.TryLoad(
+                            this.logger,
+                            "",
+                            path,
+                            tr,
+                            isLocationOriginSource,
+                            out var fragment))
                         {
-                            ObjectFileInputFragment.Load(
-                                this.logger, "", path, tr,
-                                isLocationOriginSource),
-                        };
+                            Interlocked.Increment(ref caughtErrorCount);
+                        }
+                        loadedFragmentLists[index] = new[] { fragment };
                     }
                     break;
 
@@ -102,12 +110,17 @@ public sealed class CilLinker
                         Path.Combine(baseInputPath, relativePath), false))
                     {
                         var tr = new StreamReader(fs, Encoding.UTF8, true);
-                        loadedFragmentLists[index] = new[]
+                        if (!ObjectFileInputFragment.TryLoad(
+                            this.logger,
+                            baseInputPath,
+                            relativePath,
+                            tr,
+                            isLocationOriginSource,
+                            out var fragment))
                         {
-                            ObjectFileInputFragment.Load(
-                                this.logger, baseInputPath, relativePath, tr,
-                                isLocationOriginSource),
-                        };
+                            Interlocked.Increment(ref caughtErrorCount);
+                        }
+                        loadedFragmentLists[index] = new[] { fragment };
                     }
                     break;
 
@@ -123,7 +136,9 @@ public sealed class CilLinker
                     }
                     // Multiple objects in an archive.
                     loadedFragmentLists[index] = ArchivedObjectInputFragment.Load(
-                        this.logger, baseInputPath, relativePath);
+                        this.logger,
+                        baseInputPath,
+                        relativePath);
                     break;
 
                 // Asssembly:
@@ -165,7 +180,9 @@ public sealed class CilLinker
                     if (Path.GetExtension(foundEntry.fileName) == ".a")
                     {
                         loadedFragmentLists[index] = ArchivedObjectInputFragment.Load(
-                            this.logger, foundEntry.basePath, foundEntry.fileName);
+                            this.logger,
+                            foundEntry.basePath,
+                            foundEntry.fileName);
                     }
                     else
                     {
@@ -194,9 +211,10 @@ public sealed class CilLinker
             });
 #endif
 
-        return loadedFragmentLists.
+        fragments = loadedFragmentLists.
             SelectMany(loadedFragments => loadedFragments).
             ToArray();
+        return caughtErrorCount == 0;
     }
 
     //////////////////////////////////////////////////////////////
@@ -301,12 +319,16 @@ public sealed class CilLinker
             options.DebugSymbolType != DebugSymbolTypes.None;
 
         // Load from inputs.
-        var loadedFragments = this.LoadInputReferences(
+        if (!this.TryLoadInputReferences(
             baseInputPath,
             options.LibraryReferenceBasePaths,
             assemblyReferenceBasePaths,
             totalInputReferences,
-            produceDebuggingInformation);
+            produceDebuggingInformation,
+            out var loadedFragments))
+        {
+            return false;
+        }
 
         //////////////////////////////////////////////////////////////
 

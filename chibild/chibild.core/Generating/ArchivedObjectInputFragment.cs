@@ -158,7 +158,14 @@ internal sealed class ArchivedObjectInputFragment :
 
     //////////////////////////////////////////////////////////////
 
-    public bool LoadObjectIfRequired(
+    public enum LoadObjectResults
+    {
+        Ignored,
+        Loaded,
+        CaughtError,
+    }
+    
+    public LoadObjectResults LoadObjectIfRequired(
         ILogger logger,
         bool isLocationOriginSource)
     {
@@ -187,9 +194,11 @@ internal sealed class ArchivedObjectInputFragment :
             this.enumerations = declarations.OfType<EnumerationNode>().ToArray();
             this.structures = declarations.OfType<StructureNode>().ToArray();
 
-            return true;
+            return parser.CaughtError ?
+                LoadObjectResults.CaughtError :
+                LoadObjectResults.Loaded;
         }
-        return false;
+        return LoadObjectResults.Ignored;
     }
 
     public static ArchivedObjectInputFragment[] Load(

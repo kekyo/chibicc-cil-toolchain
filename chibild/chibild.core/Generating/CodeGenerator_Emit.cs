@@ -622,13 +622,13 @@ partial class CodeGenerator
                 var tr = new StreamReader(fs, Encoding.UTF8, true);
                 
                 // Load this startup object file.
-                var fragment = ObjectFileInputFragment.Load(
+                if (!ObjectFileInputFragment.TryLoad(
                     this.logger,
                     cabiStartUpObjectDirectoryPath,
                     fileName,
                     tr,
-                    false);
-                if (this.caughtError)
+                    false,
+                    out var fragment))
                 {
                     return null;
                 }

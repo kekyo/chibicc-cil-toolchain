@@ -120,12 +120,13 @@ internal sealed class ObjectFileInputFragment :
 
     //////////////////////////////////////////////////////////////
 
-    public static ObjectFileInputFragment Load(
+    public static bool TryLoad(
         ILogger logger,
         string baseInputPath,
         string relativePath,
         TextReader tr,
-        bool isLocationOriginSource)
+        bool isLocationOriginSource,
+        out ObjectFileInputFragment fragment)
     {
         logger.Information($"Loading: {relativePath}");
 
@@ -142,12 +143,13 @@ internal sealed class ObjectFileInputFragment :
         var enumerations = declarations.OfType<EnumerationNode>().ToArray();
         var structures = declarations.OfType<StructureNode>().ToArray();
 
-        return new(baseInputPath, relativePath,
+        fragment = new(baseInputPath, relativePath,
             variables,
             constants,
             functions,
             initializers,
             enumerations,
             structures);
+        return !parser.CaughtError;
     }
 }

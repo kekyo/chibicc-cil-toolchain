@@ -172,24 +172,40 @@ internal sealed partial class CodeGenerator
             foreach (var currentFragment in inputFragments.
                 OfType<ArchivedObjectInputFragment>())
             {
-                if (currentFragment.LoadObjectIfRequired(
+                switch (currentFragment.LoadObjectIfRequired(
                     this.logger,
                     isLocationOriginSource))
                 {
-                    found = true;
-                    this.ConsumeFragment(currentFragment, inputFragments);
+                    case ArchivedObjectInputFragment.LoadObjectResults.Loaded:
+                        found = true;
+                        this.ConsumeFragment(currentFragment, inputFragments);
+                        break;
+                    case ArchivedObjectInputFragment.LoadObjectResults.Ignored:
+                        break;
+                    default:
+                        this.caughtError = true;
+                        break;
                 }
             }
 #else
             Parallel.ForEach(inputFragments, currentFragment =>
             {
-                if (currentFragment is ArchivedObjectInputFragment afif &&
-                    afif.LoadObjectIfRequired(
+                if (currentFragment is ArchivedObjectInputFragment afif)
+                {
+                    switch (afif.LoadObjectIfRequired(
                         this.logger,
                         isLocationOriginSource))
-                {
-                    found = true;
-                    this.ConsumeFragment(afif, inputFragments);
+                    {
+                        case ArchivedObjectInputFragment.LoadObjectResults.Loaded:
+                            found = true;
+                            this.ConsumeFragment(afif, inputFragments);
+                            break;
+                        case ArchivedObjectInputFragment.LoadObjectResults.Ignored:
+                            break;
+                        default:
+                            this.caughtError = true;
+                            break;
+                    }
                 }
             });
 #endif
