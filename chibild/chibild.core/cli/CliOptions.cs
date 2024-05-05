@@ -148,6 +148,25 @@ public sealed class CliOptions
                                 continue;
                             }
                             break;
+                        case 'd':
+                            if (arg.Length >= 3)
+                            {
+                                if (options.LinkerOptions.CreationOptions is { } co2)
+                                {
+                                    co2.CAbiStartUpObjectDirectoryPath = arg.Substring(2);
+                                }
+                                continue;
+                            }
+                            else if (args.Length >= index)
+                            {
+                                if (options.LinkerOptions.CreationOptions is { } co2)
+                                {
+                                    co2.CAbiStartUpObjectDirectoryPath = args[index + 1];
+                                }
+                                index++;
+                                continue;
+                            }
+                            break;
                         case 'e':
                             if (arg.Length >= 3)
                             {
@@ -224,16 +243,16 @@ public sealed class CliOptions
                                         options.LinkerOptions.ApplyOptimization = false;
                                         if (options.LinkerOptions.CreationOptions is { } co2)
                                         {
-                                            co2.Options |=
-                                                AssembleOptions.DisableJITOptimization;
+                                            co2.AssemblyOptions |=
+                                                AssemblyOptions.DisableJITOptimization;
                                         }
                                         continue;
                                     case '1':
                                         options.LinkerOptions.ApplyOptimization = true;
                                         if (options.LinkerOptions.CreationOptions is { } co3)
                                         {
-                                            co3.Options &=
-                                                ~AssembleOptions.DisableJITOptimization;
+                                            co3.AssemblyOptions &=
+                                                ~AssemblyOptions.DisableJITOptimization;
                                         }
                                         continue;
                                 }
@@ -243,8 +262,8 @@ public sealed class CliOptions
                                 options.LinkerOptions.ApplyOptimization = true;
                                 if (options.LinkerOptions.CreationOptions is { } co4)
                                 {
-                                    co4.Options &=
-                                        ~AssembleOptions.DisableJITOptimization;
+                                    co4.AssemblyOptions &=
+                                        ~AssemblyOptions.DisableJITOptimization;
                                 }
                                 continue;
                             }
@@ -436,10 +455,11 @@ public sealed class CliOptions
 
         if (this.LinkerOptions.CreationOptions is { } co)
         {
-            logger.Information($"Options={co.Options}");
+            logger.Information($"AssemblyOptions={co.AssemblyOptions}");
             logger.Information($"AssemblyType={co.AssemblyType}");
             logger.Information($"TargetWindowsArchitecture={co.TargetWindowsArchitecture}");
             logger.Information($"RuntimeConfiguration={co.RuntimeConfiguration}");
+            logger.Information($"CAbiStartUpDirectoryPath={co.CAbiStartUpObjectDirectoryPath ?? "(null)"}");
             logger.Information($"EntryPointSymbol={co.EntryPointSymbol}");
             logger.Information($"Version={co.Version}");
             logger.Information($"TargetFramework={co.TargetFramework}");
@@ -476,6 +496,7 @@ public sealed class CliOptions
         tw.WriteLine("  -s, -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
+        tw.WriteLine("  -d <path>         CABI startup object directory path");
         tw.WriteLine("  -e <symbol>       Entry point symbol (defaulted: _start)");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -m <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");

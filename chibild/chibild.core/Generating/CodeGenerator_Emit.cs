@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.IO;
 using chibicc.toolchain.Logging;
 using chibicc.toolchain.Parsing;
 using chibicc.toolchain.Tokenizing;
@@ -17,122 +18,150 @@ using Mono.Cecil.Rocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace chibild.Generating;
 
 partial class CodeGenerator
 {
-    private void AddFundamentalAttributes(
-        InputFragment[] inputFragments,
-        TargetFramework? targetFramework,
-        bool? disableJITOptimization)
+    private static readonly Dictionary<string, string> cabiStartUpSignatureTypeNames = new()
     {
-        bool UnsafeGetCoreType(
-            string coreTypeName,
-            out TypeReference tr)
+        { "System.Void", "v" },
+        { "System.Void,System.Int32", "vc" },
+        { "System.Void,System.Int32,System.SByte**", "vcv" },
+        { "System.Void,System.Int32,System.SByte**,System.SByte**", "vcve" },
+        { "System.Int32", "i" },
+        { "System.Int32,System.Int32", "ic" },
+        { "System.Int32,System.Int32,System.SByte**", "icv" },
+        { "System.Int32,System.Int32,System.SByte**,System.SByte**", "icve" },
+    };
+    
+    private static bool UnsafeGetCoreType(
+        ModuleDefinition targetModule,
+        InputFragment[] inputFragments,
+        string coreTypeName,
+        out TypeReference tr)
+    {
+        var coreType = new TypeIdentityNode(coreTypeName, Token.Unknown);
+        foreach (var fragment in inputFragments)
         {
-            var coreType = new TypeIdentityNode(coreTypeName, Token.Unknown);
-            foreach (var fragment in inputFragments)
+            if (fragment.TryGetType(
+                coreType,
+                targetModule,
+                out tr))
             {
-                if (fragment.TryGetType(
-                    coreType,
-                    this.targetModule,
-                    out tr))
-                {
-                    return true;
-                }
+                return true;
             }
-            tr = null!;
-            return false;
         }
+        tr = null!;
+        return false;
+    }
         
+    private void AddTargetFrameworkAttribute(
+        InputFragment[] inputFragments,
+        TargetFramework targetFramework)
+    {
         // Apply TargetFrameworkAttribute if could be imported.
-        if (targetFramework != null)
+        if (UnsafeGetCoreType(
+            this.targetModule,
+            inputFragments,
+            "System.Runtime.Versioning.TargetFrameworkAttribute",
+            out var tfatr))
         {
-            if (UnsafeGetCoreType(
-                "System.Runtime.Versioning.TargetFrameworkAttribute",
-                out var tfatr))
+            if (tfatr.Resolve().Methods.FirstOrDefault(m =>
+                m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
+                m.Parameters.Count == 1 &&
+                m.Parameters[0].ParameterType.FullName == "System.String") is MethodReference ctor)
             {
-                if (tfatr.Resolve().Methods.FirstOrDefault(m =>
-                    m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
-                    m.Parameters.Count == 1 &&
-                    m.Parameters[0].ParameterType.FullName == "System.String") is MethodReference ctor)
-                {
-                    ctor = this.targetModule.SafeImport(ctor);
-                    
-                    var tfa = new CustomAttribute(ctor);
-                    tfa.ConstructorArguments.Add(new(
-                        this.targetModule.TypeSystem.String,
-                        targetFramework.ToString()));
-                    this.targetModule.Assembly.CustomAttributes.Add(tfa);
+                ctor = this.targetModule.SafeImport(ctor);
+                
+                var tfa = new CustomAttribute(ctor);
+                tfa.ConstructorArguments.Add(new(
+                    this.targetModule.TypeSystem.String,
+                    targetFramework.ToString()));
+                this.targetModule.Assembly.CustomAttributes.Add(tfa);
 
-                    this.logger.Trace(
-                        "TargetFrameworkAttribute is applied.");
-                }
-                else
-                {
-                    this.logger.Warning(
-                        "TargetFrameworkAttribute constructor was not found.");
-                }
+                this.logger.Trace(
+                    "TargetFrameworkAttribute is applied.");
             }
             else
             {
                 this.logger.Warning(
-                    "TargetFrameworkAttribute was not found, so not applied. Because maybe did not reference core library.");
+                    "TargetFrameworkAttribute constructor was not found.");
             }
         }
-
-        // Apply DebuggableAttribute if could be imported.
-        if (disableJITOptimization ?? false)
+        else
         {
-            if (UnsafeGetCoreType(
+            this.logger.Warning(
+                "TargetFrameworkAttribute was not found, so not applied. Because maybe did not reference core library.");
+        }
+    }
+
+    private void AddDebuggableAttribute(
+        InputFragment[] inputFragments)
+    {
+        if (UnsafeGetCoreType(
+                this.targetModule,
+                inputFragments,
                 "System.Diagnostics.DebuggableAttribute.DebuggingModes",
-                out var dadmtr) &&
-                UnsafeGetCoreType(
+            out var dadmtr) &&
+            UnsafeGetCoreType(
+                this.targetModule,
+                inputFragments,
                 "System.Diagnostics.DebuggableAttribute",
-                out var datr))
+            out var datr))
+        {
+            if (datr.Resolve().Methods.FirstOrDefault(m =>
+                m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
+                m.Parameters.Count == 1 &&
+                m.Parameters[0].ParameterType.FullName.EndsWith("DebuggingModes")) is MethodReference ctor)
             {
-                if (datr.Resolve().Methods.FirstOrDefault(m =>
-                    m is { IsPublic: true, IsStatic: false, IsConstructor: true, } &&
-                    m.Parameters.Count == 1 &&
-                    m.Parameters[0].ParameterType.FullName.EndsWith("DebuggingModes")) is MethodReference ctor)
-                {
-                    dadmtr = this.targetModule.SafeImport(dadmtr);
-                    ctor = this.targetModule.SafeImport(ctor);
-                    
-                    var da = new CustomAttribute(ctor);
-                    da.ConstructorArguments.Add(new(
-                        dadmtr,
-                        (int)(DebuggableAttribute.DebuggingModes.Default |
-                              DebuggableAttribute.DebuggingModes.DisableOptimizations)));
-                    this.targetModule.Assembly.CustomAttributes.Add(da);
+                dadmtr = this.targetModule.SafeImport(dadmtr);
+                ctor = this.targetModule.SafeImport(ctor);
+                
+                var da = new CustomAttribute(ctor);
+                da.ConstructorArguments.Add(new(
+                    dadmtr,
+                    (int)(DebuggableAttribute.DebuggingModes.Default |
+                          DebuggableAttribute.DebuggingModes.DisableOptimizations)));
+                this.targetModule.Assembly.CustomAttributes.Add(da);
 
-                    this.logger.Trace(
-                        "DebuggableAttribute is applied.");
-                }
-                else
-                {
-                    this.logger.Warning(
-                        "DebuggableAttribute constructor was not found.");
-                }
+                this.logger.Trace(
+                    "DebuggableAttribute is applied.");
             }
             else
             {
                 this.logger.Warning(
-                    "DebuggableAttribute and/or DebuggingModes was not found, so not applied. Because maybe did not reference core library.");
+                    "DebuggableAttribute constructor was not found.");
             }
         }
+        else
+        {
+            this.logger.Warning(
+                "DebuggableAttribute and/or DebuggingModes was not found, so not applied. Because maybe did not reference core library.");
+        }
+    }
 
+    private void AddPointerVisualizerAttributes(
+        InputFragment[] inputFragments)
+    {
         // Apply pointer visualizers if could be imported.
         if (UnsafeGetCoreType(
+                this.targetModule,
+                inputFragments,
                 "System.Type",
                 out var sttr) &&
             UnsafeGetCoreType(
+                this.targetModule,
+                inputFragments,
                 "System.Diagnostics.DebuggerTypeProxyAttribute",
                 out var dtpatr) &&
             UnsafeGetCoreType(
+                this.targetModule,
+                inputFragments,
                 "C.type.__pointer_visualizer",
                 out var pvtr))
         {
@@ -150,6 +179,8 @@ partial class CodeGenerator
                     { "System.Void", "System.Byte", "System.SByte", })
                 {
                     if (UnsafeGetCoreType(
+                        this.targetModule,
+                        inputFragments,
                         targetTypeName,
                         out var ttr))
                     {
@@ -180,40 +211,7 @@ partial class CodeGenerator
         }
     }
 
-    private void AssignEntryPoint(
-        string entryPointSymbol)
-    {
-        // Priority search for a module type.
-        var startup = this.targetModule.Types.
-            First(t => t.FullName == "<Module>").
-            Methods.
-            FirstOrDefault(m =>
-                m.IsStatic &&
-                m.Name == entryPointSymbol);
-
-        // Entire search when not found.
-        if (startup == null)
-        {
-            startup = this.targetModule.Types.
-                Where(type => type.IsClass).
-                SelectMany(type => type.Methods).
-                FirstOrDefault(m =>
-                    m.IsStatic &&
-                    m.Name == entryPointSymbol);
-        }
-
-        // Inject startup code when declared.
-        if (startup != null)
-        {
-            this.targetModule.EntryPoint = startup;
-            this.logger.Information($"Found entry point.");
-        }
-        else
-        {
-            this.caughtError = true;
-            this.logger.Error($"Could not find any entry point.");
-        }
-    }
+    ///////////////////////////////////////////////////////////////////////////////
 
     private sealed class TypeDefinitionHolder
     {
@@ -335,46 +333,67 @@ partial class CodeGenerator
 
         ///////////////////////////////////////////////////
 
+        var count = 0;
         foreach (var enumeration in fragment.GetDeclaredEnumerations(true))
         {
             holder.GetFileScopedType().
                 NestedTypes.
                 Add(enumeration);
+            count++;
         }
 
+        this.logger.Trace($"Total emitted enumerations [file]: {count}");
+
+        count = 0;
         foreach (var structure in fragment.GetDeclaredStructures(true))
         {
             holder.GetFileScopedType().
                 NestedTypes.
                 Add(structure);
+            count++;
         }
 
+        this.logger.Trace($"Total emitted structures [file]: {count}");
+
+        count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(true))
         {
             holder.GetFileScopedType().
                 Methods.
                 Add(function);
+            count++;
         }
 
+        this.logger.Trace($"Total emitted functions [file]: {count}");
+
+        count = 0;
         foreach (var variable in fragment.GetDeclaredVariables(true))
         {
             holder.GetFileScopedType().
                 Fields.
                 Add(variable);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted variables [file]: {count}");
 
+        count = 0;
         foreach (var constant in fragment.GetDeclaredConstants(true))
         {
             holder.GetFileScopedType().
                 Fields.
                 Add(constant);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted constants [file]: {count}");
 
         var fileScopedInitializerNames = (holder.GetFileScopedTypeIfAvailable()?.
             Methods.
             Select(m => m.Name) ?? Utilities.Empty<string>()).
             ToHashSet();
         var subIndex = 1;
+        count = 0;
         foreach (var initializer in fragment.GetDeclaredInitializer(true).Reverse())
         {
             // Change method name when initializer symbol name is duplicate.
@@ -394,46 +413,70 @@ partial class CodeGenerator
             instructions.Insert(
                 0,
                 Instruction.Create(OpCodes.Call, initializer));
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted initializers [file]: {count}");
 
         ///////////////////////////////////////////////////
 
+        count = 0;
         foreach (var enumeration in fragment.GetDeclaredEnumerations(false))
         {
             this.targetModule.Types.Add(enumeration);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted enumerations [public/internal]: {count}");
 
+        count = 0;
         foreach (var structure in fragment.GetDeclaredStructures(false))
         {
             this.targetModule.Types.Add(structure);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted structures [public/internal]: {count}");
 
+        count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(false))
         {
             holder.GetTextType().
                 Methods.
                 Add(function);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted functions [public/internal]: {count}");
 
+        count = 0;
         foreach (var variable in fragment.GetDeclaredVariables(false))
         {
             holder.GetDataType().
                 Fields.
                 Add(variable);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted variables [public/internal]: {count}");
 
+        count = 0;
         foreach (var constant in fragment.GetDeclaredConstants(false))
         {
             holder.GetRDataType().
                 Fields.
                 Add(constant);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted constants [public/internal]: {count}");
 
         var initializerNames = (holder.GetDataTypeIfAvailable()?.
             Methods.
             Select(m => m.Name) ?? Utilities.Empty<string>()).
             ToHashSet();
         subIndex = 1;
+        count = 0;
         foreach (var initializer in fragment.GetDeclaredInitializer(false).Reverse())
         {
             // Change method name when initializer symbol name is duplicate.
@@ -453,57 +496,261 @@ partial class CodeGenerator
             instructions.Insert(
                 0,
                 Instruction.Create(OpCodes.Call, initializer));
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted initializers [internal]: {count}");
 
         ///////////////////////////////////////////////////
 
         var moduleType = this.targetModule.Types.
             First(t => t.FullName == "<Module>");
 
+        count = 0;
         foreach (var function in fragment.GetDeclaredModuleFunctions())
         {
             moduleType.
                 Methods.
                 Add(function);
+            count++;
         }
+        
+        this.logger.Trace($"Total emitted module functions: {count}");
     }
+
+    ///////////////////////////////////////////////////////////////////////////////
 
     private void OptimizeMethods(
         ObjectInputFragment fragment)
     {
+        var count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(true))
         {
             function.Body.Optimize();
+            count++;
         }
 
+        this.logger.Trace($"Total optimized methods [file]: {count}");
+
+        count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(false))
         {
             function.Body.Optimize();
+            count++;
         }
 
+        this.logger.Trace($"Total optimized methods [public/internal]: {count}");
+
+        count = 0;
         foreach (var initializer in fragment.GetDeclaredInitializer(true))
         {
             initializer.Body.Optimize();
+            count++;
         }
 
+        this.logger.Trace($"Total optimized methods [file initializer]: {count}");
+
+        count = 0;
         foreach (var initializer in fragment.GetDeclaredInitializer(false))
         {
             initializer.Body.Optimize();
+            count++;
+        }
+
+        this.logger.Trace($"Total optimized methods [public/internal initializer]: {count}");
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+
+    private ObjectFileInputFragment? LoadAndConsumeCAbiStartUpObjectIfRequired(
+        InputFragment[] inputFragments,
+        string cabiStartUpObjectDirectoryPath)
+    {
+        // Search for a set of functions built on the target module,
+        // and if a function that is considered to be a main function exists,
+        // build an additional `crt0` startup code that matches the signature of the function.
+
+        // Originally, this operation should be done on chibicc side.
+        // However, since the CLR cannot use the CDECL convention,
+        // it is necessary to identify the function signature,
+        // and all related object files must be analyzed on the chibicc side,
+        // which is quite difficult.
+
+        static string? GetCAbiStartUpObjectPostfix(MethodDefinition method)
+        {
+            if (method is { IsStatic: true, Name: "main" } &&
+                method.Parameters.Count <= 3)
+            {
+                var typeNames = method.Parameters.
+                    Select(p => p.ParameterType.FullName).
+                    Prepend(method.ReturnType.FullName).
+                    ToArray();
+                if (cabiStartUpSignatureTypeNames.TryGetValue(
+                    string.Join(",", typeNames),
+                    out var postfix))
+                {
+                    return postfix;
+                }
+            }
+            return null;
+        }
+
+        // Search for the main function with the most arguments
+        // and get the corresponding startup postfix.
+        if (this.targetModule.Types.
+            Where(type => type is { IsClass: true, FullName: "C.text" }).   // Priority search for 'C.text'.
+            Concat(this.targetModule.Types.Where(type => type.IsClass && type.FullName != "C.text")).
+            SelectMany(type => type.Methods.Select(GetCAbiStartUpObjectPostfix).Where(p => p != null)).
+            OrderByDescending(pf => pf!.Length).
+            FirstOrDefault() is { } postfix)
+        {
+            var fileName = $"crt0_{postfix}.o";
+            var objectPath = Path.Combine(
+                cabiStartUpObjectDirectoryPath,
+                fileName);
+            if (!File.Exists(objectPath))
+            {
+                this.caughtError = true;
+                this.logger.Error($"Could not find CABI startup object: {fileName}");
+                return null;
+            }
+            
+            using (var fs = StreamUtilities.OpenStream(
+                objectPath,
+                false))
+            {
+                var tr = new StreamReader(fs, Encoding.UTF8, true);
+                
+                // Load this startup object file.
+                var fragment = ObjectFileInputFragment.Load(
+                    this.logger,
+                    cabiStartUpObjectDirectoryPath,
+                    fileName,
+                    tr,
+                    false);
+                if (this.caughtError)
+                {
+                    return null;
+                }
+               
+                // Step 1. Consume the object.
+                this.ConsumeFragment(fragment, inputFragments);
+                if (this.caughtError)
+                {
+                    return null;
+                }
+
+                // Step 2. Consume scheduled object referring in archives.
+                this.ConsumeArchivedObject(inputFragments, false);
+                if (this.caughtError)
+                {
+                    return null;
+                }
+
+                this.logger.Information($"Loaded CABI startup object: {fileName}");
+
+                return fragment;
+            }
+        }
+
+        return null;
+    }
+
+    private void AssignEntryPoint(
+        string entryPointSymbol)
+    {
+        // The entry point is a pure CLR entry point, unlike the CABI startup code.
+        // However, the CABI startup code includes this,
+        // and the entry point symbol (`_start` by default) is found and set with the following code.
+        
+        // Priority search for a module type.
+        var startup = this.targetModule.Types.
+            First(type => type is { IsClass: true, FullName: "<Module>" }).
+            Methods.
+            FirstOrDefault(method =>
+                method is { IsStatic: true } &&
+                method.Name == entryPointSymbol);
+
+        // Entire search when not found.
+        if (startup == null)
+        {
+            // Because it is slower.
+            startup = this.targetModule.Types.
+                Where(type => type is { IsClass: true }).
+                SelectMany(type => type.Methods).
+                FirstOrDefault(method =>
+                    method is { IsStatic: true } &&
+                    method.Name == entryPointSymbol);
+        }
+
+        // Inject startup code when declared.
+        if (startup != null)
+        {
+            this.targetModule.EntryPoint = startup;
+            this.logger.Trace($"Found entry point: {startup.FullName}");
+        }
+        else
+        {
+            this.caughtError = true;
+            this.logger.Error($"Could not find any entry point.");
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////////
+
+    private void InvokeDelayedLookingUps()
+    {
+        // Apply all delayed looking up (types).
+        var count = 0;
+        while (this.delayLookingUpEntries1.Count >= 1)
+        {
+            var action = this.delayLookingUpEntries1.Dequeue();
+            action();
+            count++;
+        }
+
+        this.logger.Trace($"Total delayed looking up [1]: {count}");
+
+        // Apply all delayed looking up (not types).
+        count = 0;
+        while (this.delayLookingUpEntries2.Count >= 1)
+        {
+            var action = this.delayLookingUpEntries2.Dequeue();
+            action();
+            count++;
+        }
+
+        this.logger.Trace($"Total delayed looking up [2]: {count}");
+
+        // Assert reverse dependencies are nothing.
+        Debug.Assert(this.delayLookingUpEntries1.Count == 0);
+    }
+    
     public bool Emit(
         InputFragment[] inputFragments,
         bool applyOptimization,
-        TargetFramework? targetFramework,
-        bool? disableJITOptimization,
-        string? entryPointSymbol)
+        LinkerCreationOptions? creationOptions)
     {
         // Try add fundamental attributes.
-        this.AddFundamentalAttributes(
-            inputFragments,
-            targetFramework,
-            disableJITOptimization);
+        if (creationOptions != null)
+        {
+            if (creationOptions.TargetFramework is { } targetFramework)
+            {
+                this.AddTargetFrameworkAttribute(
+                    inputFragments,
+                    targetFramework);
+            }
+
+            if (creationOptions.AssemblyOptions.HasFlag(
+                AssemblyOptions.DisableJITOptimization))
+            {
+                this.AddDebuggableAttribute(
+                    inputFragments);
+            }
+            
+            this.AddPointerVisualizerAttributes(
+                inputFragments);
+        }
 
         // Combine all object fragments into target module.
         foreach (var fragment in inputFragments.
@@ -512,22 +759,25 @@ partial class CodeGenerator
             this.EmitMembers(fragment);
         }
 
-        // Apply all delayed looking up (types).
-        while (this.delayLookingUpEntries1.Count >= 1)
-        {
-            var action = this.delayLookingUpEntries1.Dequeue();
-            action();
-        }
+        // Invoke delayed looking ups.
+        this.InvokeDelayedLookingUps();
 
-        // Apply all delayed looking up (not types).
-        while (this.delayLookingUpEntries2.Count >= 1)
+        // Load CABI main object.
+        if (creationOptions is { } co &&
+            co.AssemblyType != AssemblyTypes.Dll &&
+            co.CAbiStartUpObjectDirectoryPath is { } cabiStartUpObjectDirectoryPath)
         {
-            var action = this.delayLookingUpEntries2.Dequeue();
-            action();
-        }
+            if (this.LoadAndConsumeCAbiStartUpObjectIfRequired(
+                inputFragments,
+                cabiStartUpObjectDirectoryPath) is { } fragment)
+            {
+                // Emit this object.
+                this.EmitMembers(fragment);
 
-        // Assert reverse dependencies are nothing.
-        Debug.Assert(this.delayLookingUpEntries1.Count == 0);
+                // Invoke delayed looking ups.
+                this.InvokeDelayedLookingUps();
+            }
+        }
 
         // Apply method optimization for all object fragments.
         if (applyOptimization)
@@ -553,11 +803,13 @@ partial class CodeGenerator
         {
             Debug.Assert(this.delayDebuggingInsertionEntries.Count == 0);
         }
-
-        // Assign entry point when set producing executable.
-        if (entryPointSymbol != null)
+        
+        // Assign entry point.
+        if (creationOptions is { } co2 &&
+            co2.AssemblyType != AssemblyTypes.Dll)
         {
-            this.AssignEntryPoint(entryPointSymbol);
+            this.AssignEntryPoint(
+                co2.EntryPointSymbol);
         }
 
         // (Completed all CIL implementations in this place.)

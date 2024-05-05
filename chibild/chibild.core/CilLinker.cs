@@ -312,15 +312,7 @@ public sealed class CilLinker
 
         var produceExecutable =
             options.CreationOptions?.AssemblyType != AssemblyTypes.Dll;
-        var entryPointSymbol =
-            produceExecutable ? options.CreationOptions?.EntryPointSymbol : null;
-        var targetFramework =
-            options.CreationOptions?.TargetFramework;
-        var disableJITOptimization =
-            options.CreationOptions?.Options.HasFlag(AssembleOptions.DisableJITOptimization);
-        var applyOptimization =
-            options.ApplyOptimization;
-        
+
         var requireAppHost =
             produceExecutable &&
             options.CreationOptions?.TargetFramework.Identifier == TargetFrameworkIdentifiers.NETCoreApp &&
@@ -377,10 +369,8 @@ public sealed class CilLinker
 
         if (!codeGenerator.Emit(
             loadedFragments,
-            applyOptimization,
-            targetFramework,
-            disableJITOptimization,
-            entryPointSymbol))
+            options.ApplyOptimization,
+            options.CreationOptions))
         {
             return false;
         }

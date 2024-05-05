@@ -39,7 +39,7 @@ internal static class LinkerTestRunner
         string[] chibildSourceCodes,
         string[]? additionalReferencePaths,
         string? injectToAssemblyPath,
-        Func<AssemblerCreationOptions?> creationOptionsF,
+        Func<LinkerCreationOptions?> creationOptionsF,
         string memberName)
     {
         var basePath = Path.GetFullPath(

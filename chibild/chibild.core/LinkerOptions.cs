@@ -42,7 +42,7 @@ public enum DebugSymbolTypes
 }
 
 [Flags]
-public enum AssembleOptions
+public enum AssemblyOptions
 {
     None = 0x00,
     DisableJITOptimization = 0x01,
@@ -63,7 +63,7 @@ public enum RuntimeConfigurationOptions
     ProduceCoreCLRDisableRollForward,
 }
 
-public sealed class AssemblerCreationOptions
+public sealed class LinkerCreationOptions
 {
     public AssemblyTypes AssemblyType =
         AssemblyTypes.Exe;
@@ -71,11 +71,13 @@ public sealed class AssemblerCreationOptions
     public TargetWindowsArchitectures TargetWindowsArchitecture =
         TargetWindowsArchitectures.AnyCPU;
 
+    public string? CAbiStartUpObjectDirectoryPath =
+        default;
     public string EntryPointSymbol =
         "_start";
 
-    public AssembleOptions Options =
-        AssembleOptions.DisableJITOptimization;
+    public AssemblyOptions AssemblyOptions =
+        AssemblyOptions.DisableJITOptimization;
 
     public Version Version = new(1, 0, 0, 0);
     public TargetFramework TargetFramework = TargetFramework.Default;
@@ -220,7 +222,7 @@ public sealed class LinkerOptions
     public bool IsDeterministic = true;
     public bool ApplyOptimization = false;
 
-    public AssemblerCreationOptions? CreationOptions =
+    public LinkerCreationOptions? CreationOptions =
         new();
 
     public bool IsDryRun = false;

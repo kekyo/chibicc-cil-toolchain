@@ -160,6 +160,43 @@ internal sealed partial class CodeGenerator
         this.caughtError = false;
     }
 
+    private void ConsumeArchivedObject(
+        InputFragment[] inputFragments,
+        bool isLocationOriginSource)
+    {
+        bool found;
+        do
+        {
+            found = false;
+#if DEBUG
+            foreach (var currentFragment in inputFragments.
+                OfType<ArchivedObjectInputFragment>())
+            {
+                if (currentFragment.LoadObjectIfRequired(
+                    this.logger,
+                    isLocationOriginSource))
+                {
+                    found = true;
+                    this.ConsumeFragment(currentFragment, inputFragments);
+                }
+            }
+#else
+            Parallel.ForEach(inputFragments, currentFragment =>
+            {
+                if (currentFragment is ArchivedObjectInputFragment afif &&
+                    afif.LoadObjectIfRequired(
+                        this.logger,
+                        isLocationOriginSource))
+                {
+                    found = true;
+                    this.ConsumeFragment(afif, inputFragments);
+                }
+            });
+#endif
+        }
+        while (found && !this.caughtError);
+    }
+
     public bool ConsumeInputs(
         InputFragment[] inputFragments,
         bool isLocationOriginSource)
@@ -192,37 +229,9 @@ internal sealed partial class CodeGenerator
         ////////////////////////////////////
         // Step 2. Consume scheduled object referring in archives.
 
-        bool found;
-        do
-        {
-            found = false;
-#if DEBUG
-            foreach (var currentFragment in inputFragments.
-                OfType<ArchivedObjectInputFragment>())
-            {
-                if (currentFragment.LoadObjectIfRequired(
-                    this.logger,
-                    isLocationOriginSource))
-                {
-                    found = true;
-                    this.ConsumeFragment(currentFragment, inputFragments);
-                }
-            }
-#else
-            Parallel.ForEach(inputFragments, currentFragment =>
-            {
-                if (currentFragment is ArchivedObjectInputFragment afif &&
-                    afif.LoadObjectIfRequired(
-                        this.logger,
-                        isLocationOriginSource))
-                {
-                    found = true;
-                    this.ConsumeFragment(afif, inputFragments);
-                }
-            });
-#endif
-        }
-        while (found && !this.caughtError);
+        this.ConsumeArchivedObject(
+            inputFragments,
+            isLocationOriginSource);
 
         return !this.caughtError;
     }

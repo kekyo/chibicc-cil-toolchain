@@ -20,7 +20,7 @@ public static class LinkerExtension
         string[] referenceAssemblyBasePaths,
         AssemblyTypes assemblyType,
         DebugSymbolTypes debugSymbolType,
-        AssembleOptions options,
+        AssemblyOptions options,
         Version version,
         TargetFramework targetFramework,
         string? injectToAssemblyPath,
@@ -33,7 +33,7 @@ public static class LinkerExtension
                 LibraryReferenceBasePaths = referenceAssemblyBasePaths,
                 CreationOptions = new()
                 {
-                    Options = options,
+                    AssemblyOptions = options,
                     AssemblyType = assemblyType,
                     Version = version,
                     TargetFramework = targetFramework,

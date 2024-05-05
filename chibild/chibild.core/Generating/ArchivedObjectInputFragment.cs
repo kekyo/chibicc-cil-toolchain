@@ -75,6 +75,9 @@ internal sealed class ArchivedObjectInputFragment :
 
     public override string ObjectPath { get; }
 
+    public bool IsRequired =>
+        this.requiredState == (int)RequiredStates.Required;
+
     public override string ToString() =>
         $"ArchivedObject: {this.ObjectPath}, State={(RequiredStates)this.requiredState}";
 
