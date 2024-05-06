@@ -52,14 +52,30 @@ internal sealed class AssemblyInputFragment :
 
     public override bool ContainsTypeAndSchedule(
         TypeNode type,
-        out Scopes scope)
+        out Scopes scope,
+        out int? memberCount)
     {
-        if (this.types.TryGetValue(type.TypeIdentity, out _))
+        if (this.types.TryGetValue(type.TypeIdentity, out var td))
         {
             scope = Scopes.Public;   // Contains only public members.
+            if (td.IsEnum)
+            {
+                memberCount = td.Fields.Count(f =>
+                    f is { IsPublic: true, IsStatic: true, IsLiteral: true, });
+            }
+            else if (td.IsValueType)
+            {
+                memberCount = td.Fields.Count(f =>
+                    f is { IsStatic: false, });
+            }
+            else
+            {
+                memberCount = null;
+            }
             return true;
         }
         scope = default;
+        memberCount = null;
         return false;
     }
 

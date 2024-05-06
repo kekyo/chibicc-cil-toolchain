@@ -36,7 +36,8 @@ internal abstract class InputFragment
 
     public abstract bool ContainsTypeAndSchedule(
         TypeNode type,
-        out Scopes scope);
+        out Scopes scope,
+        out int? memberCount);
 
     public abstract bool ContainsVariableAndSchedule(
         IdentityNode variable,

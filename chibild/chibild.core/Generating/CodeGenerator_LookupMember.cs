@@ -45,7 +45,7 @@ partial class CodeGenerator
     {
         // Step 1: Check on current fragment (file scoped).
         if ((context.CurrentFragment?.
-            ContainsTypeAndSchedule(type, out var scope) ?? false) &&
+            ContainsTypeAndSchedule(type, out var scope, out _) ?? false) &&
             scope == Scopes.File)
         {
             declaredFragment = context.CurrentFragment;
@@ -53,14 +53,17 @@ partial class CodeGenerator
         }
 
         // Step 2: Check on entire fragments.
-        foreach (var fragment in context.InputFragments)
+        if (context.InputFragments.
+            Select(fragment => 
+                (fragment.ContainsTypeAndSchedule(type, out scope, out var mc) &&
+                 scope is Scopes.Public or Scopes.Internal) ?
+                     new { fragment, mc } : null).
+            Where(entry => entry != null).
+            OrderByDescending(entry => entry!.mc ?? 0).
+            FirstOrDefault() is { } entry)
         {
-            if (fragment.ContainsTypeAndSchedule(type, out scope) &&
-                scope is Scopes.Public or Scopes.Internal)  // Internal only in another object.
-            {
-                declaredFragment = fragment;
-                return true;
-            }
+            declaredFragment = entry.fragment;
+            return true;
         }
 
         declaredFragment = null!;
@@ -106,7 +109,7 @@ partial class CodeGenerator
     {
         // Step 1: Check on current fragment (file scoped).
         if ((context.CurrentFragment?.
-            ContainsTypeAndSchedule(type, out var scope) ?? false) &&
+            ContainsTypeAndSchedule(type, out var scope, out _) ?? false) &&
             scope == Scopes.File)
         {
             this.DelayLookingUpAction1(() =>
@@ -129,23 +132,18 @@ partial class CodeGenerator
         // Step 2: Check on entire fragments.
         if (!isFileScoped)
         {
-            InputFragment? foundFragment = null;
-            foreach (var fragment in context.InputFragments)
-            {
-                if (fragment.ContainsTypeAndSchedule(type, out scope) &&
-                    scope is Scopes.Public or Scopes.Internal)  // Internal only in another object.
-                {
-                    // Found the symbol.
-                    foundFragment = fragment;
-                    break;
-                }
-            }
-
-            if (foundFragment != null)
+            if (context.InputFragments.
+                Select(fragment =>
+                    (fragment.ContainsTypeAndSchedule(type, out scope, out var mc) &&
+                     scope is Scopes.Public or Scopes.Internal) ?
+                         new { fragment, mc } : null).
+                Where(entry => entry != null).
+                OrderByDescending(entry => entry!.mc ?? 0).
+                FirstOrDefault() is { } entry)
             {
                 this.DelayLookingUpAction1(() =>
                 {
-                    if (foundFragment.TryGetType(
+                    if (entry.fragment.TryGetType(
                         type,
                         context.FallbackModule,
                         out var tr))
@@ -501,7 +499,7 @@ partial class CodeGenerator
             type = TypeParser.TryParse(member.Token, out var t) ? t : null;
             if (type != null &&
                 (context.CurrentFragment?.
-                 ContainsTypeAndSchedule(type, out var scope) ?? false) &&
+                 ContainsTypeAndSchedule(type, out var scope, out _) ?? false) &&
                 scope == Scopes.File)
             {
                 this.DelayLookingUpAction1(() =>
@@ -573,18 +571,25 @@ partial class CodeGenerator
 
             if (functionSignature == null)
             {
+                InputFragment? typeFragmentCandidate = default;
+                int? memberCountCandidate = null;
+
                 foreach (var fragment in context.InputFragments)
                 {
                     if (type != null &&
-                        fragment.ContainsTypeAndSchedule(type, out var scope3) &&
+                        fragment.ContainsTypeAndSchedule(type, out var scope3, out var memberCount) &&
                         scope3 is Scopes.Public or Scopes.Internal)  // Internal only in another object.
                     {
-                        // Found the symbol.
-                        foundFragment = fragment;
-                        found = FoundMembers.Type;
-                        break;
+                        if (memberCount == null ||
+                            memberCount > (memberCountCandidate ?? -1))
+                        {
+                            // Found the symbol, schedule candidate.
+                            typeFragmentCandidate = fragment;
+                            memberCountCandidate = memberCount;
+                        }
                     }
-                    if (fragment.ContainsVariableAndSchedule(member, out scope3) &&
+                    else if (typeFragmentCandidate == null &&
+                        fragment.ContainsVariableAndSchedule(member, out scope3) &&
                         scope3 is Scopes.Public or Scopes.Internal)  // Internal only in another object.
                     {
                         // Found the symbol.
@@ -592,7 +597,8 @@ partial class CodeGenerator
                         found = FoundMembers.Variable;
                         break;
                     }
-                    if (fragment.ContainsFunctionAndSchedule(member, null, out scope3) &&
+                    else if (typeFragmentCandidate == null &&
+                        fragment.ContainsFunctionAndSchedule(member, null, out scope3) &&
                         scope3 is Scopes.Public or Scopes.Internal)  // Internal only in another object.
                     {
                         // Found the symbol.
@@ -600,6 +606,12 @@ partial class CodeGenerator
                         found = FoundMembers.Function;
                         break;
                     }
+                }
+
+                if (typeFragmentCandidate != null)
+                {
+                    foundFragment = typeFragmentCandidate;
+                    found = FoundMembers.Type;
                 }
             }
             else

@@ -221,15 +221,16 @@ partial class CodeGenerator
             private readonly string namespaceName;
             private readonly string typeName;
             private readonly string typeFullName;
-            private readonly bool isPublic;
-            
+            private readonly TypeAttributes attributes;
+
+
             private TypeDefinition? type;
 
             public InnerHolder(
                 ModuleDefinition module,
                 string? namespaceName,
                 string typeName,
-                bool isPublic)
+                TypeAttributes attributes)
             {
                 this.module = module;
                 this.namespaceName = namespaceName ?? "";
@@ -237,7 +238,7 @@ partial class CodeGenerator
                 this.typeFullName = namespaceName != null ?
                     $"{this.namespaceName}.{this.typeName}" :
                     typeName;
-                this.isPublic = isPublic;
+                this.attributes = attributes | TypeAttributes.Abstract | TypeAttributes.Sealed;
                 this.type = this.module.GetType(this.typeFullName);
             }
 
@@ -252,9 +253,7 @@ partial class CodeGenerator
                     {
                         type = new(this.namespaceName,
                             this.typeName,
-                            this.isPublic ?
-                                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit :
-                                TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
+                            this.attributes,
                             this.module.TypeSystem.Object);
                         this.module.Types.Add(type);
                     }
@@ -279,22 +278,22 @@ partial class CodeGenerator
                 targetModule,
                 null,
                 $"<{CecilUtilities.SanitizeFileNameToMemberName(fragment.ObjectName)}>$",
-                false);
+                TypeAttributes.NotPublic | TypeAttributes.BeforeFieldInit);
             this.dataType = new(
                 targetModule,
                 "C",
                 "data",
-                true);
+                TypeAttributes.Public | TypeAttributes.BeforeFieldInit);
             this.rdataType = new(
                 targetModule,
                 "C",
                 "rdata",
-                true);
+                TypeAttributes.Public | TypeAttributes.BeforeFieldInit);
             this.textType = new(
                 targetModule,
                 "C",
                 "text",
-                true);
+                TypeAttributes.Public);
 
             MethodBody GetInitializerBody(TypeDefinition type)
             {

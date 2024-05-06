@@ -17,21 +17,25 @@ public readonly struct Symbol : IEquatable<Symbol>
     public readonly string Directive;
     public readonly string Scope;
     public readonly string Name;
+    public readonly int? MemberCount;
 
     public Symbol(
         string directive,
         string scope,
-        string name)
+        string name,
+        int? memberCount)
     {
         this.Directive = directive;
         this.Scope = scope;
         this.Name = name;
+        this.MemberCount = memberCount;
     }
 
     public bool Equals(Symbol rhs) =>
         this.Directive.Equals(rhs.Directive) &&
         this.Scope.Equals(rhs.Scope) &&
-        this.Name.Equals(rhs.Name);
+        this.Name.Equals(rhs.Name) &&
+        this.MemberCount == rhs.MemberCount;
 
     public override bool Equals(object? obj) =>
         obj is Symbol rhs && this.Equals(rhs);
@@ -39,20 +43,23 @@ public readonly struct Symbol : IEquatable<Symbol>
     public override int GetHashCode() =>
         this.Directive.GetHashCode() ^
         this.Scope.GetHashCode() ^
-        this.Name.GetHashCode();
+        this.Name.GetHashCode() ^
+        this.MemberCount?.GetHashCode() ?? 0;
 
     public void Deconstruct(
         out string directive,
         out string scope,
-        out string name)
+        out string name,
+        out int? memberCount)
     {
         directive = this.Directive;
         scope = this.Scope;
         name = this.Name;
+        memberCount = this.MemberCount;
     }
 
     public override string ToString() =>
-        $".{this.Directive} {this.Scope} {this.Name}";
+        $".{this.Directive} {this.Scope} {this.Name}{(this.MemberCount is { } mc ? $" {mc}" : "")}";
 }
 
 public readonly struct SymbolList : IEquatable<SymbolList>

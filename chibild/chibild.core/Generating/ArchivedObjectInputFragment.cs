@@ -105,7 +105,8 @@ internal sealed class ArchivedObjectInputFragment :
 
     public override bool ContainsTypeAndSchedule(
         TypeNode type,
-        out Scopes scope)
+        out Scopes scope,
+        out int? memberCount)
     {
         if (this.typeSymbols.TryGetValue(type.TypeIdentity, out var ts))
         {
@@ -114,9 +115,11 @@ internal sealed class ArchivedObjectInputFragment :
                 (int)RequiredStates.Required,
                 (int)RequiredStates.Ignore);
             CommonUtilities.TryParseEnum(ts.Scope, out scope);
+            memberCount = ts.MemberCount;
             return true;
         }
         scope = default;
+        memberCount = null;
         return false;
     }
 
@@ -187,12 +190,28 @@ internal sealed class ArchivedObjectInputFragment :
                 isLocationOriginSource).
                 ToArray();
 
-            this.globalVariables = declarations.OfType<GlobalVariableNode>().ToArray();
-            this.globalConstants = declarations.OfType<GlobalConstantNode>().ToArray();
-            this.functions = declarations.OfType<FunctionDeclarationNode>().ToArray();
-            this.initializers = declarations.OfType<InitializerDeclarationNode>().ToArray();
-            this.enumerations = declarations.OfType<EnumerationNode>().ToArray();
-            this.structures = declarations.OfType<StructureNode>().ToArray();
+            this.globalVariables = declarations.
+                OfType<GlobalVariableNode>().
+                ToArray();
+            this.globalConstants = declarations.
+                OfType<GlobalConstantNode>().
+                ToArray();
+            this.functions = declarations.
+                OfType<FunctionDeclarationNode>().
+                ToArray();
+            this.initializers = declarations.
+                OfType<InitializerDeclarationNode>().
+                ToArray();
+            this.enumerations = declarations.
+                OfType<EnumerationNode>().
+                OrderByDescending(e => e.Values.Length).
+                DistinctBy(e => e.Name).
+                ToArray();
+            this.structures = declarations.
+                OfType<StructureNode>().
+                OrderByDescending(s => s.Fields.Length).
+                DistinctBy(s => s.Name).
+                ToArray();
 
             return parser.CaughtError ?
                 LoadObjectResults.CaughtError :
@@ -230,7 +249,11 @@ internal sealed class ArchivedObjectInputFragment :
                 }).
                 ToDictionary(
                     g => g.Key,
-                    g => g.DistinctBy(symbol => symbol.Name).ToDictionary(symbol => symbol.Name));
+                    g => g.
+                        // Takes largest member count.
+                        OrderByDescending(symbol => symbol.MemberCount ?? 0).
+                        DistinctBy(symbol => symbol.Name).
+                        ToDictionary(symbol => symbol.Name));
 
             var empty = new Dictionary<string, Symbol>();
             

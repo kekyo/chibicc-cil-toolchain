@@ -79,14 +79,28 @@ internal sealed class ObjectFileInputFragment :
 
     public override bool ContainsTypeAndSchedule(
         TypeNode type,
-        out Scopes scope)
+        out Scopes scope,
+        out int? memberCount)
     {
         if (this.types.TryGetValue(type.TypeIdentity, out var td))
         {
             scope = td.Scope.Scope;
+            switch (td)
+            {
+                case EnumerationNode(_, _, _, var values, _):
+                    memberCount = values.Length;
+                    break;
+                case StructureNode(_, _, _, _, var fields, _):
+                    memberCount = fields.Length;
+                    break;
+                default:
+                    memberCount = null;
+                    break;
+            }
             return true;
         }
         scope = default;
+        memberCount = null;
         return false;
     }
 
@@ -136,12 +150,28 @@ internal sealed class ObjectFileInputFragment :
             isLocationOriginSource).
             ToArray();
 
-        var variables = declarations.OfType<GlobalVariableNode>().ToArray();
-        var constants = declarations.OfType<GlobalConstantNode>().ToArray();
-        var functions = declarations.OfType<FunctionDeclarationNode>().ToArray();
-        var initializers = declarations.OfType<InitializerDeclarationNode>().ToArray();
-        var enumerations = declarations.OfType<EnumerationNode>().ToArray();
-        var structures = declarations.OfType<StructureNode>().ToArray();
+        var variables = declarations.
+            OfType<GlobalVariableNode>().
+            ToArray();
+        var constants = declarations.
+            OfType<GlobalConstantNode>().
+            ToArray();
+        var functions = declarations.
+            OfType<FunctionDeclarationNode>().
+            ToArray();
+        var initializers = declarations.
+            OfType<InitializerDeclarationNode>().
+            ToArray();
+        var enumerations = declarations.
+            OfType<EnumerationNode>().
+            OrderByDescending(e => e.Values.Length).
+            DistinctBy(e => e.Name).
+            ToArray();
+        var structures = declarations.
+            OfType<StructureNode>().
+            OrderByDescending(s => s.Fields.Length).
+            DistinctBy(s => s.Name).
+            ToArray();
 
         fragment = new(baseInputPath, relativePath,
             variables,
