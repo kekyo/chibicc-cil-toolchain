@@ -33,20 +33,6 @@
   .field public static literal int32 pork
 } // end of class C.type.foo
 
-.class private abstract auto ansi sealed beforefieldinit '<source1>$'
-       extends [mscorlib]System.Object
-{
-  .class auto ansi sealed nested public foo
-         extends [mscorlib]System.Enum
-  {
-    .field public specialname rtspecialname int32 value__
-    .field public static literal int32 beef
-    .field public static literal int32 pork
-    .field public static literal int32 chicken
-  } // end of class foo
-
-} // end of class '<source1>$'
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
@@ -61,6 +47,20 @@
   } // end of method text::main
 
 } // end of class C.text
+
+.class private abstract auto ansi sealed beforefieldinit '<source1>$'
+       extends [mscorlib]System.Object
+{
+  .class auto ansi sealed nested public foo
+         extends [mscorlib]System.Enum
+  {
+    .field public specialname rtspecialname int32 value__
+    .field public static literal int32 beef
+    .field public static literal int32 pork
+    .field public static literal int32 chicken
+  } // end of class foo
+
+} // end of class '<source1>$'
 
 
 // =============================================================

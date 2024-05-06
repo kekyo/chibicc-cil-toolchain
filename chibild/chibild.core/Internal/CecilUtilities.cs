@@ -11,71 +11,16 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using chibicc.toolchain.Parsing;
 
 namespace chibild.Internal;
 
-internal enum ScopeDescriptors
-{
-    Public,
-    Internal,
-    File,
-    _Module_,   // For internal use only.
-}
-
 internal static class CecilUtilities
 {
-    private static readonly Dictionary<string, OpCode> opCodes =
-        typeof(OpCodes).GetFields().
-        Where(field =>
-            field.IsPublic && field.IsStatic && field.IsInitOnly &&
-            field.FieldType.FullName == "Mono.Cecil.Cil.OpCode").
-        Select(field => (OpCode)field.GetValue(null)!).
-        ToDictionary(opCode => opCode.Name.Replace('_', '.').ToLowerInvariant());
-
-    private static readonly Dictionary<string, string> aliasTypeNames =
-        new Dictionary<string, string>()
-    {
-        { "void", "System.Void" },
-        { "uint8", "System.Byte" },
-        { "int8", "System.SByte" },
-        { "int16", "System.Int16" },
-        { "uint16", "System.UInt16" },
-        { "int32", "System.Int32" },
-        { "uint32", "System.UInt32" },
-        { "int64", "System.Int64" },
-        { "uint64", "System.UInt64" },
-        { "float32", "System.Single" },
-        { "float64", "System.Double" },
-        { "nint", "System.IntPtr" },
-        { "nuint", "System.UIntPtr" },
-        { "bool", "System.Boolean" },
-        { "char", "System.Char" },
-        { "object", "System.Object" },
-        { "string", "System.String" },
-        { "typedref", "System.TypedReference" },
-        { "byte", "System.Byte" },
-        { "sbyte", "System.SByte" },
-        { "short", "System.Int16" },
-        { "ushort", "System.UInt16" },
-        { "int", "System.Int32" },
-        { "uint", "System.UInt32" },
-        { "long", "System.Int64" },
-        { "ulong", "System.UInt64" },
-        { "single", "System.Single" },
-        { "float", "System.Single" },
-        { "double", "System.Double" },
-        { "char16", "System.Char" },
-        { "intptr", "System.IntPtr" },
-        { "uintptr", "System.UIntPtr" },
-    };
-
-    private static readonly HashSet<string> enumerationUnderlyingTypes = new HashSet<string>()
-    {
-        "System.Byte", "System.SByte", "System.Int16", "System.UInt16",
-        "System.Int32", "System.UInt32", "System.Int64", "System.UInt64",
-    };
+    private static readonly Dictionary<string, OpCode> opCodes;
 
     private static readonly HashSet<char> invalidMemberNameChars = new()
     {
@@ -88,50 +33,34 @@ internal static class CecilUtilities
         '\u0018', '\u0019', '\u001a', '\u001b', '\u001c', '\u001d', '\u001e', '\u001f',
     };
 
-    public static int GetOpCodeStackSize(StackBehaviour sb) =>
-        sb switch
-        {
-            StackBehaviour.Pop0 => 0,
-            StackBehaviour.Pop1 => -1,
-            StackBehaviour.Pop1_pop1 => -2,
-            StackBehaviour.Popi => -1,
-            StackBehaviour.Popi_pop1 => -2,
-            StackBehaviour.Popi_popi => -2,
-            StackBehaviour.Popi_popi8 => -2,
-            StackBehaviour.Popi_popi_popi => -3,
-            StackBehaviour.Popi_popr4 => -2,
-            StackBehaviour.Popi_popr8 => -2,
-            StackBehaviour.Popref => -1,
-            StackBehaviour.Popref_pop1 => -2,
-            StackBehaviour.Popref_popi => -2,
-            StackBehaviour.Popref_popi_popi => -3,
-            StackBehaviour.Popref_popi_popi8 => -3,
-            StackBehaviour.Popref_popi_popr4 => -3,
-            StackBehaviour.Popref_popi_popr8 => -3,
-            StackBehaviour.Popref_popi_popref => -3,
-            StackBehaviour.Varpop => -1,
-            StackBehaviour.Push0 => 0,
-            StackBehaviour.Push1 => 1,
-            StackBehaviour.Push1_push1 => 2,
-            StackBehaviour.Pushi => 1,
-            StackBehaviour.Pushi8 => 1,
-            StackBehaviour.Pushr4 => 1,
-            StackBehaviour.Pushr8 => 1,
-            StackBehaviour.Pushref => 1,
-            StackBehaviour.Varpush => 1,
-            _ => 0,
-        };
+    static CecilUtilities()
+    {
+        var translator = CilParser.GetOpCodeTranslator();
 
-    public static Instruction CreateInstruction(OpCode opCode, object operand) =>
-        operand switch
-        {
-            MethodReference method => Instruction.Create(opCode, method),
-            FieldReference field => Instruction.Create(opCode, field),
-            TypeReference type => Instruction.Create(opCode, type),
-            CallSite callSite => Instruction.Create(opCode, callSite),
-            Instruction instruction => Instruction.Create(opCode, instruction),
-            _ => throw new InvalidOperationException(),
-        };
+        opCodes = typeof(OpCodes).GetFields().
+            Where(field =>
+                field.IsPublic && field.IsStatic && field.IsInitOnly &&
+                field.FieldType.FullName == "Mono.Cecil.Cil.OpCode").
+            Select(field =>
+            {
+                var opCode = (OpCode)field.GetValue(null)!;
+
+                // Verify between Cecil's opcode and Reflection.Emit opcode.
+                if (!translator.TryGetValue(opCode.Value, out var name))
+                {
+                    name = null;
+                }
+
+                return (name, opCode);
+            }).
+            Where(entry => entry.name != null && entry.opCode.OpCodeType != OpCodeType.Nternal).
+            ToDictionary(
+                entry => entry.name!,
+                entry => entry.opCode,
+                StringComparer.OrdinalIgnoreCase);
+
+        Debug.Assert(translator.All(t => opCodes.ContainsKey(t.Value)));
+    }
 
     public static string SanitizeFileNameToMemberName(string fileName)
     {
@@ -150,88 +79,70 @@ internal static class CecilUtilities
         return sb.ToString();
     }
 
-    public static bool TryLookupScopeDescriptorName(
-        string scopeDescriptorName,
-        out ScopeDescriptors scopeDescriptor) =>
-        Enum.TryParse(scopeDescriptorName, true, out scopeDescriptor);
+    public static OpCode ParseOpCode(
+        string word) =>
+        opCodes[word];
 
-    public static bool TryLookupOriginTypeName(
-        string typeName,
-        out string originTypeName) =>
-        aliasTypeNames.TryGetValue(typeName, out originTypeName!);
-
-    public static bool IsEnumerationUnderlyingType(
-        string typeName)
-    {
-        if (TryLookupOriginTypeName(typeName, out var originName))
-        {
-            typeName = originName;
-        }
-        return enumerationUnderlyingTypes.Contains(typeName);
-    }
-
-    public static bool TryParseOpCode(
-        string word,
-        out OpCode opCode) =>
-        opCodes.TryGetValue(word, out opCode);
-
-    public static bool TryMakeFunctionPointerType(
-        this MethodReference method,
-        out FunctionPointerType type)
-    {
-        if (method.HasThis)
-        {
-            type = null!;
-            return false;
-        }
-
-        type = new FunctionPointerType
-        {
-            ReturnType = method.ReturnType,
-            CallingConvention = method.CallingConvention,
-            HasThis = method.HasThis,
-            ExplicitThis = method.ExplicitThis,
-        };
-        foreach (var parameter in method.Parameters)
-        {
-            type.Parameters.Add(new(
-                parameter.Name, parameter.Attributes, parameter.ParameterType));
-        }
-
-        return true;
-    }
-
-    public static TypeDefinition CreateDummyType(int postfix) =>
+    public static TypeDefinition CreatePlaceholderType(int postfix) =>
         new("", $"<placeholder_type>_${postfix}",
             TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed);
-    public static FieldDefinition CreateDummyField(int postfix) =>
+
+    public static FieldDefinition CreatePlaceholderField(int postfix) =>
         new($"<placeholder_field>_${postfix}",
-            FieldAttributes.Private | FieldAttributes.InitOnly,
-            CreateDummyType(postfix));
-    public static MethodDefinition CreateDummyMethod(int postfix) =>
+            FieldAttributes.Private | FieldAttributes.Static | FieldAttributes.InitOnly,
+            CreatePlaceholderType(postfix));
+
+    public static MethodDefinition CreatePlaceholderMethod(int postfix) =>
         new($"<placeholder_method>_${postfix}",
-            MethodAttributes.Private | MethodAttributes.Abstract,
-            CreateDummyType(postfix));
+            MethodAttributes.Private | MethodAttributes.Abstract | MethodAttributes.Final,
+            CreatePlaceholderType(postfix));
 
-    public static bool IsPlaceholder(TypeReference type) =>
-        type.Name.StartsWith("<placeholder_type>_$");
-    public static bool IsPlaceholder(FieldReference field) =>
-        field.Name.StartsWith("<placeholder_field>_$");
-    public static bool IsPlaceholder(MethodReference method) =>
-        method.Name.StartsWith("<placeholder_method>_$");
+    public static Instruction CreatePlaceholderInstruction(int postfix) =>
+        Instruction.Create(OpCodes.Ldc_I4, postfix);
 
-    public static bool IsValidCAbiParameter(
-        MethodReference method, string[] parameterTypeNames) =>
-        method.CallingConvention switch
+    private sealed class ParameterReferenceComparer :
+        IEqualityComparer<ParameterReference>
+    {
+        public bool Equals(ParameterReference? lhs, ParameterReference? rhs) =>
+            lhs is { } && rhs is { } &&
+            lhs.ParameterType.FullName.Equals(rhs.ParameterType.FullName);
+
+        public int GetHashCode(ParameterReference obj) =>
+            obj.ParameterType.FullName.GetHashCode();
+
+        public static readonly ParameterReferenceComparer Instance = new();
+    }
+
+    public static bool Equals(
+        MethodReference lhs,
+        MethodReference rhs) =>
+        lhs.Name == rhs.Name &&
+        lhs.ReturnType.FullName == rhs.ReturnType.FullName &&
+        (lhs.CallingConvention, rhs.CallingConvention) switch
         {
-            MethodCallingConvention.VarArg =>
-                method.Parameters.
-                    Zip(parameterTypeNames, (p, ptn) => p.ParameterType.FullName == ptn).
-                    All(eq => eq),
-            _ =>
-                parameterTypeNames.Length == 0,
+            (Mono.Cecil.MethodCallingConvention.VarArg, Mono.Cecil.MethodCallingConvention.VarArg) =>
+                lhs.Parameters.
+                    Take(Math.Min(lhs.Parameters.Count, rhs.Parameters.Count)).
+                    SequenceEqual(rhs.Parameters.
+                        Take(Math.Min(lhs.Parameters.Count, rhs.Parameters.Count)),
+                        ParameterReferenceComparer.Instance),
+            (Mono.Cecil.MethodCallingConvention.VarArg, _) when
+                lhs.Parameters.Count <= rhs.Parameters.Count =>
+                lhs.Parameters.
+                    SequenceEqual(rhs.Parameters.
+                        Take(lhs.Parameters.Count),
+                        ParameterReferenceComparer.Instance),
+            (_, Mono.Cecil.MethodCallingConvention.VarArg) when
+                rhs.Parameters.Count <= lhs.Parameters.Count =>
+                rhs.Parameters.
+                    SequenceEqual(lhs.Parameters.
+                        Take(rhs.Parameters.Count),
+                        ParameterReferenceComparer.Instance),
+            _ => lhs.Parameters.
+                SequenceEqual(rhs.Parameters,
+                    ParameterReferenceComparer.Instance),
         };
-
+    
     public static void SetFieldType(
         FieldDefinition field, TypeReference type)
     {
@@ -247,4 +158,33 @@ internal static class CecilUtilities
             field.MarshalInfo = new(NativeType.U2);
         }
     }
+
+    public static TypeReference SafeImport(
+        this ModuleDefinition targetModule,
+        TypeReference tr) =>
+        (tr.Module?.Equals(targetModule) ?? tr is TypeDefinition) ?
+            tr : targetModule.ImportReference(tr);
+        
+    public static FieldReference SafeImport(
+        this ModuleDefinition targetModule,
+        FieldReference fr) =>
+        (fr.Module?.Equals(targetModule) ?? fr is FieldDefinition) ?
+            fr : targetModule.ImportReference(fr);
+        
+    public static MethodReference SafeImport(
+        this ModuleDefinition targetModule,
+        MethodReference mr) =>
+        (mr.Module?.Equals(targetModule) ?? mr is MethodDefinition) ?
+            mr : targetModule.ImportReference(mr);
+
+    public static MemberReference SafeImport(
+        this ModuleDefinition targetModule,
+        MemberReference member) =>
+        member switch
+        {
+            TypeReference type => targetModule.SafeImport(type),
+            FieldReference field => targetModule.SafeImport(field),
+            MethodReference method => targetModule.SafeImport(method),
+            _ => throw new InvalidOperationException(),
+        };
 }

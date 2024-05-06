@@ -2,7 +2,11 @@
   "profiles": {
     "chibild": {
       "commandName": "Project",
-      "commandLineArgs": "-o test/alignof -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 test/alignof.o test/common.o -lc-bootstrap -lSystem.Private.CoreLib",
+      //"commandLineArgs": " -mnet45 -shared -o initializertestbed.dll initializertestbed.o -L/home/kouji/.nuget/packages/microsoft.netframework.referenceassemblies.net45/1.0.3/build/.NETFramework/v4.5 -lmscorlib",
+      //"workingDirectory": "/home/kouji/Projects/chibicc-cil-toolchain/chibild/chibild.core.Tests/artifacts"
+      //"commandLineArgs": "-o foo -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 /home/kouji/Projects/libc-cil/crt0/crt0_i_v.s main.o foo.a -lc-bootstrap -lSystem.Private.CoreLib",
+      //"workingDirectory": "/home/kouji/Projects/chibicc-cil/aaa",
+      "commandLineArgs": "-o stage2/chibicc -m net6.0 -d/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0/crt0 -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 -lSystem.Private.CoreLib -lc-bootstrap stage2/codegen.o stage2/main.o stage2/parse.o stage2/preprocess.o stage2/strings.o stage2/tokenize.o stage2/type.o stage2/unicode.o stage2/utils.o -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost",
       "workingDirectory": "/home/kouji/Projects/chibicc-cil"
     }
   }

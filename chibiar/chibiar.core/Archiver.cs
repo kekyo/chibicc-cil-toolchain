@@ -33,25 +33,25 @@ public enum AddResults
 
 public sealed class Archiver
 {
-    private static Symbol[] ReadSymbols(string objectFilePath, SymbolTableModes symbolTableMode)
+    private static SymbolList ReadSymbols(
+        string objectFilePath,
+        SymbolTableModes symbolTableMode)
     {
+        var objectName = Path.GetFileNameWithoutExtension(objectFilePath) + ".o";
+        
         if (symbolTableMode == SymbolTableModes.ForceUpdate ||
             (symbolTableMode == SymbolTableModes.Auto && Path.GetExtension(objectFilePath) is ".o" or ".s"))
         {
             using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
 
-            var fileName = Path.GetFileNameWithoutExtension(objectFilePath) + ".o";
-            var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(ofs, fileName).
-                Distinct(SymbolComparer.Instance).
-                OrderBy(symbol => symbol.Directive.Text).
-                ThenBy(symbol => symbol.Name.Text).
+            var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(ofs).
                 ToArray();
 
-            return symbols;
+            return new SymbolList(objectName, symbols);
         }
         else
         {
-            return new Symbol[0];
+            return new SymbolList(objectName, new Symbol[0]);
         }
     }
 
@@ -69,7 +69,7 @@ public sealed class Archiver
                 updated ? ZipArchiveMode.Update : ZipArchiveMode.Create,
                 Encoding.UTF8);
 
-        var symbolLists = new Symbol[objectFilePaths.Length][];
+        var symbolLists = new SymbolList[objectFilePaths.Length];
 
         var tasks = new[]
             {
@@ -105,19 +105,12 @@ public sealed class Archiver
             Concat(objectFilePaths.Select((objectFilePath, index) =>
                 new Action(() =>
                 {
-                    var symbols = ReadSymbols(objectFilePath, symbolTableMode);
-                    symbolLists[index] = symbols;
+                    var symbolList = ReadSymbols(objectFilePath, symbolTableMode);
+                    symbolLists[index] = symbolList;
                 }))).
             ToArray();
         
         Parallel.Invoke(tasks);
-        
-        var symbols = symbolLists.
-            SelectMany(symbols => symbols).
-            Distinct(SymbolComparer.Instance).
-            OrderBy(symbol => symbol.Directive.Text).
-            ThenBy(symbol => symbol.Name.Text).
-            ToArray();
 
         if (archive != null)
         {
@@ -126,7 +119,7 @@ public sealed class Archiver
                             
             using var afs = symbolTableEntry.Open();
 
-            ArchiverUtilities.WriteSymbolTable(afs, symbols);
+            ArchiverUtilities.WriteSymbolTable(afs, symbolLists);
         }
 
         return updated ? AddResults.Updated : AddResults.Created;

@@ -38,6 +38,19 @@
 
 } // end of class '<source>$'
 
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static int32  main() cil managed
+  {
+    // Code size       2 (0x2)
+    .maxstack  8
+    IL_0000:  ldc.i4.0
+    IL_0001:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
 .class private abstract auto ansi sealed beforefieldinit '<source1>$'
        extends [mscorlib]System.Object
 {
@@ -51,19 +64,6 @@
   } // end of class foo
 
 } // end of class '<source1>$'
-
-.class public abstract auto ansi sealed C.text
-       extends [mscorlib]System.Object
-{
-  .method public static int32  main() cil managed
-  {
-    // Code size       2 (0x2)
-    .maxstack  8
-    IL_0000:  ldc.i4.0
-    IL_0001:  ret
-  } // end of method text::main
-
-} // end of class C.text
 
 
 // =============================================================

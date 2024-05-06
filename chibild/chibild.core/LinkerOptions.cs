@@ -9,6 +9,7 @@
 
 using chibild.Internal;
 using System;
+using System.IO;
 
 namespace chibild;
 
@@ -41,7 +42,7 @@ public enum DebugSymbolTypes
 }
 
 [Flags]
-public enum AssembleOptions
+public enum AssemblyOptions
 {
     None = 0x00,
     DisableJITOptimization = 0x01,
@@ -62,7 +63,7 @@ public enum RuntimeConfigurationOptions
     ProduceCoreCLRDisableRollForward,
 }
 
-public sealed class AssemblerCreationOptions
+public sealed class LinkerCreationOptions
 {
     public AssemblyTypes AssemblyType =
         AssemblyTypes.Exe;
@@ -70,8 +71,13 @@ public sealed class AssemblerCreationOptions
     public TargetWindowsArchitectures TargetWindowsArchitecture =
         TargetWindowsArchitectures.AnyCPU;
 
-    public AssembleOptions Options =
-        AssembleOptions.DisableJITOptimization;
+    public string? CAbiStartUpObjectDirectoryPath =
+        default;
+    public string EntryPointSymbol =
+        "_start";
+
+    public AssemblyOptions AssemblyOptions =
+        AssemblyOptions.DisableJITOptimization;
 
     public Version Version = new(1, 0, 0, 0);
     public TargetFramework TargetFramework = TargetFramework.Default;
@@ -82,13 +88,80 @@ public sealed class AssemblerCreationOptions
     public string? AppHostTemplatePath = default;
 }
 
-public interface ILibraryReference : IEquatable<ILibraryReference>
+//////////////////////////////////////////////////////////////
+
+public abstract class InputReference : IEquatable<InputReference>
+{
+    bool IEquatable<InputReference>.Equals(InputReference? other) =>
+        this.Equals(other);
+}
+
+public abstract class ObjectInputReference : InputReference
 {
 }
 
-public sealed class LibraryNameReference : ILibraryReference
+public sealed class ObjectFilePathReference : ObjectInputReference
 {
-    public string Name { get; }
+    public readonly string RelativePath;
+
+    public ObjectFilePathReference(string relativePath) =>
+        this.RelativePath = relativePath;
+
+    public override string ToString() =>
+        this.RelativePath;
+
+    private bool Equals(ObjectFilePathReference other) =>
+        this.RelativePath == other.RelativePath;
+
+    public override bool Equals(object? obj) =>
+        ReferenceEquals(this, obj) ||
+        obj is ObjectFilePathReference other &&
+        this.Equals(other);
+
+    public override int GetHashCode() =>
+        this.RelativePath.GetHashCode();
+
+    public void Deconstruct(out string relativePath) =>
+        relativePath = this.RelativePath;
+}
+
+public sealed class ObjectReaderReference : ObjectInputReference
+{
+    public readonly Func<TextReader> Reader;
+    public readonly string Identity;
+
+    public ObjectReaderReference(
+        string identity, Func<TextReader> reader)
+    {
+        this.Identity = identity;
+        this.Reader = reader;
+    }
+
+    public override string ToString() =>
+        $"<{this.Identity}>";
+
+    private bool Equals(ObjectReaderReference other) =>
+        this.Identity == other.Identity;
+
+    public override bool Equals(object? obj) =>
+        ReferenceEquals(this, obj) ||
+        obj is ObjectReaderReference other &&
+        this.Equals(other);
+
+    public override int GetHashCode() =>
+        this.Identity.GetHashCode();
+
+    public void Deconstruct(
+        out string identity, out Func<TextReader> reader)
+    {
+        identity = this.Identity;
+        reader = this.Reader;
+    }
+}
+
+public sealed class LibraryNameReference : InputReference
+{
+    public readonly string Name;
 
     public LibraryNameReference(string name) =>
         this.Name = name;
@@ -98,9 +171,6 @@ public sealed class LibraryNameReference : ILibraryReference
 
     private bool Equals(LibraryNameReference other) =>
         this.Name == other.Name;
-
-    bool IEquatable<ILibraryReference>.Equals(ILibraryReference? other) =>
-        this.Equals(other);
 
     public override bool Equals(object? obj) =>
         ReferenceEquals(this, obj) ||
@@ -114,21 +184,18 @@ public sealed class LibraryNameReference : ILibraryReference
         name = this.Name;
 }
 
-public sealed class LibraryPathReference : ILibraryReference
+public sealed class LibraryPathReference : InputReference
 {
-    public string Path { get; }
+    public readonly string RelativePath;
 
-    public LibraryPathReference(string name) =>
-        this.Path = name;
+    public LibraryPathReference(string relativePath) =>
+        this.RelativePath = relativePath;
 
     public override string ToString() =>
-        this.Path;
+        this.RelativePath;
 
     private bool Equals(LibraryPathReference other) =>
-        this.Path == other.Path;
-
-    bool IEquatable<ILibraryReference>.Equals(ILibraryReference? other) =>
-        this.Equals(other);
+        this.RelativePath == other.RelativePath;
 
     public override bool Equals(object? obj) =>
         ReferenceEquals(this, obj) ||
@@ -136,18 +203,18 @@ public sealed class LibraryPathReference : ILibraryReference
         this.Equals(other);
 
     public override int GetHashCode() =>
-        this.Path.GetHashCode();
+        this.RelativePath.GetHashCode();
 
-    public void Deconstruct(out string path) =>
-        path = this.Path;
+    public void Deconstruct(out string relativePath) =>
+        relativePath = this.RelativePath;
 }
+
+//////////////////////////////////////////////////////////////
 
 public sealed class LinkerOptions
 {
     public string[] LibraryReferenceBasePaths =
         Utilities.Empty<string>();
-    public ILibraryReference[] LibraryReferences =
-        Utilities.Empty<ILibraryReference>();
 
     public DebugSymbolTypes DebugSymbolType =
         DebugSymbolTypes.Embedded;
@@ -155,7 +222,7 @@ public sealed class LinkerOptions
     public bool IsDeterministic = true;
     public bool ApplyOptimization = false;
 
-    public AssemblerCreationOptions? CreationOptions =
+    public LinkerCreationOptions? CreationOptions =
         new();
 
     public bool IsDryRun = false;

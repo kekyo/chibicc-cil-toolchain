@@ -11,11 +11,21 @@ using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using DiffEngine;
 
 namespace chibiar;
 
 internal static class ArchiverTestRunner
 {
+    static ArchiverTestRunner()
+    {
+        DiffTools.UseOrder(
+            DiffTool.WinMerge,
+            DiffTool.Meld,
+            DiffTool.VisualStudio,
+            DiffTool.Rider);        
+    }
+    
     public static readonly string ArtifactsBasePath = Path.GetFullPath(
         Path.Combine("..", "..", "..", "artifacts"));
     

@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -58,186 +59,63 @@ internal static class Utilities
             Path.GetFullPath(string.IsNullOrWhiteSpace(d) ? "." : d) :
             Path.DirectorySeparatorChar.ToString();
 
-    public static string IntersectStrings(IEnumerable<string> strings)
+#if NETFRAMEWORK || NETSTANDARD2_0
+    public static bool TryAdd<TKey, TValue>(
+        this Dictionary<TKey, TValue> dict,
+        TKey key,
+        TValue value)
     {
-        var sb = new StringBuilder();
-        foreach (var str in strings)
+        if (!dict.ContainsKey(key))
         {
-            if (sb.Length == 0)
-            {
-                sb.Append(str);
-            }
-            else
-            {
-                var length = Math.Min(sb.Length, str.Length);
-                var index = 0;
-                while (index < length)
-                {
-                    if (str[index] != sb[index])
-                    {
-                        sb.Remove(index, sb.Length - index);
-                        break;
-                    }
-                    index++;
-                }
-            }
+            dict.Add(key, value);
+            return true;
         }
-        return sb.ToString();
+        else
+        {
+            return false;
+        }
     }
+#endif
 
-    public static IEnumerable<TR> Collect<TR, T>(
+#if NET45 || NET461
+    public static IEnumerable<T> Prepend<T>(
         this IEnumerable<T> enumerable,
-        Func<T, TR?> selector)
-        where TR : class
+        T value)
     {
+        yield return value;
         foreach (var item in enumerable)
         {
-            if (selector(item) is { } value)
-            {
-                yield return value;
-            }
+            yield return item;
         }
     }
+#endif
 
-    public static IEnumerable<TR> Collect<TR, T>(
+#if NET45 || NET461 || NETSTANDARD2_0
+    public static HashSet<T> ToHashSet<T>(this IEnumerable<T> enumerable) =>
+        new(enumerable);
+#endif
+
+#if !NET6_0_OR_GREATER
+    public static IEnumerable<T> DistinctBy<T, U>(
         this IEnumerable<T> enumerable,
-        Func<T, TR?> selector)
-        where TR : struct
+        Func<T, U> selector)
     {
+        var taken = new HashSet<U>();
         foreach (var item in enumerable)
         {
-            if (selector(item) is { } value)
+            var value = selector(item);
+            if (taken.Add(value))
             {
-                yield return value;
+                yield return item;
             }
         }
     }
+#endif
 
-    public static bool TryParseUInt8(string word, out byte value) =>
-        byte.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         byte.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseInt8(string word, out sbyte value) =>
-        sbyte.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         sbyte.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseInt16(string word, out short value) =>
-        short.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         short.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseUInt16(string word, out ushort value) =>
-        ushort.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         ushort.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseInt32(string word, out int value) =>
-        int.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         int.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseUInt32(string word, out uint value) =>
-        uint.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         uint.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseInt64(string word, out long value) =>
-        long.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         long.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseUInt64(string word, out ulong value) =>
-        ulong.TryParse(
-            word,
-            NumberStyles.Integer,
-            CultureInfo.InvariantCulture,
-            out value) ||
-        (word.StartsWith("0x") &&
-         ulong.TryParse(
-            word.Substring(2),
-            NumberStyles.HexNumber,
-            CultureInfo.InvariantCulture,
-            out value));
-
-    public static bool TryParseFloat32(string word, out float value) =>
-        float.TryParse(
-            word,
-            NumberStyles.Float,
-            CultureInfo.InvariantCulture,
-            out value);
-
-    public static bool TryParseFloat64(string word, out double value) =>
-        double.TryParse(
-            word,
-            NumberStyles.Float,
-            CultureInfo.InvariantCulture,
-            out value);
-
-    public static bool TryParseEnum<TEnum>(string word, out TEnum value)
-        where TEnum : struct, Enum =>
-        Enum.TryParse(word, true, out value);
-    
     public static bool UpdateBytes(
         MemoryStream ms,
-        byte[] targetBytes, byte[] replaceBytes)
+        byte[] targetBytes,
+        byte[] replaceBytes)
     {
         var data = ms.GetBuffer();
         var index = 0;

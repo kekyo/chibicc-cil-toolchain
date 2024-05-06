@@ -1,4 +1,4 @@
-
+﻿
 //  .NET IL Disassembler.  Version 8.0.0
 
 
@@ -30,31 +30,31 @@
 {
   .field public static int32 foo
   .field public static int32 bar
-  .method private static void  initializer_$0() cil managed
+  .method private static void  initializer_$1() cil managed
   {
     // Code size       7 (0x7)
     .maxstack  8
     IL_0000:  ldc.i4.2
     IL_0001:  stsfld     int32 '<source>$'::foo
     IL_0006:  ret
-  } // end of method '<source>$'::initializer_$0
+  } // end of method '<source>$'::initializer_$1
 
-  .method private static void  initializer_$1() cil managed
+  .method private static void  initializer_$2() cil managed
   {
     // Code size       7 (0x7)
     .maxstack  8
     IL_0000:  ldc.i4.4
     IL_0001:  stsfld     int32 '<source>$'::bar
     IL_0006:  ret
-  } // end of method '<source>$'::initializer_$1
+  } // end of method '<source>$'::initializer_$2
 
   .method private hidebysig specialname rtspecialname static 
           void  .cctor() cil managed
   {
     // Code size       11 (0xb)
     .maxstack  8
-    IL_0000:  call       void '<source>$'::initializer_$0()
-    IL_0005:  call       void '<source>$'::initializer_$1()
+    IL_0000:  call       void '<source>$'::initializer_$1()
+    IL_0005:  call       void '<source>$'::initializer_$2()
     IL_000a:  ret
   } // end of method '<source>$'::.cctor
 

@@ -36,7 +36,7 @@ partial class LinkerTests
                     tf1 : throw new InvalidOperationException();
                 return new()
                 {
-                    Options = AssembleOptions.None,
+                    AssemblyOptions = AssemblyOptions.None,
                     AssemblyType = assemblyType,
                     TargetFramework = tf,
                     AppHostTemplatePath = appHostTemplatePath,

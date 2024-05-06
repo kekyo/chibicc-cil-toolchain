@@ -72,8 +72,8 @@ public sealed partial class LinkerTests
     public Task Hidden()
     {
         var actual = Run(@"
-            .hidden
             .function public int32() main
+                .hidden
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -495,37 +495,6 @@ public sealed partial class LinkerTests
             .function file int32() baz
                 ldc.i4.1
                 ret");
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task MainFunctionWithoutReturn()
-    {
-        var actual = Run(@"
-            .function internal void() main
-                ret",
-                assemblyType: AssemblyTypes.Exe);
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task MainFunctionWithReturnAndParameters()
-    {
-        var actual = Run(@"
-            .function internal int32(argc:int32,argv:int8**) main
-                ldc.i4.1
-                ret",
-                assemblyType: AssemblyTypes.Exe);
-        return Verify(actual);
-    }
-
-    [Test]
-    public Task MainFunctionWithoutReturnAndParameters()
-    {
-        var actual = Run(@"
-            .function internal void(argc:int32,argv:int8**) main
-                ret",
-                assemblyType: AssemblyTypes.Exe);
         return Verify(actual);
     }
 
@@ -1113,6 +1082,21 @@ public sealed partial class LinkerTests
                 ldstr ""ABC""
                 ldc.i4.1
                 call int32(int32,int64,float64,string,bool) va 
+                ret");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task CallCAbiTargetFunctionWithVariadicSameObject()
+    {
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.s 123
+                ldc.i8 456
+                ldc.r8 123.456
+                ldstr ""ABC""
+                ldc.i4.1
+                call int32(int32,int64,float64,string,bool) va 
                 ret
             .function file int32(int32,int64,float64,...) va
                 ldc.i4.s 123
@@ -1168,23 +1152,6 @@ public sealed partial class LinkerTests
     /////////////////////////////////////////////////////////
 
     [Test]
-    public Task InitializerOnPublic()
-    {
-        var actual = Run(@"
-            .initializer public
-                ldc.i4.2
-                stsfld foo
-                ret
-            .initializer public
-                ldc.i4.4
-                stsfld bar
-                ret
-            .global public int32 foo
-            .global public int32 bar");
-        return Verify(actual);
-    }
-
-    [Test]
     public Task InitializerOnInternal()
     {
         var actual = Run(@"
@@ -1215,6 +1182,53 @@ public sealed partial class LinkerTests
                 ret
             .global file int32 foo
             .global file int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerOnBoth()
+    {
+        var actual = Run(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .initializer internal
+                ldc.i4.4
+                stsfld bar
+                ret
+            .global file int32 foo
+            .global public int32 bar");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerConflict1()
+    {
+        var injectToAssemblyPath = Path.Combine(
+            LinkerTestRunner.ArtifactsBasePath, "initializertestbed.dll");
+        var actual = RunInjection(@"
+            .initializer internal
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global public int32 foo",
+            injectToAssemblyPath);
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task InitializerConflict2()
+    {
+        var injectToAssemblyPath = Path.Combine(
+            LinkerTestRunner.ArtifactsBasePath, "initializertestbed.dll");
+        var actual = RunInjection(@"
+            .initializer file
+                ldc.i4.2
+                stsfld foo
+                ret
+            .global file int32 foo",
+            injectToAssemblyPath);
         return Verify(actual);
     }
 
@@ -1474,7 +1488,7 @@ public sealed partial class LinkerTests
     {
         var actual = Run(@"
             .function public string(int32,int8&,...)*() foo
-                ldftn bar
+                ldftn string(int32,int8&,...) bar
                 ret
             .function file string(a:int32,b:int8&,...) bar
                 .local System.ArgIterator
@@ -1509,9 +1523,10 @@ public sealed partial class LinkerTests
     public Task CallDotNetAssemblyMethod()
     {
         var actual = Run(@"
-            .function public void() main
+            .function public int32() main
                 ldstr ""Hello world""
                 call void(string) System.Console.WriteLine
+                ldc.i4.0
                 ret",
             new[] { typeof(System.Console).Assembly.Location },
             AssemblyTypes.Exe);
@@ -1522,12 +1537,13 @@ public sealed partial class LinkerTests
     public Task CallDotNetAssemblyMethod2()
     {
         var actual = Run(@"
-            .function public void() main
+            .function public int32() main
                 ldc.i4.1
                 box int32
                 ldc.i4.3
                 call System.Runtime.InteropServices.GCHandle(object,System.Runtime.InteropServices.GCHandleType) System.Runtime.InteropServices.GCHandle.Alloc
                 pop
+                ldc.i4.0
                 ret",
             new[] { typeof(System.Console).Assembly.Location },
             AssemblyTypes.Exe);
@@ -1785,7 +1801,7 @@ public sealed partial class LinkerTests
     [Test]
     public Task FlexValueArray()
     {
-        // It is illegal variable/result type, but chibild will generate.
+        // It is illegal variable/result type, but chibild will generate it.
         var actual = Run(@"
             .function public char[*]() foo
                 ldsfld bar
@@ -1961,6 +1977,63 @@ public sealed partial class LinkerTests
                 public int32 a
                 internal int8 b
                 public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure10()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int16 a
+                public int64 b
+            .structure public foo
+                public int16 a
+                public int64 b
+                public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure11()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int16 a
+                public int64 b
+                public int32 c
+            .structure public foo
+                public int16 a
+                public int64 b");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure12()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure file foo
+                public int16 a
+                public int64 b",
+            @".structure public foo
+                public int16 a
+                public int64 b
+                public int32 c" });
         return Verify(actual);
     }
 
@@ -2197,6 +2270,7 @@ public sealed partial class LinkerTests
     }
 
     /////////////////////////////////////////////////////////
+
     [Test]
     public Task Enumeration1()
     {
@@ -2354,6 +2428,141 @@ public sealed partial class LinkerTests
                 beef 5
                 poke 13
                 chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple1()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple2()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple3()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42
+            .enumeration public uint64 foo
+                beef 5
+                poke 13");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple4()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple5()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple6()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple7()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration file uint64 foo
+                beef 5
+                poke 13",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42" });
         return Verify(actual);
     }
 

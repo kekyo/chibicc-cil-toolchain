@@ -10,27 +10,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
     <PackageReference Include="Mono.Cecil" Version="0.11.5" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Internal\runtimeconfig.json" />
-    <None Remove="Parsing\_startup_i.s" />
-    <None Remove="Parsing\_startup_i_v.s" />
-    <None Remove="Parsing\_startup_v.s" />
-    <None Remove="Parsing\_startup_v_v.s" />
-    <Compile Remove="Parsing\Embedding\_start.cs" />
-    <None Include="Parsing\Embedding\_start.cs" />
-    <EmbeddedResource Include="Internal\runtimeconfig.json" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_i_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_v_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_v.s" />
-    <EmbeddedResource Include="Parsing\Embedding\_start_i.s" />
+    <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
+    <None Remove="Internal\runtimeconfig.json" />
+    <EmbeddedResource Include="Internal\runtimeconfig.json" />
   </ItemGroup>
 
 </Project>
