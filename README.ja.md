@@ -960,8 +960,8 @@ chibildは、任意の型・グローバル変数・関数（これらをメン�
 しかし、`.hidden`ディレクティブを使用すると、以降のコードでシーケンスポイントを生成しなくなります:
 
 ```
-.hidden
 .function public int32() _start
+    .hidden
     ldc.i4 123     ; <-- シーケンスポイントは出力されない
     ldc.i4 456
     add

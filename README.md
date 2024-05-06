@@ -985,8 +985,8 @@ Will produce debugging information with CIL source file itself when does not app
 But use the `.hidden` directive to prevent subsequent code from generating sequence points:
 
 ```
-.hidden
 .function public int32() _start
+    .hidden
     ldc.i4 123     ; <-- Sequence points are not emit below.
     ldc.i4 456
     add

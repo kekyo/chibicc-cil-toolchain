@@ -72,8 +72,8 @@ public sealed partial class LinkerTests
     public Task Hidden()
     {
         var actual = Run(@"
-            .hidden
             .function public int32() main
+                .hidden
                 ldc.i4.1
                 ret");
         return Verify(actual);
@@ -1981,6 +1981,63 @@ public sealed partial class LinkerTests
     }
 
     [Test]
+    public Task Structure10()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int16 a
+                public int64 b
+            .structure public foo
+                public int16 a
+                public int64 b
+                public int32 c");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure11()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure public foo
+                public int16 a
+                public int64 b
+                public int32 c
+            .structure public foo
+                public int16 a
+                public int64 b");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task Structure12()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .structure file foo
+                public int16 a
+                public int64 b",
+            @".structure public foo
+                public int16 a
+                public int64 b
+                public int32 c" });
+        return Verify(actual);
+    }
+
+    [Test]
     public Task StructureWithFlexibleArray()
     {
         var actual = Run(@"
@@ -2371,6 +2428,141 @@ public sealed partial class LinkerTests
                 beef 5
                 poke 13
                 chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple1()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple2()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple3()
+    {
+        var actual = Run(@"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42
+            .enumeration public uint64 foo
+                beef 5
+                poke 13");
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple4()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple5()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple6()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13" });
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task EnumerationMultiple7()
+    {
+        var actual = Run(new[] { @"
+            .function public void() main
+                .local foo fv
+                ldloca 0
+                initobj foo
+                ret
+            .enumeration file uint64 foo
+                beef 5
+                poke 13",
+            @".enumeration public uint64 foo
+                beef 5
+                poke 13
+                chicken 42" });
         return Verify(actual);
     }
 
