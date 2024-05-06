@@ -33,6 +33,21 @@
   .field public int32 c
 } // end of class C.type.foo
 
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static void  main() cil managed
+  {
+    // Code size       11 (0xb)
+    .maxstack  1
+    .locals (valuetype C.type.foo V_0)
+    IL_0000:  ldloca     V_0
+    IL_0004:  initobj    C.type.foo
+    IL_000a:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
 .class public sequential ansi sealed System.SByte_len4
        extends [mscorlib]System.ValueType
 {
@@ -182,21 +197,6 @@
                                                         valuetype System.SByte_len4)
   } // end of property SByte_len4_len3::Item
 } // end of class System.SByte_len4_len3
-
-.class public abstract auto ansi sealed C.text
-       extends [mscorlib]System.Object
-{
-  .method public static void  main() cil managed
-  {
-    // Code size       11 (0xb)
-    .maxstack  1
-    .locals (valuetype C.type.foo V_0)
-    IL_0000:  ldloca     V_0
-    IL_0004:  initobj    C.type.foo
-    IL_000a:  ret
-  } // end of method text::main
-
-} // end of class C.text
 
 
 // =============================================================

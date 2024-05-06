@@ -38,15 +38,6 @@
 
 } // end of class '<source>$'
 
-.class public auto ansi sealed C.type.foo
-       extends [mscorlib]System.Enum
-{
-  .field public specialname rtspecialname int32 value__
-  .field public static literal int32 beef
-  .field public static literal int32 pork
-  .field public static literal int32 chicken
-} // end of class C.type.foo
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
@@ -61,6 +52,15 @@
   } // end of method text::main
 
 } // end of class C.text
+
+.class public auto ansi sealed C.type.foo
+       extends [mscorlib]System.Enum
+{
+  .field public specialname rtspecialname int32 value__
+  .field public static literal int32 beef
+  .field public static literal int32 pork
+  .field public static literal int32 chicken
+} // end of class C.type.foo
 
 
 // =============================================================

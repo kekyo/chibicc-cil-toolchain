@@ -1,0 +1,3 @@
+﻿.function __module__ int32() _start
+	call main
+	ret

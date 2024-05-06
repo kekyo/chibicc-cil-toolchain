@@ -25,6 +25,26 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static valuetype System.Byte_len6 
+          foo() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldsfld     valuetype System.Byte_len6 C.data::bar
+    IL_0005:  ret
+  } // end of method text::foo
+
+} // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static initonly valuetype System.Byte_len6 bar at I_00002090
+} // end of class C.data
+
 .class public sequential ansi sealed System.Byte_len6
        extends [mscorlib]System.ValueType
 {
@@ -99,26 +119,6 @@
                                                   uint8)
   } // end of property Byte_len6::Item
 } // end of class System.Byte_len6
-
-.class public abstract auto ansi sealed C.text
-       extends [mscorlib]System.Object
-{
-  .method public static valuetype System.Byte_len6 
-          foo() cil managed
-  {
-    // Code size       6 (0x6)
-    .maxstack  8
-    IL_0000:  ldsfld     valuetype System.Byte_len6 C.data::bar
-    IL_0005:  ret
-  } // end of method text::foo
-
-} // end of class C.text
-
-.class public abstract auto ansi sealed beforefieldinit C.data
-       extends [mscorlib]System.Object
-{
-  .field public static initonly valuetype System.Byte_len6 bar at I_00002090
-} // end of class C.data
 
 
 // =============================================================

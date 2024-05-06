@@ -25,6 +25,26 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static valuetype System.Char_flex 
+          foo() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldsfld     valuetype System.Char_flex C.data::bar
+    IL_0005:  ret
+  } // end of method text::foo
+
+} // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static valuetype System.Char_flex bar
+} // end of class C.data
+
 .class public sequential ansi sealed System.Char_flex
        extends [mscorlib]System.ValueType
 {
@@ -71,26 +91,6 @@
                                                   char)
   } // end of property Char_flex::Item
 } // end of class System.Char_flex
-
-.class public abstract auto ansi sealed C.text
-       extends [mscorlib]System.Object
-{
-  .method public static valuetype System.Char_flex 
-          foo() cil managed
-  {
-    // Code size       6 (0x6)
-    .maxstack  8
-    IL_0000:  ldsfld     valuetype System.Char_flex C.data::bar
-    IL_0005:  ret
-  } // end of method text::foo
-
-} // end of class C.text
-
-.class public abstract auto ansi sealed beforefieldinit C.data
-       extends [mscorlib]System.Object
-{
-  .field public static valuetype System.Char_flex bar
-} // end of class C.data
 
 
 // =============================================================

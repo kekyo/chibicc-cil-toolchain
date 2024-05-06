@@ -29,21 +29,6 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private abstract auto ansi sealed beforefieldinit '<source>$'
-       extends [mscorlib]System.Object
-{
-  .method public static vararg int32  va(int32 A_0,
-                                         int64 A_1,
-                                         float64 A_2) cil managed
-  {
-    // Code size       3 (0x3)
-    .maxstack  8
-    IL_0000:  ldc.i4.s   123
-    IL_0002:  ret
-  } // end of method '<source>$'::va
-
-} // end of class '<source>$'
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {

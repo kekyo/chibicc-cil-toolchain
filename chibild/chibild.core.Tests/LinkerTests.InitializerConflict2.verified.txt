@@ -1,0 +1,107 @@
+﻿
+//  .NET IL Disassembler.  Version 8.0.0
+
+
+
+// Metadata version: v4.0.30319
+.assembly extern mscorlib
+{
+  .publickey = (00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 ) 
+  .ver 4:0:0:0
+}
+.assembly initializertestbed
+{
+  .custom instance void [mscorlib]System.Runtime.Versioning.TargetFrameworkAttribute::.ctor(string) = ( 01 00 1A 2E 4E 45 54 46 72 61 6D 65 77 6F 72 6B   // ....NETFramework
+                                                                                                        2C 56 65 72 73 69 6F 6E 3D 76 34 2E 35 00 00 )    // ,Version=v4.5..
+
+  // --- The following custom attribute is added automatically, do not uncomment -------
+  //  .custom instance void [mscorlib]System.Diagnostics.DebuggableAttribute::.ctor(valuetype [mscorlib]System.Diagnostics.DebuggableAttribute/DebuggingModes) = ( 01 00 01 01 00 00 00 00 ) 
+
+  .ver 1:0:0:0
+}
+.module initializertestbed.dll
+.imagebase 0x00400000
+.file alignment 0x00000200
+.stackreserve 0x00100000
+.subsystem 0x0003       // WINDOWS_CUI
+.corflags 0x00000001    //  ILONLY
+
+
+// =============== CLASS MEMBERS DECLARATION ===================
+
+.class private abstract auto ansi sealed beforefieldinit '<initializertestbed>$'
+       extends [mscorlib]System.Object
+{
+  .field public static int32 fvar
+  .method private static void  initializer_$1() cil managed
+  {
+    // Code size       8 (0x8)
+    .maxstack  8
+    IL_0000:  ldc.i4.s   45
+    IL_0002:  stsfld     int32 '<initializertestbed>$'::fvar
+    IL_0007:  ret
+  } // end of method '<initializertestbed>$'::initializer_$1
+
+  .method private hidebysig specialname rtspecialname static 
+          void  .cctor() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  call       void '<initializertestbed>$'::initializer_$1()
+    IL_0005:  ret
+  } // end of method '<initializertestbed>$'::.cctor
+
+} // end of class '<initializertestbed>$'
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static int32 pvar
+  .method private static void  initializer_$1() cil managed
+  {
+    // Code size       8 (0x8)
+    .maxstack  8
+    IL_0000:  ldc.i4.s   123
+    IL_0002:  stsfld     int32 C.data::pvar
+    IL_0007:  ret
+  } // end of method data::initializer_$1
+
+  .method private hidebysig specialname rtspecialname static 
+          void  .cctor() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  call       void C.data::initializer_$1()
+    IL_0005:  ret
+  } // end of method data::.cctor
+
+} // end of class C.data
+
+.class private abstract auto ansi sealed beforefieldinit '<source>$'
+       extends [mscorlib]System.Object
+{
+  .field public static int32 foo
+  .method private static void  initializer_$1() cil managed
+  {
+    // Code size       7 (0x7)
+    .maxstack  8
+    IL_0000:  ldc.i4.2
+    IL_0001:  stsfld     int32 '<source>$'::foo
+    IL_0006:  ret
+  } // end of method '<source>$'::initializer_$1
+
+  .method private hidebysig specialname rtspecialname static 
+          void  .cctor() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  call       void '<source>$'::initializer_$1()
+    IL_0005:  ret
+  } // end of method '<source>$'::.cctor
+
+} // end of class '<source>$'
+
+
+// =============================================================
+
+// *********** DISASSEMBLY COMPLETE ***********************

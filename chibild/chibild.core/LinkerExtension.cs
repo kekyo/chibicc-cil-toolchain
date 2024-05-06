@@ -8,32 +8,32 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using System;
+using chibild.cli;
 
 namespace chibild;
 
 public static class LinkerExtension
 {
     public static bool Link(
-        this Linker linker,
+        this CilLinker linker,
         string outputAssemblyPath,
         string[] referenceAssemblyBasePaths,
-        string[] referenceAssemblyNames,
         AssemblyTypes assemblyType,
         DebugSymbolTypes debugSymbolType,
-        AssembleOptions options,
+        AssemblyOptions options,
         Version version,
         TargetFramework targetFramework,
         string? injectToAssemblyPath,
-        params string[] sourcePaths) =>
+        string baseInputPath,        
+        params InputReference[] inputReferences) =>
         linker.Link(
             outputAssemblyPath,
             new()
             {
-                ReferenceAssemblyBasePaths = referenceAssemblyBasePaths,
-                ReferenceAssemblyNames = referenceAssemblyNames,
+                LibraryReferenceBasePaths = referenceAssemblyBasePaths,
                 CreationOptions = new()
                 {
-                    Options = options,
+                    AssemblyOptions = options,
                     AssemblyType = assemblyType,
                     Version = version,
                     TargetFramework = targetFramework,
@@ -41,5 +41,16 @@ public static class LinkerExtension
                 DebugSymbolType = debugSymbolType,
             },
             injectToAssemblyPath,
-            sourcePaths);
+            baseInputPath,
+            inputReferences);
+
+    public static bool Link(
+        this CilLinker linker,
+        CliOptions cilOptions) =>
+        linker.Link(
+            cilOptions.OutputAssemblyPath,
+            cilOptions.LinkerOptions,
+            cilOptions.InjectToAssemblyPath,
+            cilOptions.BaseInputPath,
+            cilOptions.InputReferences);
 }

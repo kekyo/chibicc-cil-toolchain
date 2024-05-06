@@ -33,6 +33,21 @@
   .field public valuetype System.Int32_flex c
 } // end of class C.type.foo
 
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static void  main() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  1
+    .locals (valuetype C.type.foo* V_0)
+    IL_0000:  ldc.i4.0
+    IL_0001:  stloc      V_0
+    IL_0005:  ret
+  } // end of method text::main
+
+} // end of class C.text
+
 .class public sequential ansi sealed System.Int32_flex
        extends [mscorlib]System.ValueType
 {
@@ -78,21 +93,6 @@
                                                    int32)
   } // end of property Int32_flex::Item
 } // end of class System.Int32_flex
-
-.class public abstract auto ansi sealed C.text
-       extends [mscorlib]System.Object
-{
-  .method public static void  main() cil managed
-  {
-    // Code size       6 (0x6)
-    .maxstack  1
-    .locals (valuetype C.type.foo* V_0)
-    IL_0000:  ldc.i4.0
-    IL_0001:  stloc      V_0
-    IL_0005:  ret
-  } // end of method text::main
-
-} // end of class C.text
 
 
 // =============================================================

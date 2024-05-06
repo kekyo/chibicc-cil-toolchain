@@ -7,8 +7,10 @@
 
     <DebugSymbols>true</DebugSymbols>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <CheckEolTargetFramework>false</CheckEolTargetFramework>
+    <SuppressNETCoreSdkPreviewMessage>true</SuppressNETCoreSdkPreviewMessage>
+
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/kekyo/chibicc-cil-toolchain.git</RepositoryUrl>
@@ -49,6 +51,8 @@
 
   <ItemGroup>
     <PackageReference Include="RelaxVersioner" Version="3.3.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="PolySharp" Version="1.14.1" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Release'">

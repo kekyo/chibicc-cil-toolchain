@@ -25,6 +25,26 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
+.class public abstract auto ansi sealed C.text
+       extends [mscorlib]System.Object
+{
+  .method public static valuetype System.Boolean_len3_ptr_len6 
+          foo() cil managed
+  {
+    // Code size       6 (0x6)
+    .maxstack  8
+    IL_0000:  ldsfld     valuetype System.Boolean_len3_ptr_len6 C.data::bar
+    IL_0005:  ret
+  } // end of method text::foo
+
+} // end of class C.text
+
+.class public abstract auto ansi sealed beforefieldinit C.data
+       extends [mscorlib]System.Object
+{
+  .field public static valuetype System.Boolean_len3_ptr_len6 bar
+} // end of class C.data
+
 .class public sequential ansi sealed System.Boolean_len3
        extends [mscorlib]System.ValueType
 {
@@ -177,26 +197,6 @@
                                                               valuetype System.Boolean_len3*)
   } // end of property Boolean_len3_ptr_len6::Item
 } // end of class System.Boolean_len3_ptr_len6
-
-.class public abstract auto ansi sealed C.text
-       extends [mscorlib]System.Object
-{
-  .method public static valuetype System.Boolean_len3_ptr_len6 
-          foo() cil managed
-  {
-    // Code size       6 (0x6)
-    .maxstack  8
-    IL_0000:  ldsfld     valuetype System.Boolean_len3_ptr_len6 C.data::bar
-    IL_0005:  ret
-  } // end of method text::foo
-
-} // end of class C.text
-
-.class public abstract auto ansi sealed beforefieldinit C.data
-       extends [mscorlib]System.Object
-{
-  .field public static valuetype System.Boolean_len3_ptr_len6 bar
-} // end of class C.data
 
 
 // =============================================================

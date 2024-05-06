@@ -88,17 +88,17 @@ Then:
 ```bash
 $ cil-chibild
 
-cil-chibild [0.50.0,net6.0] [...]
+cil-chibild [0.60.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: cil-chibild [options] <obj path> [<obj path> ...]
+usage: cil-chibild [options] <input path> [<input path> ...]
   -o <path>         Output assembly path
-  -c, -mdll         Produce dll assembly
-      -mexe         Produce executable assembly (defaulted)
-      -mwinexe      Produce Windows executable assembly
+  -shared, -mdll    Produce dll assembly
+           -mexe    Produce executable assembly (defaulted)
+           -mwinexe Produce Windows executable assembly
   -L <path>         Reference assembly base path
   -l <name>         Reference assembly name
   -i <path>         Will inject into an assembly file
@@ -109,6 +109,7 @@ usage: cil-chibild [options] <obj path> [<obj path> ...]
   -s, -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
+  -e <symbol>       Entry point symbol (defaulted: _start)
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -m <tfm>          Target framework moniker (defaulted: net6.0)
   -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)
@@ -119,8 +120,9 @@ usage: cil-chibild [options] <obj path> [<obj path> ...]
   -h, --help        Show this help
 ```
 
-* chibild will combine multiple source code in command line pointed into one assembly.
-* Reference assembly paths `-l` evaluates last-to-first order, same as `ld` looking up.
+* chibild assembles multiple input files (objects '*.o' and CIL sources '*.s')
+  pointed out on the command line into a single .NET assembly.
+* The reference library name `-l` is evaluated from the beginning, including the archive file path ('*.a').
   This feature applies to duplicated symbols (function/global variables).
   Library file names are assumed to be prefixed with `lib` as in the native toolchain,
   and also assumes the filename as specified in fallbacks.
@@ -141,7 +143,7 @@ Let's play "Hello world" with chibild.
 You should create a new source code file `hello.s` with the contents only need 4 lines:
 
 ```
-.function public void() main
+.function public void() _start
     ldstr "Hello world with chibild!"
     call void(string) System.Console.WriteLine
     ret
@@ -167,7 +169,7 @@ Linux and other operating systems can be used in the same way, by adding referen
 Also, if you assemble code that uses only built-in types (see below), you do not need references to other assemblies:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4.1
     ldc.i4.2
     add
@@ -184,7 +186,7 @@ $ echo $?
 * Note: In this example, some warnings about attributes is generated during assembly.
   Which can be ignored.
 
-### To run with .NET 6, .NET Core and others
+### To run with .NET Core and others
 
 Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
 
@@ -247,7 +249,7 @@ but it should be much easier to write than ILAsm.
 ### Minimum, included only main entry point
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123    ; This is comment.
     ret
 ```
@@ -272,27 +274,36 @@ Scope descriptors are common in other declarations.
 | `internal` | Referenced only within the same assembly. |
 | `file` | Referenced only from the current source code file. |
 
-* Automatic apply entry point when using `main` function name and assemble executable file with same as `-mexe` option.
-* The scope descriptor of the entry point must be `public` or `internal`.
+* Automatic apply entry point when using `_start` function name and assemble executable file with same as `-mexe` option.
+* Specify `-efoo` to change the symbol of the entry point to `foo`.
 
-The signature of the `main` function accepts the following variations:
+The signature of the entry point follows the requirements of the CLR.
+That is, the following combinations are possible:
 
-|Function signature|Example signature in the C language|
+|Function signature|Example signature in the C# language|
 |:----|:----|
-|`int32(argc:int32,argv:sbyte**)`|`int main(int argc, char** argv)`|
-|`void(argc:int32,argv:sbyte**)`|`void main(int argc, char** argv)`|
-|`int32()`|`int main(void)`|
-|`void()`|`void main(void)`|
+|`void()`|`static void _start()`|
+|`int32()`|`static int32 _start()`|
+|`void(args:string[])`|`static void _start(string[] args)`|
+|`int32(args:string[])`|`static int32 _start(string[] args)`|
 
-It may seem strange in .NET peoples, but the argument `argv` is actually a nested pointers.
-And beyond that, it indicates a UTF-8 string containing the terminating character.
+* For function signatures, see the description below.
 
-chibild does not support entry points containing UTF-16LE wide-length strings by `wmain`.
+#### Supplemental: Startup code
+
+When using chibicc, the entry point is assumed to be defined only as the C language `main` function.
+For example, `int main(int argc, char **argv)`.
+
+The difference is achieved by chibicc supplying an object file such as `crt0.o`
+containing the startup code and generating the arguments required by the C language in it.
+
+In this document, startup codes are omitted from the explanation.
+Therefore, the startup code rules always follow the table above.
 
 ### Literals
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123
     ldc.r8 1.234
     ldstr "abc\"def\"ghi"
@@ -311,7 +322,7 @@ chibild does not support entry points containing UTF-16LE wide-length strings by
 ### Labels
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123
     br NAME
     nop
@@ -401,7 +412,7 @@ See separate section for details.
 ### Local variables
 
 ```
-.function public int32() main
+.function public int32() _start
     .local int32
     .local int32 abc
     ldc.i4 1
@@ -445,7 +456,7 @@ This allows the use of a scratch buffer when dealing with raw pointer to a value
 ### Call another function
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -492,7 +503,7 @@ Calls to functions with variable parameters require an explicit list of paramete
 For example, calls above function `add_n` would use:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4.s 123
     ldc.r8 123.456    ; <-- Additional parameter
     ldstr "ABC"       ; <-- Additional parameter
@@ -525,7 +536,7 @@ $ chibild -c test.s
 Then:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 1
     ldc.i4 2
     call add2
@@ -539,7 +550,7 @@ $ chibild -ltest main.s
 The functions (.NET CIL methods) are placed into single class named `C.text`.
 That mapping is:
 
-* `int32() main` --> `public static int32 C.text::main()`
+* `int32() _start` --> `public static int32 C.text::main()`
 * `int32(a:int32,b:int32) add2` --> `public static int32 C.text::add2(int32 a, int32 b)`
 
 Pseudo code in C# (test.dll):
@@ -591,7 +602,6 @@ Naturally, a reference to `this` must be pushed onto the evaluation stack.
 A list of parameter types is used to identify overloads.
 If no signature is specified and there are multiple overload methods, the wrong method may be selected.
 Generally, the return type is not verified,
-but the return type is also verified to match when using only for the `op_Implicit` and `op_Explicit` methods.
 
 You have to give it containing assembly on command line option `-l`.
 This is true even for the most standard `mscorlib.dll` or `System.Runtime.dll`.
@@ -628,7 +638,7 @@ These are used in function directives, to identify method overloads in the `call
 and in the `calli` opcode:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldstr "123"
     ldftn int32(string) System.Int32.Parse
     calli int32(string)
@@ -641,7 +651,7 @@ Global variable format is same as local variable format plus scope descriptor.
 However, excludes declarations outside function body:
 
 ```
-.function public int32() main
+.function public int32() _start
     ldc.i4 123
     stsfld foo
     ldsfld foo
@@ -896,12 +906,31 @@ The last member of the structure type can be a value array type with unspecified
 ```
 
 If you specify the number of array elements as `*`,
-that does not specify the number of elements.
+that does not specify the number of elements (called flex array.)
 It is a special type for indexer accesses are not checked for element counts out of range.
 Naturally, the result of accessing an out of element will be undefined, so care must be taken.
 
+Although the flex array type is intended to be used for the last member of the structure type,
+chibild does not perform this check.
+
 Note: To use an structure type, a reference to the `System.ValueType` type must be resolved.
 Add a reference to `mscorlib.dll` or `System.Private.CoreLib.dll`.
+
+### About duplicate symbols
+
+When chibild searches for any type, global variable,
+or function (referred to as members),
+it performs the search as follows:
+
+1. Refer to a member when find the `file` scope defined in the same object file.
+2. Refer to a member when find the `public` or `internal` scope defined in any inputs.
+   In this case, search priority is the order of the input groups
+   (object files, archive files and assembly files) specified in the command line options.
+3. An error occurs because it is not found.
+
+Symbol names are searched according to their respective member types.
+Even if the symbol name is the same, the type, global variable,
+and function are treated separately.
 
 ### Explicitly location information
 
@@ -914,7 +943,7 @@ This information is optional and does not affect assembly task if it is not pres
 
 ```
 .file 1 "/home/kouji/Projects/test.c" c
-.function public int32() main
+.function public int32() _start
     .location 1 10 5 10 36
     ldc.i4 123
     ldc.i4 456
@@ -937,6 +966,7 @@ This information is optional and does not affect assembly task if it is not pres
   * Forth operand: End line index. (0 based index)
   * Fifth operand: End column index. (0 based index, must larger than start)
   * The location directive can declare only in the function body.
+  * Applies only to an opcode immediately after the location directive is specified.
 
 The language indicators is shown (not all):
 
@@ -952,12 +982,11 @@ The language indicators is shown (not all):
 Language indicator comes from [Mono.Cecil.Cil.DocumentLanguage](https://github.com/jbevain/cecil/blob/7b8ee049a151204997eecf587c69acc2f67c8405/Mono.Cecil.Cil/Document.cs#L27).
 
 Will produce debugging information with CIL source file itself when does not apply any location directive.
-
-Use the `.hidden` directive to prevent subsequent code from generating sequence points:
+But use the `.hidden` directive to prevent subsequent code from generating sequence points:
 
 ```
-.hidden
-.function public int32() main
+.function public int32() _start
+    .hidden
     ldc.i4 123     ; <-- Sequence points are not emit below.
     ldc.i4 456
     add

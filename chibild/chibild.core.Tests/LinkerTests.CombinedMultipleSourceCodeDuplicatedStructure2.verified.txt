@@ -37,14 +37,6 @@
 
 } // end of class '<source>$'
 
-.class public sequential ansi sealed C.type.foo
-       extends [mscorlib]System.ValueType
-{
-  .field public int32 v0
-  .field public int32 v1
-  .field public int32 v2
-} // end of class C.type.foo
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
@@ -59,6 +51,14 @@
   } // end of method text::main
 
 } // end of class C.text
+
+.class public sequential ansi sealed C.type.foo
+       extends [mscorlib]System.ValueType
+{
+  .field public int32 v0
+  .field public int32 v1
+  .field public int32 v2
+} // end of class C.type.foo
 
 
 // =============================================================

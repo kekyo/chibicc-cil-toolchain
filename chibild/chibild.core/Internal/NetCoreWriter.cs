@@ -12,13 +12,14 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using chibicc.toolchain.Logging;
 
 namespace chibild.Internal;
 
 internal static class NetCoreWriter
 {
     private static readonly string runtimeConfigJsonTemplate =
-        new StreamReader(typeof(Linker).Assembly.GetManifestResourceStream(
+        new StreamReader(typeof(CilLinker).Assembly.GetManifestResourceStream(
             "chibild.Internal.runtimeconfig.json")!).
         ReadToEnd();
 

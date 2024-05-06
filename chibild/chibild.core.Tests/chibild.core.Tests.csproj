@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net6.0</TargetFrameworks>
@@ -6,10 +6,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit" Version="4.1.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.5.0" />
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
-    <PackageReference Include="Verify.NUnit" Version="19.6.0" />
+    <PackageReference Include="Verify.NUnit" Version="24.1.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +18,14 @@
   <ItemGroup>
     <None Remove="artifacts\*" />
     <Content Include="artifacts\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="artifacts\crt0.o" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="artifacts\crt0.o" />
   </ItemGroup>
 
   <ItemGroup>

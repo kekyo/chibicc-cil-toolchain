@@ -32,13 +32,6 @@
   .field public int32 v1
 } // end of class C.type.foo
 
-.class public sequential ansi sealed C.type.bar
-       extends [mscorlib]System.ValueType
-{
-  .field public int32 v0
-  .field public int32 v1
-} // end of class C.type.bar
-
 .class public abstract auto ansi sealed C.text
        extends [mscorlib]System.Object
 {
@@ -53,6 +46,13 @@
   } // end of method text::main
 
 } // end of class C.text
+
+.class public sequential ansi sealed C.type.bar
+       extends [mscorlib]System.ValueType
+{
+  .field public int32 v0
+  .field public int32 v1
+} // end of class C.type.bar
 
 
 // =============================================================

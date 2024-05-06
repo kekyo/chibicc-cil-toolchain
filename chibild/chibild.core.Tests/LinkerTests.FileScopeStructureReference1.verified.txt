@@ -1,4 +1,4 @@
-
+﻿
 //  .NET IL Disassembler.  Version 8.0.0
 
 
@@ -25,14 +25,6 @@
 
 // =============== CLASS MEMBERS DECLARATION ===================
 
-.class private sequential ansi sealed C.type.foo
-       extends [mscorlib]System.ValueType
-{
-  .field public int32 a
-  .field public int8 b
-  .field public int32 c
-} // end of class C.type.foo
-
 .class private abstract auto ansi sealed beforefieldinit '<source>$'
        extends [mscorlib]System.Object
 {
@@ -47,6 +39,14 @@
   } // end of method '<source>$'::main
 
 } // end of class '<source>$'
+
+.class private sequential ansi sealed C.type.foo
+       extends [mscorlib]System.ValueType
+{
+  .field public int32 a
+  .field public int8 b
+  .field public int32 c
+} // end of class C.type.foo
 
 
 // =============================================================
