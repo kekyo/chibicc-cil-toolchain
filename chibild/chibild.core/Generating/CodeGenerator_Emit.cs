@@ -213,64 +213,88 @@ partial class CodeGenerator
 
     ///////////////////////////////////////////////////////////////////////////////
 
-    private sealed class TypeDefinitionHolder
+    private sealed class TypeDefinitionsHolder
     {
-        private readonly Lazy<TypeDefinition> fileScopedType;
-        private readonly Lazy<TypeDefinition> dataType;
-        private readonly Lazy<TypeDefinition> rdataType;
-        private readonly Lazy<TypeDefinition> textType;
+        private sealed class InnerHolder
+        {
+            private readonly ModuleDefinition module;
+            private readonly string namespaceName;
+            private readonly string typeName;
+            private readonly string typeFullName;
+            private readonly bool isPublic;
+            
+            private TypeDefinition? type;
+
+            public InnerHolder(
+                ModuleDefinition module,
+                string? namespaceName,
+                string typeName,
+                bool isPublic)
+            {
+                this.module = module;
+                this.namespaceName = namespaceName ?? "";
+                this.typeName = typeName;
+                this.typeFullName = namespaceName != null ?
+                    $"{this.namespaceName}.{this.typeName}" :
+                    typeName;
+                this.isPublic = isPublic;
+                this.type = this.module.GetType(this.typeFullName);
+            }
+
+            public TypeDefinition? GetIfAvailable() =>
+                this.type;
+
+            public TypeDefinition GetOrCreate()
+            {
+                if (this.type == null)
+                {
+                    if (this.module.GetType(this.typeFullName) is not { } type)
+                    {
+                        type = new(this.namespaceName,
+                            this.typeName,
+                            this.isPublic ?
+                                TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit :
+                                TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
+                            this.module.TypeSystem.Object);
+                        this.module.Types.Add(type);
+                    }
+                    this.type = type;
+                }
+                return this.type;
+            }
+        }
+        
+        private readonly InnerHolder fileScopedType;
+        private readonly InnerHolder dataType;
+        private readonly InnerHolder rdataType;
+        private readonly InnerHolder textType;
         private readonly Lazy<MethodBody> fileScopedInitializerBody;
         private readonly Lazy<MethodBody> dataInitializerBody;
 
-        public TypeDefinitionHolder(
+        public TypeDefinitionsHolder(
             ObjectInputFragment fragment,
             ModuleDefinition targetModule)
         {
-            this.fileScopedType = new(() =>
-            {
-                var fileTypeName = $"<{CecilUtilities.SanitizeFileNameToMemberName(fragment.ObjectName)}>$";
-                if (targetModule.GetType(fileTypeName) is not { } type)
-                {
-                    type = new("", fileTypeName,
-                        TypeAttributes.NotPublic | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
-                        targetModule.TypeSystem.Object);
-                    targetModule.Types.Add(type);
-                }
-                return type;
-            });
-            this.dataType = new(() =>
-            {
-                if (targetModule.GetType("C.data") is not { } type)
-                {
-                    type = new("C", "data",
-                        TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
-                        targetModule.TypeSystem.Object);
-                    targetModule.Types.Add(type);
-                }
-                return type;
-            });
-            this.rdataType = new(() =>
-            {
-                if (targetModule.GetType("C.rdata") is not { } type)
-                {
-                    type = new("C", "rdata",
-                        TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
-                        targetModule.TypeSystem.Object);
-                    targetModule.Types.Add(type);
-                }
-                return type;
-            });
-            this.textType = new(() =>
-            {
-                if (targetModule.GetType("C.text") is not { } type)
-                {
-                    type = new("C", "text",
-                        TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed,
-                        targetModule.TypeSystem.Object);
-                    targetModule.Types.Add(type);
-                }
-                return type;
-            });
+            this.fileScopedType = new(
+                targetModule,
+                null,
+                $"<{CecilUtilities.SanitizeFileNameToMemberName(fragment.ObjectName)}>$",
+                false);
+            this.dataType = new(
+                targetModule,
+                "C",
+                "data",
+                true);
+            this.rdataType = new(
+                targetModule,
+                "C",
+                "rdata",
+                true);
+            this.textType = new(
+                targetModule,
+                "C",
+                "text",
+                true);
 
             MethodBody GetInitializerBody(TypeDefinition type)
             {
@@ -292,30 +316,28 @@ partial class CodeGenerator
             }
 
             this.fileScopedInitializerBody = new(() =>
-                GetInitializerBody(this.fileScopedType.Value));
+                GetInitializerBody(this.fileScopedType.GetOrCreate()));
             this.dataInitializerBody = new(() =>
-                GetInitializerBody(this.dataType.Value));
+                GetInitializerBody(this.dataType.GetOrCreate()));
         }
 
         public TypeDefinition GetFileScopedType() =>
-            this.fileScopedType.Value;
+            this.fileScopedType.GetOrCreate();
 
         public TypeDefinition? GetFileScopedTypeIfAvailable() =>
-            this.fileScopedType.IsValueCreated ?
-                this.fileScopedType.Value : null;
+            this.fileScopedType.GetIfAvailable();
 
         public TypeDefinition GetDataType() =>
-            this.dataType.Value;
+            this.dataType.GetOrCreate();
 
         public TypeDefinition? GetDataTypeIfAvailable() =>
-            this.dataType.IsValueCreated ?
-                this.dataType.Value : null;
+            this.dataType.GetIfAvailable();
 
         public TypeDefinition GetRDataType() =>
-            this.rdataType.Value;
+            this.rdataType.GetOrCreate();
 
         public TypeDefinition GetTextType() =>
-            this.textType.Value;
+            this.textType.GetOrCreate();
 
         public Mono.Collections.Generic.Collection<Instruction> GetFileScopedInitializerBody() =>
             this.fileScopedInitializerBody.Value.Instructions;
@@ -327,7 +349,7 @@ partial class CodeGenerator
     private void EmitMembers(
         ObjectInputFragment fragment)
     {
-        var holder = new TypeDefinitionHolder(
+        var holder = new TypeDefinitionsHolder(
             fragment,
             this.targetModule);
 
