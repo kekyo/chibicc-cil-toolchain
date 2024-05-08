@@ -507,7 +507,7 @@ public sealed class CilLinker
                         Path.GetFileName(module.FileName));
                     if (tp != module.FileName)
                     {
-                        File.Copy(
+                        Utilities.SafeCopy(
                             module.FileName,
                             tp);
                         
@@ -524,7 +524,7 @@ public sealed class CilLinker
                                 Path.GetFileNameWithoutExtension(module.FileName) + ext);
                             if (File.Exists(fp) && fp != tp)
                             {
-                                File.Copy(fp, tp);
+                                Utilities.SafeCopy(fp, tp);
                                 
                                 this.logger.Information(
                                     $"Copied: {Path.GetFileName(fp)}");

@@ -143,4 +143,56 @@ internal static class Utilities
         }
         return false;
     }
+
+    public static void SafeCopy(string from, string to)
+    {
+        // Note that although named 'Safe',
+        // atomic replacement of files is not realized.
+        
+        var to1 = Guid.NewGuid().ToString("N");
+        var to2 = Guid.NewGuid().ToString("N");
+                
+        try
+        {
+            File.Copy(from, to1);
+        }
+        catch
+        {
+            File.Delete(to1);
+            throw;
+        }
+
+        var isExistTo = File.Exists(to);
+        if (isExistTo)
+        {
+            try
+            {
+                File.Move(to, to2);
+            }
+            catch
+            {
+                File.Delete(to1);
+                throw;
+            }
+        }
+                
+        try
+        {
+            File.Move(to1, to);
+        }
+        catch
+        {
+            File.Delete(to1);
+            if (isExistTo)
+            {
+                File.Move(to2, to);
+            }
+            throw;
+        }
+
+        if (isExistTo)
+        {
+            File.Delete(to2);
+        }
+    }
 }
