@@ -171,7 +171,8 @@ public sealed class CilLinker
                         SelectMany(basePath => new[]
                             { $"lib{name}.a", $"lib{name}.dll", $"{name}.a", $"{name}.dll" }.
                             Select(fileName => new { basePath, fileName })).
-                        FirstOrDefault(entry => File.Exists(Path.Combine(entry.basePath, entry.fileName))) is not { } foundEntry)
+                        FirstOrDefault(entry => File.Exists(Path.Combine(entry.basePath, entry.fileName))) is not { } foundEntry ||
+                        foundEntry.fileName == null)
                     {
                         this.logger.Warning(
                             $"Unable to find the library: -l{name}");
