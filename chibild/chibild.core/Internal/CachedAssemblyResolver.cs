@@ -9,6 +9,7 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using chibicc.toolchain.Logging;
 using Mono.Cecil;
@@ -48,6 +49,15 @@ internal sealed class CachedAssemblyResolver : DefaultAssemblyResolver
             ThrowIfSymbolsAreNotMatching = false,
         };
 
+        // HACK: Cecil default search paths are "." and "bin".
+        // If the assembly is resolved with this relative path,
+        // the `FileName` of the module will be a relative path.
+        // To load modules with absolute paths, remove the default search paths here.
+        foreach (var path in base.GetSearchDirectories())
+        {
+            base.RemoveSearchDirectory(path);
+        }
+
         foreach (var referenceBasePath in referenceBasePaths)
         {
             var fullPath = Path.GetFullPath(referenceBasePath);
@@ -83,4 +93,10 @@ internal sealed class CachedAssemblyResolver : DefaultAssemblyResolver
 
     public override string ToString() =>
         $"CachedAssemblyResolver: Index={this.instanceIndex}, ByPath={this.byPath.Count}, ByFullName={this.byFullName.Count}";
+
+    public AssemblyDefinition[] GetCachedAssemblies() =>
+        this.byPath.Values.Concat(
+            this.byFullName.Values).
+            DistinctBy(ad => ad.FullName).
+            ToArray();
 }

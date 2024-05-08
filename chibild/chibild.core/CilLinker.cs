@@ -474,6 +474,68 @@ public sealed class CilLinker
 
         //////////////////////////////////////////////////////////////
 
+        if (options.WillCopyRequiredAssemblies)
+        {
+            var cachedAssemblyResolver =
+                (CachedAssemblyResolver)primaryAssembly.MainModule.AssemblyResolver;
+            var cachedAssemblies = cachedAssemblyResolver.GetCachedAssemblies();
+
+            var requiredAssemblyBasePaths = assemblyReferenceBasePaths.
+                ToHashSet();
+
+            // Excepts corlib related (same directory) assemblies.
+            var corlibName = primaryAssembly.MainModule.TypeSystem.CoreLibrary.Name;
+            if (cachedAssemblies.FirstOrDefault(
+                assembly => assembly.Name.Name == corlibName) is { } corlibAssembly)
+            {
+                var corlibBasePath = Utilities.GetDirectoryPath(
+                    corlibAssembly.MainModule.FileName);
+
+                requiredAssemblyBasePaths = requiredAssemblyBasePaths.
+                    Where(path => !path.StartsWith(corlibBasePath)).
+                    ToHashSet();
+            }
+
+            Parallel.ForEach(cachedAssemblies.
+                SelectMany(assembly => assembly.Modules).
+                Where(module => requiredAssemblyBasePaths.
+                    Contains(Utilities.GetDirectoryPath(module.FileName))),
+                module =>
+                {
+                    var tp = Path.Combine(
+                        outputAssemblyBasePath,
+                        Path.GetFileName(module.FileName));
+                    if (tp != module.FileName)
+                    {
+                        File.Copy(
+                            module.FileName,
+                            tp);
+                        
+                        this.logger.Information(
+                            $"Copied: {Path.GetFileName(module.FileName)}");
+
+                        foreach (var ext in new[] { ".pdb", ".mdb" })
+                        {
+                            var fp = Path.Combine(
+                                 Utilities.GetDirectoryPath(module.FileName),
+                                 Path.GetFileNameWithoutExtension(module.FileName) + ext);
+                            tp = Path.Combine(
+                                outputAssemblyBasePath,
+                                Path.GetFileNameWithoutExtension(module.FileName) + ext);
+                            if (File.Exists(fp) && fp != tp)
+                            {
+                                File.Copy(fp, tp);
+                                
+                                this.logger.Information(
+                                    $"Copied: {Path.GetFileName(fp)}");
+                            }
+                        }
+                    }
+                });
+        }
+        
+        //////////////////////////////////////////////////////////////
+
         // When creates a new assembly:
         if (options.CreationOptions is { } co2)
         {
