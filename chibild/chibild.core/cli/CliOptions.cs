@@ -333,6 +333,9 @@ public sealed class CliOptions
                                 }
                             }
                             break;
+                        case 'x':
+                            options.LinkerOptions.WillCopyRequiredAssemblies = false;
+                            continue;
                         case 'h':
                             options.ShowHelp = true;
                             continue;
@@ -452,6 +455,7 @@ public sealed class CliOptions
 
         logger.Information($"DebugSymbolType={this.LinkerOptions.DebugSymbolType}");
         logger.Information($"ApplyOptimization={this.LinkerOptions.ApplyOptimization}");
+        logger.Information($"WillCopyRequiredAssemblies={this.LinkerOptions.WillCopyRequiredAssemblies}");
 
         if (this.LinkerOptions.CreationOptions is { } co)
         {
@@ -496,6 +500,7 @@ public sealed class CliOptions
         tw.WriteLine("  -s, -g0           Omit debug symbol file");
         tw.WriteLine("  -O, -O1           Apply optimization");
         tw.WriteLine("      -O0           Disable optimization (defaulted)");
+        tw.WriteLine("  -x                Will not copy required assemblies");
         tw.WriteLine("  -d <path>         CABI startup object directory path");
         tw.WriteLine("  -e <symbol>       Entry point symbol (defaulted: _start)");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");

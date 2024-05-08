@@ -221,6 +221,7 @@ public sealed class LinkerOptions
 
     public bool IsDeterministic = true;
     public bool ApplyOptimization = false;
+    public bool WillCopyRequiredAssemblies = true;
 
     public LinkerCreationOptions? CreationOptions =
         new();
