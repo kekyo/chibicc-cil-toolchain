@@ -40,7 +40,7 @@ public sealed class Archiver
 
     public Archiver(ILogger logger) =>
         this.logger = logger;
-    
+
     private SymbolList ReadSymbols(
         string objectFilePath,
         SymbolTableModes symbolTableMode)
@@ -50,7 +50,7 @@ public sealed class Archiver
         if (symbolTableMode == SymbolTableModes.ForceUpdate ||
             (symbolTableMode == SymbolTableModes.Auto && Path.GetExtension(objectFilePath) is ".o" or ".s"))
         {
-            using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
+            using var ofs = ObjectStreamUtilities.OpenObjectStream(objectFilePath, false);
 
             var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(ofs).
                 ToArray();
@@ -61,6 +61,17 @@ public sealed class Archiver
         {
             return new SymbolList(objectName, CommonUtilities.Empty<Symbol>());
         }
+    }
+
+    private static bool IsSourceFile(string path) =>
+        Path.GetExtension(path) is not ".o";
+
+    private static Stream OpenObjectStreamToCompressed(string objectFilePath)
+    {
+        var ofs = StreamUtilities.OpenStream(objectFilePath, false);
+    
+        return IsSourceFile(objectFilePath) ?
+            new GZipStream(ofs, CompressionLevel.Optimal) : ofs;
     }
 
     internal AddResults Add(
@@ -87,12 +98,16 @@ public sealed class Archiver
                     {
                         if (archive != null)
                         {
-                            using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
-                            
-                            var fileName = Path.GetExtension(objectFilePath) == ".s" ?
+                            using var ofs = OpenObjectStreamToCompressed(objectFilePath);
+
+                            var fileName = IsSourceFile(objectFilePath) ?
                                 (Path.GetFileNameWithoutExtension(objectFilePath) + ".o") :
                                 Path.GetFileName(objectFilePath);
-                            var entry = archive.CreateEntry(fileName, CompressionLevel.Optimal);
+
+                            var entry = archive.CreateEntry(
+                                fileName,
+                                CompressionLevel.NoCompression);  // ofs is already gzip compressed.
+
                             entry.LastWriteTime = File.GetLastWriteTime(objectFilePath);
                             
                             using var afs = entry.Open();

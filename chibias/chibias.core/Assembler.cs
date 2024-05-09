@@ -7,8 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.IO;
+using System.IO.Compression;
 using chibicc.toolchain.IO;
 using chibicc.toolchain.Logging;
 
@@ -27,13 +26,14 @@ public sealed class Assembler
         bool isDryrun)
     {
         using var outputStream = isDryrun ?
-            null : StreamUtilities.OpenStream(outputObjectFilePath, true);
+            null : ObjectStreamUtilities.OpenObjectStream(outputObjectFilePath, true);
 
         using var inputStream = StreamUtilities.OpenStream(sourceFilePath, false);
 
         if (outputStream != null)
         {
             inputStream.CopyTo(outputStream);
+
             outputStream.Flush();
         }
 

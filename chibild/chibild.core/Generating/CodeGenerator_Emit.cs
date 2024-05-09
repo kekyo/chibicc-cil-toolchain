@@ -637,7 +637,7 @@ partial class CodeGenerator
                 return null;
             }
             
-            using (var fs = StreamUtilities.OpenStream(
+            using (var fs = ObjectStreamUtilities.OpenObjectStream(
                 objectPath,
                 false))
             {

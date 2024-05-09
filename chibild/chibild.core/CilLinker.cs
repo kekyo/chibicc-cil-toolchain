@@ -106,7 +106,7 @@ public sealed class CilLinker
                             $"Unable to find the object file: {relativePath}");
                         break;
                     }
-                    using (var fs = StreamUtilities.OpenStream(
+                    using (var fs = ObjectStreamUtilities.OpenObjectStream(
                         Path.Combine(baseInputPath, relativePath), false))
                     {
                         var tr = new StreamReader(fs, Encoding.UTF8, true);

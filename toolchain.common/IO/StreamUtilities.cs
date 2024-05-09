@@ -20,5 +20,6 @@ public static class StreamUtilities
             new FileStream(
                 path,
                 writable ? FileMode.Create : FileMode.Open,
-                writable ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read);
+                writable ? FileAccess.ReadWrite : FileAccess.Read,
+                FileShare.Read);
 }
