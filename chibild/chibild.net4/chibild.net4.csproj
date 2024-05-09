@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>net48</TargetFrameworks>
-    <AssemblyName>cil-chibild</AssemblyName>
+    <AssemblyName>cil-ecma-chibild</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

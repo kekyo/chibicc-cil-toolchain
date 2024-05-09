@@ -82,15 +82,15 @@ $ dotnet tool install -g chibild-cli
 使用可能になったかどうかは、以下のように確認できます:
 
 ```bash
-$ cil-chibild
+$ cil-ecma-chibild
 
-cil-chibild [0.60.0,net6.0] [...]
+cil-ecma-chibild [0.63.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: cil-chibild [options] <input path> [<input path> ...]
+usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   -o <path>         Output assembly path
   -shared, -mdll    Produce dll assembly
            -mexe    Produce executable assembly (defaulted)
@@ -149,7 +149,7 @@ chibildを使って "Hello world" を実行してみましょう。
 出来たら、chibildを呼び出します:
 
 ```bash
-$ cil-chibild -mnet45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ cil-ecma-chibild -mnet45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 実行します:
@@ -176,7 +176,7 @@ Linuxや他のOSでも、必要な参照を追加することで同じように�
 ```
 
 ```bash
-$ cil-chibild -mnet45 -o adder.exe adder.s
+$ cil-ecma-chibild -mnet45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -190,7 +190,7 @@ $ echo $?
 ターゲットフレームワークを指定して、かつ参照アセンブリに`System.Private.CoreLib.dll`が含まれるようにします:
 
 ```bash
-$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+$ cil-ecma-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
   -o hello.exe hello.s
 ```
 
@@ -1010,7 +1010,7 @@ public static class text
 以下のコマンドを使用して `injected.dll` を生成します:
 
 ```bash
-$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+$ cil-ecma-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
   -i managed.dll -c -o injected.dll add_c.s
 ```
 

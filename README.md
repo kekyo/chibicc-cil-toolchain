@@ -86,15 +86,15 @@ $ dotnet tool install -g chibild-cli
 Then:
 
 ```bash
-$ cil-chibild
+$ cil-ecma-chibild
 
-cil-chibild [0.60.0,net6.0] [...]
+cil-ecma-chibild [0.63.0,net6.0] [...]
 This is the CIL object linker, part of chibicc-cil project.
 https://github.com/kekyo/chibicc-cil-toolchain
 Copyright (c) Kouji Matsui
 License under MIT
 
-usage: cil-chibild [options] <input path> [<input path> ...]
+usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   -o <path>         Output assembly path
   -shared, -mdll    Produce dll assembly
            -mexe    Produce executable assembly (defaulted)
@@ -152,7 +152,7 @@ You should create a new source code file `hello.s` with the contents only need 4
 Then invoke chibild with:
 
 ```bash
-$ cil-chibild -mnet45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
+$ cil-ecma-chibild -mnet45 -L/mnt/c/Windows/Microsoft.NET/Framework64/v4.0.30319 -lmscorlib -o hello.exe hello.s
 ```
 
 Run it:
@@ -177,7 +177,7 @@ Also, if you assemble code that uses only built-in types (see below), you do not
 ```
 
 ```bash
-$ cil-chibild -mnet45 -o adder.exe adder.s
+$ cil-ecma-chibild -mnet45 -o adder.exe adder.s
 $ ./adder.exe
 $ echo $?
 3
@@ -191,7 +191,7 @@ $ echo $?
 Specify the target framework moniker and make sure that the reference assembly `System.Private.CoreLib.dll`:
 
 ```bash
-$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+$ cil-ecma-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
   -o hello.exe hello.s
 ```
 
@@ -1036,7 +1036,7 @@ Using injection mode, you can "inject" the following CIL code directly into `man
 To `injected.dll` by the command:
 
 ```bash
-$ cil-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
+$ cil-ecma-chibild -mnet6.0 -L$HOME/.dotnet/shared/Microsoft.NETCore.App/6.0.13 -lSystem.Private.CoreLib \
   -i managed.dll -c -o injected.dll add_c.s
 ```
 
