@@ -55,7 +55,7 @@ public static class Program
             }
             else
             {
-                logger.Information($"Failed linking.");
+                logger.Information($"Failed assembling.");
                 return 2;
             }
         }

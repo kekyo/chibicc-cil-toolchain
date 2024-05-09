@@ -8,10 +8,6 @@
     <PackageId>chibias.core</PackageId>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
-    <Reference Include="System.IO.Compression" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
   </ItemGroup>
