@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
+    <ProjectReference Include="..\chibias.core\chibias.core.csproj" />
   </ItemGroup>
 
 </Project>

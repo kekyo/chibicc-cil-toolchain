@@ -10,31 +10,30 @@
 using System;
 using System.IO;
 using chibicc.toolchain.IO;
+using chibicc.toolchain.Logging;
 
 namespace chibias;
 
 public sealed class Assembler
 {
+    private readonly ILogger logger;
+
+    public Assembler(ILogger logger) =>
+        this.logger = logger;
+
     public bool Assemble(
         string outputObjectFilePath,
-        string[] sourceFilePaths,
+        string sourceFilePath,
         bool isDryrun)
     {
         using var outputStream = isDryrun ?
             null : StreamUtilities.OpenStream(outputObjectFilePath, true);
 
-        foreach (var sourceFilePath in sourceFilePaths)
-        {
-            using var inputStream = StreamUtilities.OpenStream(sourceFilePath, false);
-
-            if (outputStream != null)
-            {
-                inputStream.CopyTo(outputStream);
-            }
-        }
+        using var inputStream = StreamUtilities.OpenStream(sourceFilePath, false);
 
         if (outputStream != null)
         {
+            inputStream.CopyTo(outputStream);
             outputStream.Flush();
         }
 

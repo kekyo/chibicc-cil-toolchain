@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -11,12 +11,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\toolchain.common\toolchain.common.csproj" />
+    <ProjectReference Include="..\chibias.core\chibias.core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\chibias\*.cs" BaseLink="." />
-    <Compile Include="..\chibias\cli\*.cs" BaseLink="cli" />
   </ItemGroup>
 
 </Project>

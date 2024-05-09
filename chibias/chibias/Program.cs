@@ -10,6 +10,7 @@
 using System;
 using System.Runtime.InteropServices;
 using chibias.cli;
+using chibicc.toolchain.Logging;
 
 namespace chibias;
 
@@ -21,34 +22,40 @@ public static class Program
         {
             var options = CliOptions.Parse(args);
 
-            if (options.ShowHelp || options.SourceFilePaths.Count == 0)
+            if (options.ShowHelp || options.SourceFilePath == null)
             {
                 Console.WriteLine();
                 Console.WriteLine($"cil-ecma-chibias [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
-                Console.WriteLine("This is a stub CIL assembler, part of chibicc-cil project.");
+                Console.WriteLine("This is a CIL assembler, part of chibicc-cil project.");
                 Console.WriteLine("https://github.com/kekyo/chibicc-cil-toolchain");
                 Console.WriteLine("Copyright (c) Kouji Matsui");
                 Console.WriteLine("License under MIT");
                 Console.WriteLine();
-                Console.WriteLine("usage: cil-ecma-chibias [options] <soruce path> [<soruce path> ...]");
+                Console.WriteLine("usage: cil-ecma-chibias [options] <soruce path>");
                 CliOptions.WriteUsage(Console.Out);
                 Console.WriteLine();
                 return 1;
             }
 
-            var assembler = new Assembler();
+            using var logger = new TextWriterLogger(
+                options.LogLevel,
+                Console.Out);
+
+            logger.Information($"Started. [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
+
+            var assembler = new Assembler(logger);
 
             if (assembler.Assemble(
                 options.OutputObjectFilePath,
-                options.SourceFilePaths.ToArray(),
+                options.SourceFilePath,
                 options.IsDryRun))
             {
-                //logger.Information($"Finished.");
+                logger.Information($"Finished.");
                 return 0;
             }
             else
             {
-                //logger.Information($"Failed linking.");
+                logger.Information($"Failed linking.");
                 return 2;
             }
         }

@@ -79,7 +79,7 @@ public sealed class CliOptions
                         options.ShowHelp = true;
                         continue;
                     case '-':
-                        switch (arg0.Substring(2).ToLowerInvariant())
+                        switch (arg0.Substring(1).ToLowerInvariant())
                         {
                             case "log":
                                 if (args.Length >= index &&

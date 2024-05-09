@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <Compile Include="..\chibiar\*.cs" BaseLink="." />
-    <Compile Include="..\chibiar\cli\*.cs" BaseLink="cli" />
   </ItemGroup>
 
 </Project>

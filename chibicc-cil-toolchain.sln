@@ -26,39 +26,41 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibild.core.Tests", "chibi
 		{D0633B87-E72A-4362-B11F-E614494771C0} = {D0633B87-E72A-4362-B11F-E614494771C0}
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "chibild\misc", "{2D17624C-B2B8-4343-94BF-34056C7FD4EC}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "misc", "misc", "{2D17624C-B2B8-4343-94BF-34056C7FD4EC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "mergetestbed", "chibild\misc\mergetestbed\mergetestbed.csproj", "{D0633B87-E72A-4362-B11F-E614494771C0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "mergetestbed", "chibild\misc\mergetestbed\mergetestbed.csproj", "{D0633B87-E72A-4362-B11F-E614494771C0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "combinetestbed", "chibild\misc\combinetestbed\combinetestbed.csproj", "{7875CC3D-B029-4D43-8328-8D7A8D773091}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "combinetestbed", "chibild\misc\combinetestbed\combinetestbed.csproj", "{7875CC3D-B029-4D43-8328-8D7A8D773091}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "chibild", "chibild", "{D0131164-9D0E-4CEE-9CB3-FC617BD661DA}"
 	ProjectSection(SolutionItems) = preProject
 		chibild\Directory.Build.props = chibild\Directory.Build.props
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibicc.build", "chibicc.build\chibicc.build.csproj", "{69DC07CB-4E13-4F7A-B7A6-A3F9B1B0111D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibicc.build", "chibicc.build\chibicc.build.csproj", "{69DC07CB-4E13-4F7A-B7A6-A3F9B1B0111D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "chibias", "chibias", "{A4C160C3-9D6F-4B0C-9A66-CA5FE5264672}"
 	ProjectSection(SolutionItems) = preProject
 		chibias\Directory.Build.props = chibias\Directory.Build.props
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibias", "chibias\chibias\chibias.csproj", "{F347B527-EAA8-4675-932B-13F54C252DC7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibias", "chibias\chibias\chibias.csproj", "{F347B527-EAA8-4675-932B-13F54C252DC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibias.net4", "chibias\chibias.net4\chibias.net4.csproj", "{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibias.net4", "chibias\chibias.net4\chibias.net4.csproj", "{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "chibiar", "chibiar", "{5F40AA75-7382-487D-B2F7-3D07DC68C566}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibiar", "chibiar\chibiar\chibiar.csproj", "{9E9A6F23-6F3F-4361-B443-9B0EBEBE9712}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibiar", "chibiar\chibiar\chibiar.csproj", "{9E9A6F23-6F3F-4361-B443-9B0EBEBE9712}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibiar.net4", "chibiar\chibiar.net4\chibiar.net4.csproj", "{A65A61A0-F372-4630-982E-B728ABFFB09A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibiar.net4", "chibiar\chibiar.net4\chibiar.net4.csproj", "{A65A61A0-F372-4630-982E-B728ABFFB09A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibiar.core.Tests", "chibiar\chibiar.core.Tests\chibiar.core.Tests.csproj", "{9C384CE3-4BD5-44B9-AE59-F0159D20D302}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibiar.core.Tests", "chibiar\chibiar.core.Tests\chibiar.core.Tests.csproj", "{9C384CE3-4BD5-44B9-AE59-F0159D20D302}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibiar.core", "chibiar\chibiar.core\chibiar.core.csproj", "{EDFB3E84-7FD5-414D-9A17-378C62CA3F35}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "chibiar.core", "chibiar\chibiar.core\chibiar.core.csproj", "{EDFB3E84-7FD5-414D-9A17-378C62CA3F35}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "toolchain.common", "toolchain.common\toolchain.common.csproj", "{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "toolchain.common", "toolchain.common\toolchain.common.csproj", "{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "chibias.core", "chibias\chibias.core\chibias.core.csproj", "{CC1EC762-ED84-47A5-914F-5B5DD820D980}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -122,24 +124,29 @@ Global
 		{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2100986D-9CD5-4A38-8D48-8E6F2781A9FF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC1EC762-ED84-47A5-914F-5B5DD820D980}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC1EC762-ED84-47A5-914F-5B5DD820D980}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC1EC762-ED84-47A5-914F-5B5DD820D980}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC1EC762-ED84-47A5-914F-5B5DD820D980}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{B6307988-91AA-43A8-89E5-E65E9C26CF9D} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
+		{4D0D87F5-40E5-49C1-B990-84F7B570BCB6} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
+		{9228F275-78AA-475D-844D-6D54A62B132A} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
+		{7453BCDC-28AE-44DD-B96C-A4E2BA6740D6} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
+		{2D17624C-B2B8-4343-94BF-34056C7FD4EC} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
 		{D0633B87-E72A-4362-B11F-E614494771C0} = {2D17624C-B2B8-4343-94BF-34056C7FD4EC}
 		{7875CC3D-B029-4D43-8328-8D7A8D773091} = {2D17624C-B2B8-4343-94BF-34056C7FD4EC}
-		{4D0D87F5-40E5-49C1-B990-84F7B570BCB6} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
-		{B6307988-91AA-43A8-89E5-E65E9C26CF9D} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
-		{7453BCDC-28AE-44DD-B96C-A4E2BA6740D6} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
-		{9228F275-78AA-475D-844D-6D54A62B132A} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
-		{2D17624C-B2B8-4343-94BF-34056C7FD4EC} = {D0131164-9D0E-4CEE-9CB3-FC617BD661DA}
 		{F347B527-EAA8-4675-932B-13F54C252DC7} = {A4C160C3-9D6F-4B0C-9A66-CA5FE5264672}
 		{3EBC174A-06E7-4FBA-9745-7BBCD7F2982E} = {A4C160C3-9D6F-4B0C-9A66-CA5FE5264672}
 		{9E9A6F23-6F3F-4361-B443-9B0EBEBE9712} = {5F40AA75-7382-487D-B2F7-3D07DC68C566}
 		{A65A61A0-F372-4630-982E-B728ABFFB09A} = {5F40AA75-7382-487D-B2F7-3D07DC68C566}
 		{9C384CE3-4BD5-44B9-AE59-F0159D20D302} = {5F40AA75-7382-487D-B2F7-3D07DC68C566}
 		{EDFB3E84-7FD5-414D-9A17-378C62CA3F35} = {5F40AA75-7382-487D-B2F7-3D07DC68C566}
+		{CC1EC762-ED84-47A5-914F-5B5DD820D980} = {A4C160C3-9D6F-4B0C-9A66-CA5FE5264672}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {50B7704D-EFFD-4789-90DD-F594F80C2B97}
