@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.IO;
 using chibicc.toolchain.Logging;
 using chibicc.toolchain.Parsing;
@@ -411,7 +412,7 @@ partial class CodeGenerator
 
         var fileScopedInitializerNames = (holder.GetFileScopedTypeIfAvailable()?.
             Methods.
-            Select(m => m.Name) ?? Utilities.Empty<string>()).
+            Select(m => m.Name) ?? CommonUtilities.Empty<string>()).
             ToHashSet();
         var subIndex = 1;
         count = 0;
@@ -494,7 +495,7 @@ partial class CodeGenerator
 
         var initializerNames = (holder.GetDataTypeIfAvailable()?.
             Methods.
-            Select(m => m.Name) ?? Utilities.Empty<string>()).
+            Select(m => m.Name) ?? CommonUtilities.Empty<string>()).
             ToHashSet();
         subIndex = 1;
         count = 0;
@@ -636,7 +637,7 @@ partial class CodeGenerator
                 return null;
             }
             
-            using (var fs = StreamUtilities.OpenStream(
+            using (var fs = ObjectStreamUtilities.OpenObjectStream(
                 objectPath,
                 false))
             {

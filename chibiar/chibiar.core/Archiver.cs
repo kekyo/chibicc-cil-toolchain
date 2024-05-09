@@ -13,8 +13,11 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using chibiar.cli;
 using chibicc.toolchain.Archiving;
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.IO;
+using chibicc.toolchain.Logging;
 
 namespace chibiar;
 
@@ -33,7 +36,12 @@ public enum AddResults
 
 public sealed class Archiver
 {
-    private static SymbolList ReadSymbols(
+    private readonly ILogger logger;
+
+    public Archiver(ILogger logger) =>
+        this.logger = logger;
+
+    private SymbolList ReadSymbols(
         string objectFilePath,
         SymbolTableModes symbolTableMode)
     {
@@ -42,7 +50,7 @@ public sealed class Archiver
         if (symbolTableMode == SymbolTableModes.ForceUpdate ||
             (symbolTableMode == SymbolTableModes.Auto && Path.GetExtension(objectFilePath) is ".o" or ".s"))
         {
-            using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
+            using var ofs = ObjectStreamUtilities.OpenObjectStream(objectFilePath, false);
 
             var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(ofs).
                 ToArray();
@@ -51,11 +59,22 @@ public sealed class Archiver
         }
         else
         {
-            return new SymbolList(objectName, new Symbol[0]);
+            return new SymbolList(objectName, CommonUtilities.Empty<Symbol>());
         }
     }
 
-    public AddResults Add(
+    private static bool IsSourceFile(string path) =>
+        Path.GetExtension(path) is not ".o";
+
+    private static Stream OpenObjectStreamToCompressed(string objectFilePath)
+    {
+        var ofs = StreamUtilities.OpenStream(objectFilePath, false);
+    
+        return IsSourceFile(objectFilePath) ?
+            new GZipStream(ofs, CompressionLevel.Optimal) : ofs;
+    }
+
+    internal AddResults Add(
         string archiveFilePath,
         SymbolTableModes symbolTableMode,
         string[] objectFilePaths,
@@ -79,12 +98,16 @@ public sealed class Archiver
                     {
                         if (archive != null)
                         {
-                            using var ofs = StreamUtilities.OpenStream(objectFilePath, false);
-                            
-                            var fileName = Path.GetExtension(objectFilePath) == ".s" ?
+                            using var ofs = OpenObjectStreamToCompressed(objectFilePath);
+
+                            var fileName = IsSourceFile(objectFilePath) ?
                                 (Path.GetFileNameWithoutExtension(objectFilePath) + ".o") :
                                 Path.GetFileName(objectFilePath);
-                            var entry = archive.CreateEntry(fileName, CompressionLevel.Optimal);
+
+                            var entry = archive.CreateEntry(
+                                fileName,
+                                CompressionLevel.NoCompression);  // ofs is already gzip compressed.
+
                             entry.LastWriteTime = File.GetLastWriteTime(objectFilePath);
                             
                             using var afs = entry.Open();
@@ -105,7 +128,7 @@ public sealed class Archiver
             Concat(objectFilePaths.Select((objectFilePath, index) =>
                 new Action(() =>
                 {
-                    var symbolList = ReadSymbols(objectFilePath, symbolTableMode);
+                    var symbolList = this.ReadSymbols(objectFilePath, symbolTableMode);
                     symbolLists[index] = symbolList;
                 }))).
             ToArray();
@@ -123,5 +146,25 @@ public sealed class Archiver
         }
 
         return updated ? AddResults.Updated : AddResults.Created;
+    }
+
+    public void Archive(CliOptions options)
+    {
+        switch (options.Mode)
+        {
+            case ArchiveModes.Add:
+                if (this.Add(
+                    options.ArchiveFilePath,
+                    options.SymbolTableMode,
+                    options.ObjectFilePaths.ToArray(),
+                    options.IsDryRun) == AddResults.Created &&
+                    !options.IsSilent)
+                {
+                    this.logger.Information($"creating {Path.GetFileName(options.ArchiveFilePath)}");
+                }
+                break;
+            default:
+                throw new NotImplementedException();
+        }
     }
 }

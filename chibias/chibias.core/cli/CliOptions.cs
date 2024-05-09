@@ -12,6 +12,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using chibicc.toolchain.Logging;
 
 namespace chibias.cli;
 
@@ -20,8 +21,9 @@ public sealed class CliOptions
     public string OutputObjectFilePath = null!;
     public bool IsLinked = true;
     public bool IsDryRun = false;
+    public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
-    public readonly List<string> SourceFilePaths = new();
+    public string? SourceFilePath;
 
     private CliOptions()
     {
@@ -65,6 +67,15 @@ public sealed class CliOptions
                         case '-':
                             switch (arg.Substring(2).ToLowerInvariant())
                             {
+                                case "log":
+                                    if (args.Length >= index &&
+                                        Enum.TryParse<LogLevels>(args[index + 1], true, out var logLevel))
+                                    {
+                                        index++;
+                                        options.LogLevel = logLevel;
+                                        continue;
+                                    }
+                                    break;
                                 case "dryrun":
                                     options.IsDryRun = true;
                                     continue;
@@ -80,7 +91,7 @@ public sealed class CliOptions
 
                 var sourceCodePath =
                     arg != "-" ? Path.GetFullPath(arg) : arg;
-                options.SourceFilePaths.Add(sourceCodePath);
+                options.SourceFilePath = sourceCodePath;
             }
             catch (InvalidOptionException)
             {
@@ -108,14 +119,8 @@ public sealed class CliOptions
 
     public static void WriteUsage(TextWriter tw)
     {
-        tw.WriteLine($"cil-chibias [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
-        tw.WriteLine("This is a stub CIL assembler, part of chibicc-cil project.");
-        tw.WriteLine("https://github.com/kekyo/chibicc-cil-toolchain");
-        tw.WriteLine("Copyright (c) Kouji Matsui");
-        tw.WriteLine("License under MIT");
-        tw.WriteLine();
-        tw.WriteLine("usage: cil-chibias [options] <soruce path> [<soruce path> ...]");
         tw.WriteLine("  -o <path>         Output object file path");
+        tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)");
         tw.WriteLine("      --dryrun      Need to dryrun");
         tw.WriteLine("  -h, --help        Show this help");
     }

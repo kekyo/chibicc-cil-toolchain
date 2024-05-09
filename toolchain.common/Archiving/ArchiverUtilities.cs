@@ -242,6 +242,9 @@ public static class ArchiverUtilities
             ZipArchiveMode.Read,
             Encoding.UTF8);
 
-        return new ArchiveObjectStream(archive, archive.GetEntry(objectName)!.Open());
+        var zs = archive.GetEntry(objectName)!.Open();
+        var ofs = new GZipStream(zs, CompressionMode.Decompress);
+
+        return new ArchiveObjectStream(archive, ofs);
     }
 }

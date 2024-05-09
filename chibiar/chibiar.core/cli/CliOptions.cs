@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using chibicc.toolchain.Logging;
 
 namespace chibiar.cli;
 
@@ -28,6 +29,7 @@ public sealed class CliOptions
     public bool IsSilent = false;
     public SymbolTableModes SymbolTableMode = SymbolTableModes.Auto;
     public bool IsDryRun = false;
+    public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
     public readonly List<string> ObjectFilePaths = new();
 
@@ -79,6 +81,15 @@ public sealed class CliOptions
                     case '-':
                         switch (arg0.Substring(1).ToLowerInvariant())
                         {
+                            case "log":
+                                if (args.Length >= index &&
+                                    Enum.TryParse<LogLevels>(args[index + 1], true, out var logLevel))
+                                {
+                                    index++;
+                                    options.LogLevel = logLevel;
+                                    continue;
+                                }
+                                break;
                             case "dryrun":
                                 options.IsDryRun = true;
                                 continue;
@@ -126,20 +137,14 @@ public sealed class CliOptions
 
     public static void WriteUsage(TextWriter tw)
     {
-        tw.WriteLine($"cil-chibiar [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
-        tw.WriteLine("This is a CIL object archiver, part of chibicc-cil project.");
-        tw.WriteLine("https://github.com/kekyo/chibicc-cil-toolchain");
-        tw.WriteLine("Copyright (c) Kouji Matsui");
-        tw.WriteLine("License under MIT");
-        tw.WriteLine();
-        tw.WriteLine("usage: cil-chibiar [options] <archive path> [<obj path> ...]");
-        tw.WriteLine("  -r            Add object files into the archive");
-        tw.WriteLine("  -c            Add object files into the archive silently");
-        tw.WriteLine("  -s            Add symbol table");
-        tw.WriteLine("  -d            Delete object files from the archive");
-        tw.WriteLine("  -t            List object files in the archive");
-        tw.WriteLine("      --dryrun  Need to dryrun");
-        tw.WriteLine("  -h, --help    Show this help");
+        tw.WriteLine("  -r                Add object files into the archive");
+        tw.WriteLine("  -c                Add object files into the archive silently");
+        tw.WriteLine("  -s                Add symbol table");
+        tw.WriteLine("  -d                Delete object files from the archive");
+        tw.WriteLine("  -t                List object files in the archive");
+        tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)");
+        tw.WriteLine("      --dryrun      Need to dryrun");
+        tw.WriteLine("  -h, --help        Show this help");
     }
 }
 

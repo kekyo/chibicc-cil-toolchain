@@ -15,7 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using chibicc.toolchain.Archiving;
-
+using chibicc.toolchain.Logging;
 using static VerifyNUnit.Verifier;
 using static chibiar.ArchiverTestRunner;
 
@@ -38,11 +38,13 @@ public sealed class ArchiverTests
     [Test]
     public Task ArchiveOne()
     {
-        return RunAsync(async basePath =>
+        return RunAsync(async (basePath, logger) =>
         {
+            logger.Information($"Test runner BasePath={basePath}");
+
             var archivePath = Path.Combine(basePath, "output.a");
             
-            var archiver = new Archiver();
+            var archiver = new Archiver(logger);
             var actual = archiver.Add(
                 archivePath,
                 SymbolTableModes.Auto,
@@ -67,11 +69,11 @@ public sealed class ArchiverTests
     [Test]
     public Task ArchiveTwo()
     {
-        return RunAsync(async basePath =>
+        return RunAsync(async (basePath, logger) =>
         {
             var archivePath = Path.Combine(basePath, "output.a");
             
-            var archiver = new Archiver();
+            var archiver = new Archiver(logger);
             var actual = archiver.Add(
                 archivePath,
                 SymbolTableModes.Auto,
