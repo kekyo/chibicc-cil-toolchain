@@ -10,7 +10,9 @@
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading.Tasks;
+using chibicc.toolchain.Logging;
 using DiffEngine;
 
 namespace chibiar;
@@ -32,8 +34,8 @@ internal static class ArchiverTestRunner
     private static readonly string id =
         $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{new Random().Next()}";
 
-    public static Task RunAsync(
-        Func<string, Task> tester,
+    public static async Task RunAsync(
+        Func<string, TextWriterLogger, Task> tester,
         [CallerMemberName] string memberName = null!)
     {
         var basePath = Path.GetFullPath(
@@ -41,6 +43,21 @@ internal static class ArchiverTestRunner
 
         Directory.CreateDirectory(basePath);
 
-        return tester(basePath);
+        var logPath = Path.Combine(basePath, "log.txt");
+        using var logfs = new FileStream(
+            logPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+        var logtw = new StreamWriter(
+            logfs, Encoding.UTF8);
+        var logger = new TextWriterLogger(
+            LogLevels.Debug, logtw);
+
+        try
+        {
+            await tester(basePath, logger);
+        }
+        finally
+        {
+            await logtw.FlushAsync();
+        }
     }
 }

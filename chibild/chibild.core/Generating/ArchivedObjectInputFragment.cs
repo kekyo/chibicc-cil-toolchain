@@ -44,12 +44,12 @@ internal sealed class ArchivedObjectInputFragment :
     private readonly Dictionary<string, Symbol> variableSymbols;
     private readonly Dictionary<string, Symbol> functionSymbols;
 
-    private GlobalVariableNode[] globalVariables = Utilities.Empty<GlobalVariableNode>();
-    private GlobalConstantNode[] globalConstants = Utilities.Empty<GlobalConstantNode>();
-    private FunctionDeclarationNode[] functions = Utilities.Empty<FunctionDeclarationNode>();
-    private InitializerDeclarationNode[] initializers = Utilities.Empty<InitializerDeclarationNode>();
-    private EnumerationNode[] enumerations = Utilities.Empty<EnumerationNode>();
-    private StructureNode[] structures = Utilities.Empty<StructureNode>();
+    private GlobalVariableNode[] globalVariables = CommonUtilities.Empty<GlobalVariableNode>();
+    private GlobalConstantNode[] globalConstants = CommonUtilities.Empty<GlobalConstantNode>();
+    private FunctionDeclarationNode[] functions = CommonUtilities.Empty<FunctionDeclarationNode>();
+    private InitializerDeclarationNode[] initializers = CommonUtilities.Empty<InitializerDeclarationNode>();
+    private EnumerationNode[] enumerations = CommonUtilities.Empty<EnumerationNode>();
+    private StructureNode[] structures = CommonUtilities.Empty<StructureNode>();
 
     private int requiredState = (int)RequiredStates.Ignore;
 

@@ -51,6 +51,19 @@ namespace chibicc.toolchain.Internal
     {
         private static readonly IFormatProvider invariantCulture = CultureInfo.InvariantCulture;
         
+#if NET40 || NET45
+        private static class ArrayEmpty<T>
+        {
+            public static readonly T[] Empty = new T[0];
+        }
+
+        public static T[] Empty<T>() =>
+            ArrayEmpty<T>.Empty;
+#else
+        public static T[] Empty<T>() =>
+            Array.Empty<T>();
+#endif
+
         public static bool TryParseUInt8(
             string word,
             out byte value) =>

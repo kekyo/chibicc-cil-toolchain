@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Logging;
 using chibicc.toolchain.Parsing;
 using chibild.Internal;
@@ -796,7 +797,7 @@ partial class CodeGenerator
         var method = this.SetupMethodDefinition(
             IntiializerMethodName,
             this.CreatePlaceholderType(),
-            Utilities.Empty<ParameterDefinition>(),
+            CommonUtilities.Empty<ParameterDefinition>(),
             MethodAttributes.Private | MethodAttributes.Static);
         method.ReturnType = context.FallbackModule.TypeSystem.Void;
 

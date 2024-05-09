@@ -24,6 +24,13 @@ public static class Program
             if (options.ShowHelp || options.SourceFilePaths.Count == 0)
             {
                 Console.WriteLine();
+                Console.WriteLine($"cil-ecma-chibias [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
+                Console.WriteLine("This is a stub CIL assembler, part of chibicc-cil project.");
+                Console.WriteLine("https://github.com/kekyo/chibicc-cil-toolchain");
+                Console.WriteLine("Copyright (c) Kouji Matsui");
+                Console.WriteLine("License under MIT");
+                Console.WriteLine();
+                Console.WriteLine("usage: cil-ecma-chibias [options] <soruce path> [<soruce path> ...]");
                 CliOptions.WriteUsage(Console.Out);
                 Console.WriteLine();
                 return 1;

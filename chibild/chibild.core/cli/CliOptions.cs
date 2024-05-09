@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Logging;
 using chibild.Internal;
 using System;
@@ -39,7 +40,7 @@ public sealed class CliOptions
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
     public string BaseInputPath = Directory.GetCurrentDirectory();
-    public InputReference[] InputReferences = Utilities.Empty<InputReference>();
+    public InputReference[] InputReferences = CommonUtilities.Empty<InputReference>();
 
     private CliOptions()
     {
@@ -434,7 +435,7 @@ public sealed class CliOptions
         return options;
     }
 
-    public void Write(ILogger logger)
+    public void WriteOptions(ILogger logger)
     {
         foreach (var inputFilePath in this.InputReferences)
         {
@@ -479,13 +480,6 @@ public sealed class CliOptions
 
     public static void WriteUsage(TextWriter tw)
     {
-        tw.WriteLine($"cil-chibild [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");
-        tw.WriteLine("This is the CIL object linker, part of chibicc-cil project.");
-        tw.WriteLine("https://github.com/kekyo/chibicc-cil-toolchain");
-        tw.WriteLine("Copyright (c) Kouji Matsui");
-        tw.WriteLine("License under MIT");
-        tw.WriteLine();
-        tw.WriteLine("usage: cil-chibild [options] <input path> [<input path> ...]");
         tw.WriteLine("  -o <path>         Output assembly path");
         tw.WriteLine("  -shared, -mdll    Produce dll assembly");
         tw.WriteLine("           -mexe    Produce executable assembly (defaulted)");

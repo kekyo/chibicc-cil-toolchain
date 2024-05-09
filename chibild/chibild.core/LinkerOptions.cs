@@ -7,7 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using chibild.Internal;
+using chibicc.toolchain.Internal;
 using System;
 using System.IO;
 
@@ -214,7 +214,7 @@ public sealed class LibraryPathReference : InputReference
 public sealed class LinkerOptions
 {
     public string[] LibraryReferenceBasePaths =
-        Utilities.Empty<string>();
+        CommonUtilities.Empty<string>();
 
     public DebugSymbolTypes DebugSymbolType =
         DebugSymbolTypes.Embedded;
