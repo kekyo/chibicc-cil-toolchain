@@ -4,11 +4,22 @@
 
 ## NuGet
 
-| Package                            | NuGet                                                                                                                |
-|:-----------------------------------|:---------------------------------------------------------------------------------------------------------------------|
-| chibias-cli (dotnet CLI)           | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
-| chibild-cli (dotnet CLI)           | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
-| chibild.core (Linker core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
+### .NET CLI interface
+
+| Package     | NuGet                                                                                                                            |
+|:------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| chibiar-cli | [![NuGet chibiar-cli](https://img.shields.io/nuget/v/chibiar-cli.svg?style=flat)](https://www.nuget.org/packages/chibiar-cli)    |
+| chibias-cli | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibias-cli.svg?style=flat)](https://www.nuget.org/packages/chibias-cli)    |
+| chibild-cli | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli)    |
+
+### Core libraries
+
+| Package                  | NuGet                                                                                                                            |
+|:-------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| chibiar.core             | [![NuGet chibiar.core](https://img.shields.io/nuget/v/chibiar.core.svg?style=flat)](https://www.nuget.org/packages/chibiar.core) |
+| chibias.core             | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
+| chibild.core             | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
+| chibicc.toolchain.common | [![NuGet chibicc.toolchain.common](https://img.shields.io/nuget/v/chibicc.toolchain.common.svg?style=flat)](https://www.nuget.org/packages/chibicc.toolchain.common) |
 
 [![Japanese language](Images/Japanese.256.png)](https://github.com/kekyo/chibicc-cil-toolchain/blob/main/README.ja.md)
 
@@ -47,10 +58,11 @@ chibicc-toolchain consists of the following toolchain programs:
 
 ![chibicc-toolchain overview](Images/toolchain.png)
 
-chibias actually combines a group of CIL source code ('*.s') and outputs it as-is as an object file ('*.o'),
-chibild performs the actual assembly process of the CIL source code.
+chibias outputs the CIL source code ('*.s') almost as is as an object file ('*.o'),
+and chibild performs the actual assembly process of the CIL source code.
+Therefore, chibias does not perform syntax checking.
 
-The strange behavior of chibias and chibilds is due to implementation limitations.
+The strange behavior of chibias and chibild is due to implementation limitations.
 For toolchain users, the advantage is that they can contrast their usage with
 that of the "as" and "ld" toolchains expected on POSIX.
 
@@ -109,6 +121,8 @@ usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   -s, -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
+  -x                Will not copy required assemblies
+  -d <path>         CABI startup object directory path
   -e <symbol>       Entry point symbol (defaulted: _start)
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -m <tfm>          Target framework moniker (defaulted: net6.0)
@@ -120,6 +134,8 @@ usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   -h, --help        Show this help
 ```
 
+* The actual command name for chibild is `cil-ecma-chibild`, as are chibiar and chibias.
+  This naming convention is analogous to GNU binutils.
 * chibild assembles multiple input files (objects '*.o' and CIL sources '*.s')
   pointed out on the command line into a single .NET assembly.
 * The reference library name `-l` is evaluated from the beginning, including the archive file path ('*.a').
@@ -134,6 +150,11 @@ usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   It may always operate as `AnyCPU` except in Windows CLR environment.
 * Log level is `warning` by default. These values ignore case.
 * When using the `-i` injection mode, the `-a`, `-v` and `-m` specifications are ignored.
+* chibild has the ability to automatically copy referenced assemblies except for system assemblies
+  (such as `mscorlib.dll` and `System.Private.CoreLib.dll`), but if `-x` is specified, it will not automatically copy.
+  Note that this feature is simplified and may not copy all necessary files.
+  If you are planning a complex deployment, it is likely that you will need to build with MSBuild.
+
 
 ----
 
@@ -185,6 +206,8 @@ $ echo $?
 
 * Note: In this example, some warnings about attributes is generated during assembly.
   Which can be ignored.
+* If you use arguments equivalent to `argc` or `argv` in the `main` function,
+  you need to specify the startup code (`crt0.o`) and a reference to the `mscorlib.dll` assembly, which is the FCL.
 
 ### To run with .NET Core and others
 
@@ -296,6 +319,7 @@ For example, `int main(int argc, char **argv)`.
 
 The difference is achieved by chibicc supplying an object file such as `crt0.o`
 containing the startup code and generating the arguments required by the C language in it.
+(A special `-d` option exists for this purpose.)
 
 In this document, startup codes are omitted from the explanation.
 Therefore, the startup code rules always follow the table above.

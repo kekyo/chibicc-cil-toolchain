@@ -4,11 +4,22 @@
 
 ## NuGet
 
-| Package                            | NuGet                                                                                                                            |
-|:-----------------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
-| chibias-cli (dotnet CLI)           | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
-| chibild-cli (dotnet CLI)           | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli) |
-| chibild.core (Linker core library) | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
+### .NET CLI interface
+
+| Package     | NuGet                                                                                                                            |
+|:------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| chibiar-cli | [![NuGet chibiar-cli](https://img.shields.io/nuget/v/chibiar-cli.svg?style=flat)](https://www.nuget.org/packages/chibiar-cli)    |
+| chibias-cli | [![NuGet chibias-cli](https://img.shields.io/nuget/v/chibias-cli.svg?style=flat)](https://www.nuget.org/packages/chibias-cli)    |
+| chibild-cli | [![NuGet chibild-cli](https://img.shields.io/nuget/v/chibild-cli.svg?style=flat)](https://www.nuget.org/packages/chibild-cli)    |
+
+### Core libraries
+
+| Package                  | NuGet                                                                                                                            |
+|:-------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| chibiar.core             | [![NuGet chibiar.core](https://img.shields.io/nuget/v/chibiar.core.svg?style=flat)](https://www.nuget.org/packages/chibiar.core) |
+| chibias.core             | [![NuGet chibias.core](https://img.shields.io/nuget/v/chibias.core.svg?style=flat)](https://www.nuget.org/packages/chibias.core) |
+| chibild.core             | [![NuGet chibild.core](https://img.shields.io/nuget/v/chibild.core.svg?style=flat)](https://www.nuget.org/packages/chibild.core) |
+| chibicc.toolchain.common | [![NuGet chibicc.toolchain.common](https://img.shields.io/nuget/v/chibicc.toolchain.common.svg?style=flat)](https://www.nuget.org/packages/chibicc.toolchain.common) |
 
 [English language is here](https://github.com/kekyo/chibicc-cil-toolchain)
 
@@ -44,10 +55,11 @@ chibicc-toolchainは、以下のツールチェインプログラムで構成さ
 
 ![chibicc-toolchain overview](Images/toolchain.png)
 
-chibiasは、実際にはCILソースコード群('*.s')を結合して、そのままオブジェクトファイル('*.o')として出力し、
+chibiasは、CILソースコード群('*.s')をほぼそのままオブジェクトファイル('*.o')として出力し、
 CILソースコードの実質的なアセンブル処理は、chibildが行います。
+従って、chibiasは構文チェックを行いません。
 
-chibiasとchibildの、この奇妙な挙動は、実装の制約によるものですが、
+chibiasとchibildの奇妙な挙動は、実装の制約によるものですが、
 ツールチェイン使用者にとって見れば、POSIXで想定されるasやldなどのツールチェインと対比させて使用方法を理解できるという強みがあります。
 
 以降の説明では、CILアセンブリソースコードをchibildで直接使用して解説します。
@@ -105,6 +117,8 @@ usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   -s, -g0           Omit debug symbol file
   -O, -O1           Apply optimization
       -O0           Disable optimization (defaulted)
+  -x                Will not copy required assemblies
+  -d <path>         CABI startup object directory path
   -e <symbol>       Entry point symbol (defaulted: _start)
   -v <version>      Apply assembly version (defaulted: 1.0.0.0)
   -m <tfm>          Target framework moniker (defaulted: net6.0)
@@ -116,8 +130,10 @@ usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   -h, --help        Show this help
 ```
 
+* chibildの実際のコマンド名は、`cil-ecma-chibild` です。chibiarやchibiasも同様です。
+  この命名規則は、GNU binutilsになぞらえたものです。
 * chibildは、コマンドラインで指摘された複数の入力ファイル（オブジェクト '*.o'、CILソース '*.s'）
- をアセンブルして、1つの.NETアセンブリにまとめます。
+  をアセンブルして、1つの.NETアセンブリにまとめます。
 * 参照ライブラリ名 `-l` は、アーカイブファイルパス ('*.a') を含めて、先頭から順に評価されます。
   この機能は、重複するシンボル(関数/グローバル変数)にも適用されます。
   また、ライブラリファイル名は、ネイティブツールチェインと同様に `lib` というプレフィックスが適用されている事を想定し、
@@ -130,6 +146,10 @@ usage: cil-ecma-chibild [options] <input path> [<input path> ...]
   WindowsのCLR環境以外では、常に`AnyCPU`として動作する可能性があります。
 * ログレベルは、デフォルトで`warning`です。大文字小文字は無視されます。
 * 注入モード `-i` を使用する場合は、 `-a`, `-v`, `-m` の指定が無視されます。
+* chibildには、システムアセンブリ（`mscorlib.dll`や`System.Private.CoreLib.dll`など）を除く、
+  参照されたアセンブリを自動的にコピーする機能がありますが、`-x`を指定すると、自動的にコピーしません。
+  この機能は簡易的なものであり、必要な全てのファイルをコピーしない場合があるため、注意が必要です。
+  複雑なデプロイを前提とする場合は、MSBuildによるビルドが必要になると思われます。
 
 
 ----
@@ -183,7 +203,8 @@ $ echo $?
 ```
 
 * 注意: この例では、アセンブル時に属性に関する警告が発生しますが、無視して構いません。
-* `main` 関数の `argc` や `argv` に相当する引数を使用する場合は、FCLである `mscorlib.dll` アセンブリへの参照が必要です。
+* `main` 関数の `argc` や `argv` に相当する引数を使用する場合は、
+  スタートアップコード(`crt0.o`)の指定と、FCLである `mscorlib.dll` アセンブリへの参照が必要です。
 
 ### .NET Coreなどで動かすには
 
@@ -294,6 +315,7 @@ chibiccを使う場合、エントリポイントはあくまでC言語の `main
 
 このシグネチャの違いは、スタートアップコードを含む `crt0.o` のようなオブジェクトファイルをchibiccが供給し、
 その中でC言語で必要な引数を生成することによって実現しています。
+（この目的のために、特殊な `-d` オプションが存在します）
 
 このドキュメントでは、スタートアップコードを省いて解説しています。
 従って、スタートアップコードの規則は、常に上記の表に従います。
