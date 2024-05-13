@@ -158,8 +158,7 @@ internal static class Utilities
             }
             catch
             {
-                File.Delete(to1);
-                throw;
+                isExistTo = false;
             }
         }
                 
@@ -172,9 +171,16 @@ internal static class Utilities
             File.Delete(to1);
             if (isExistTo)
             {
-                File.Move(to2, to);
+                try
+                {
+                    File.Move(to2, to);
+                }
+                catch
+                {
+                    File.Delete(to2);
+                }
             }
-            throw;
+            return;
         }
 
         if (isExistTo)
