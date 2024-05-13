@@ -53,11 +53,29 @@ public sealed class CliOptions
         var options = new CliOptions();
         var libraryBasePaths = new List<string>();
         var inputReferences = new List<InputReference>();
+        var prependExecutionSearchPaths = new List<string>();
 
         options.LinkerOptions.CreationOptions!.TargetFramework =
             TargetFramework.TryParse(defaultTargetFrameworkMoniker, out var tf) ?
                 tf : TargetFramework.Default;
 
+        static bool TryGetOptionArgument(
+            string[] args, ref int index, out string result)
+        {
+            if (args[index].Length >= 3)
+            {
+                result = args[index].Substring(2);
+                return true;
+            }
+            else if (args.Length >= index)
+            {
+                result = args[++index];
+                return true;
+            }
+            result = null!;
+            return false;
+        }
+        
         for (var index = 0; index < args.Length; index++)
         {
             var arg = args[index];
@@ -68,122 +86,69 @@ public sealed class CliOptions
                     switch (arg[1])
                     {
                         case 'o':
-                            if (arg.Length >= 3)
+                            if (TryGetOptionArgument(args, ref index, out var path1))
                             {
-                                var outputAssemblyPath =
-                                    Path.GetFullPath(arg.Substring(2));
-                                options.OutputAssemblyPath = outputAssemblyPath;
-                                continue;
-                            }
-                            else if (args.Length >= index)
-                            {
-                                var outputAssemblyPath =
-                                    Path.GetFullPath(args[++index]);
-                                options.OutputAssemblyPath = outputAssemblyPath;
+                                options.OutputAssemblyPath = Path.GetFullPath(path1);
                                 continue;
                             }
                             break;
                         case 'L':
-                            if (arg.Length >= 3)
+                            if (TryGetOptionArgument(args, ref index, out var path2))
                             {
-                                var referenceAssemblyBasePath =
-                                    Path.GetFullPath(arg.Substring(2));
-                                libraryBasePaths.Add(referenceAssemblyBasePath);
-                                continue;
-                            }
-                            else if (args.Length >= index)
-                            {
-                                var referenceAssemblyBasePath =
-                                    Path.GetFullPath(args[++index]);
-                                libraryBasePaths.Add(referenceAssemblyBasePath);
+                                libraryBasePaths.Add(Path.GetFullPath(path2));
                                 continue;
                             }
                             break;
                         case 'l':
-                            if (arg.Length >= 3)
+                            if (TryGetOptionArgument(args, ref index, out var path3))
                             {
-                                var referenceAssemblyName = arg.Substring(2);
-                                inputReferences.Add(new LibraryNameReference(referenceAssemblyName));
-                                continue;
-                            }
-                            else if (args.Length >= index)
-                            {
-                                var referenceAssemblyName = args[index + 1];
-                                inputReferences.Add(new LibraryNameReference(referenceAssemblyName));
-                                index++;
+                                inputReferences.Add(new LibraryNameReference(path3));
                                 continue;
                             }
                             break;
                         case 'i':
-                            if (arg.Length >= 3)
+                            if (TryGetOptionArgument(args, ref index, out var path4))
                             {
-                                options.InjectToAssemblyPath = arg.Substring(2);
+                                options.InjectToAssemblyPath = path4;
                                 options.LinkerOptions.CreationOptions = null;
-                                continue;
-                            }
-                            else if (args.Length >= index)
-                            {
-                                options.InjectToAssemblyPath = args[index + 1];
-                                options.LinkerOptions.CreationOptions = null;
-                                index++;
                                 continue;
                             }
                             options.LinkerOptions.CreationOptions = null;
                             continue;
                         case 'a':
-                            if (arg.Length >= 3)
+                            if (TryGetOptionArgument(args, ref index, out var path5))
                             {
                                 if (options.LinkerOptions.CreationOptions is { } co2)
                                 {
-                                    co2.AppHostTemplatePath = arg.Substring(2);
+                                    co2.AppHostTemplatePath = path5;
                                 }
-                                continue;
-                            }
-                            else if (args.Length >= index)
-                            {
-                                if (options.LinkerOptions.CreationOptions is { } co2)
-                                {
-                                    co2.AppHostTemplatePath = args[index + 1];
-                                }
-                                index++;
                                 continue;
                             }
                             break;
                         case 'd':
-                            if (arg.Length >= 3)
+                            if (TryGetOptionArgument(args, ref index, out var path6))
                             {
                                 if (options.LinkerOptions.CreationOptions is { } co2)
                                 {
-                                    co2.CAbiStartUpObjectDirectoryPath = arg.Substring(2);
+                                    co2.CAbiStartUpObjectDirectoryPath = path6;
                                 }
-                                continue;
-                            }
-                            else if (args.Length >= index)
-                            {
-                                if (options.LinkerOptions.CreationOptions is { } co2)
-                                {
-                                    co2.CAbiStartUpObjectDirectoryPath = args[index + 1];
-                                }
-                                index++;
                                 continue;
                             }
                             break;
                         case 'e':
-                            if (arg.Length >= 3)
+                            if (TryGetOptionArgument(args, ref index, out var path7))
                             {
                                 if (options.LinkerOptions.CreationOptions is { } co2)
                                 {
-                                    co2.EntryPointSymbol = arg.Substring(2);
+                                    co2.EntryPointSymbol = path7;
                                 }
                                 continue;
                             }
-                            else if (args.Length >= index)
+                            break;
+                        case 'B':
+                            if (TryGetOptionArgument(args, ref index, out var path8))
                             {
-                                if (options.LinkerOptions.CreationOptions is { } co2)
-                                {
-                                    co2.EntryPointSymbol = args[index + 1];
-                                }
-                                index++;
+                                prependExecutionSearchPaths.Add(path8);
                                 continue;
                             }
                             break;
@@ -261,74 +226,72 @@ public sealed class CliOptions
                             else if (arg.Length == 2)
                             {
                                 options.LinkerOptions.ApplyOptimization = true;
-                                if (options.LinkerOptions.CreationOptions is { } co4)
+                                if (options.LinkerOptions.CreationOptions is { } co2)
                                 {
-                                    co4.AssemblyOptions &=
+                                    co2.AssemblyOptions &=
                                         ~AssemblyOptions.DisableJITOptimization;
                                 }
                                 continue;
                             }
                             break;
                         case 'v':
-                            if (arg.Length == 2 &&
-                                Version.TryParse(args[index + 1], out var version))
+                            if (TryGetOptionArgument(args, ref index, out var vs))
                             {
-                                index++;
-                                if (options.LinkerOptions.CreationOptions is { } co6)
+                                if (Version.TryParse(vs, out var version))
                                 {
-                                    co6.Version = version;
+                                    if (options.LinkerOptions.CreationOptions is { } co2)
+                                    {
+                                        co2.Version = version;
+                                    }
                                 }
                                 continue;
                             }
                             break;
                         case 'm':
-                            var mopt = (arg.Length >= 3) ? arg.Substring(2) :
-                                args.Length >= index ? args[++index] :
-                                null;
-                            if (mopt != null)
+                            if (TryGetOptionArgument(args, ref index, out var mopt))
                             {
                                 if (TargetFramework.TryParse(mopt, out var tf2))
                                 {
-                                    if (options.LinkerOptions.CreationOptions is { } co7)
+                                    if (options.LinkerOptions.CreationOptions is { } co2)
                                     {
-                                        co7.TargetFramework = tf2;
+                                        co2.TargetFramework = tf2;
                                     }
                                     continue;
                                 }
                                 if (Enum.TryParse<TargetWindowsArchitectures>(mopt, true, out var arch))
                                 {
-                                    if (options.LinkerOptions.CreationOptions is { } co8)
+                                    if (options.LinkerOptions.CreationOptions is { } co2)
                                     {
-                                        co8.TargetWindowsArchitecture = arch;
+                                        co2.TargetWindowsArchitecture = arch;
                                     }
                                     continue;
                                 }
                                 if (rollforwards.TryGetValue(mopt, out var rollforward))
                                 {
-                                    if (options.LinkerOptions.CreationOptions is { } co5)
+                                    if (options.LinkerOptions.CreationOptions is { } co2)
                                     {
-                                        co5.RuntimeConfiguration = rollforward;
+                                        co2.RuntimeConfiguration = rollforward;
                                     }
                                     continue;
                                 }
                                 switch (mopt.ToLowerInvariant())
                                 {
                                     case "dll":
-                                        if (options.LinkerOptions.CreationOptions is { } co9)
+                                        if (options.LinkerOptions.CreationOptions is { } co2)
                                         {
-                                            co9.AssemblyType = AssemblyTypes.Dll;
+                                            co2.AssemblyType = AssemblyTypes.Dll;
                                         }
                                         continue;
                                     case "exe":
-                                        if (options.LinkerOptions.CreationOptions is { } co10)
+                                        if (options.LinkerOptions.CreationOptions is { } co3)
                                         {
-                                            co10.AssemblyType = AssemblyTypes.Exe;
+                                            co3.AssemblyType = AssemblyTypes.Exe;
                                         }
                                         continue;
                                     case "winexe":
-                                        if (options.LinkerOptions.CreationOptions is { } co11)
+                                        if (options.LinkerOptions.CreationOptions is { } co4)
                                         {
-                                            co11.AssemblyType = AssemblyTypes.WinExe;
+                                            co4.AssemblyType = AssemblyTypes.WinExe;
                                         }
                                         continue;
                                 }
@@ -431,6 +394,9 @@ public sealed class CliOptions
         options.InputReferences = inputReferences.
             Distinct().
             ToArray();
+        options.LinkerOptions.PrependExecutionSearchPaths = prependExecutionSearchPaths.
+            Distinct().
+            ToArray();
 
         return options;
     }
@@ -474,7 +440,12 @@ public sealed class CliOptions
         {
             logger.Information($"InjectToAssemblyPath={this.InjectToAssemblyPath}");
         }
-        
+    
+        foreach (var sp in this.LinkerOptions.PrependExecutionSearchPaths)
+        {
+            logger.Information($"PrependExecutionSearchPath={sp}");
+        }
+
         logger.Information($"IsDryRun={this.LinkerOptions.IsDryRun}");
     }
 
@@ -497,6 +468,7 @@ public sealed class CliOptions
         tw.WriteLine("  -x                Will not copy required assemblies");
         tw.WriteLine("  -d <path>         CABI startup object directory path");
         tw.WriteLine("  -e <symbol>       Entry point symbol (defaulted: _start)");
+        tw.WriteLine("  -B <path>         Prepend execution search path");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
         tw.WriteLine($"  -m <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
         tw.WriteLine("  -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)");

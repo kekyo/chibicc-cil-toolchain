@@ -39,6 +39,7 @@ internal static class LinkerTestRunner
         string[] chibildSourceCodes,
         string[]? additionalReferencePaths,
         string? injectToAssemblyPath,
+        string[]? prependExecutionSearchPaths,
         Func<LinkerCreationOptions?> creationOptionsF,
         string memberName)
     {
@@ -116,6 +117,7 @@ internal static class LinkerTestRunner
                         IsDeterministic = true,
                         ApplyOptimization = false,
                         CreationOptions = creationOptions,
+                        PrependExecutionSearchPaths = prependExecutionSearchPaths ?? Array.Empty<string>(),
                     },
                     injectToAssemblyPath,
                     basePath,

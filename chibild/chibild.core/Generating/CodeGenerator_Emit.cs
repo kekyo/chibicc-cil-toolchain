@@ -584,9 +584,46 @@ partial class CodeGenerator
 
     ///////////////////////////////////////////////////////////////////////////////
 
-    private ObjectFileInputFragment? LoadAndConsumeCAbiStartUpObjectIfRequired(
+    private bool TryLoadAndConsumeAdhocObject(
         InputFragment[] inputFragments,
-        string cabiStartUpObjectDirectoryPath)
+        string baseInputPath,
+        string relativePath,
+        TextReader objectReader,
+        out ObjectFileInputFragment fragment)
+    {
+        // Load this startup object file.
+        if (!ObjectFileInputFragment.TryLoad(
+            this.logger,
+            baseInputPath,
+            relativePath,
+            objectReader,
+            false,
+            out fragment))
+        {
+            return false;
+        }
+
+        // Step 1. Consume the object.
+        this.ConsumeFragment(fragment, inputFragments);
+        if (this.caughtError)
+        {
+            return false;
+        }
+
+        // Step 2. Consume scheduled object referring in archives.
+        this.ConsumeArchivedObject(inputFragments, false);
+        if (this.caughtError)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryLoadAndConsumeCAbiStartUpObjectIfRequired(
+        InputFragment[] inputFragments,
+        string cabiStartUpObjectDirectoryPath,
+        out ObjectFileInputFragment fragment)
     {
         // Search for a set of functions built on the target module,
         // and if a function that is considered to be a main function exists,
@@ -634,52 +671,58 @@ partial class CodeGenerator
             {
                 this.caughtError = true;
                 this.logger.Error($"Could not find CABI startup object: {fileName}");
-                return null;
+                fragment = null!;
+                return false;
             }
-            
-            using (var fs = ObjectStreamUtilities.OpenObjectStream(
+
+            using var fs = ObjectStreamUtilities.OpenObjectStream(
                 objectPath,
-                false))
+                false);
+
+            var tr = new StreamReader(fs, Encoding.UTF8, true);
+
+            if (!this.TryLoadAndConsumeAdhocObject(
+                inputFragments,
+                cabiStartUpObjectDirectoryPath,
+                fileName,
+                tr,
+                out fragment))
             {
-                var tr = new StreamReader(fs, Encoding.UTF8, true);
-                
-                // Load this startup object file.
-                if (!ObjectFileInputFragment.TryLoad(
-                    this.logger,
-                    cabiStartUpObjectDirectoryPath,
-                    fileName,
-                    tr,
-                    false,
-                    out var fragment))
-                {
-                    return null;
-                }
-               
-                // Step 1. Consume the object.
-                this.ConsumeFragment(fragment, inputFragments);
-                if (this.caughtError)
-                {
-                    return null;
-                }
-
-                // Step 2. Consume scheduled object referring in archives.
-                this.ConsumeArchivedObject(inputFragments, false);
-                if (this.caughtError)
-                {
-                    return null;
-                }
-
-                this.logger.Information($"Loaded CABI startup object: {fileName}");
-
-                return fragment;
+                return false;
             }
+
+            this.logger.Information($"Loaded CABI startup object: {fileName}");
+
+            return true;
         }
         else
         {
             this.logger.Warning("Could not find CABI startup function.");
         }
 
-        return null;
+        fragment = null!;
+        return false;
+    }
+    
+    private bool TryUnsafeGetMethod(
+        ModuleDefinition targetModule,
+        InputFragment[] inputFragments,
+        IdentityNode function,
+        out MethodReference method)
+    {
+        foreach (var fragment in inputFragments)
+        {
+            if (fragment.TryGetMethod(
+                function,
+                null,
+                targetModule,
+                out method))
+            {
+                return true;
+            }
+        }
+        method = null!;
+        return false;
     }
 
     private void AssignEntryPoint(
@@ -704,6 +747,35 @@ partial class CodeGenerator
         {
             this.caughtError = true;
             this.logger.Error($"Could not find any entry point.");
+        }
+    }
+
+    private void InsertPrependExecutionPath(
+        InputFragment[] inputFragments,
+        string[] prependExecutionSearchPaths,
+        MethodDefinition targetMethod)
+    {
+        if (this.TryUnsafeGetMethod(
+            targetModule,
+            inputFragments,
+            IdentityNode.Create("__prepend_path_env"),
+            out var m))
+        {
+            var method = targetModule.SafeImport(m);
+            var instructions = targetMethod.Body.Instructions;
+
+            foreach (var prependPath in prependExecutionSearchPaths.Reverse())
+            {
+                instructions.Insert(0, Instruction.Create(OpCodes.Ldstr, prependPath));
+                instructions.Insert(1, Instruction.Create(OpCodes.Call, method));
+
+                this.logger.Information($"Set prepend execution search path: {prependPath}");
+            }
+        }
+        else
+        {
+            this.caughtError = true;
+            this.logger.Error($"Could not find prepender implementation.");
         }
     }
 
@@ -741,7 +813,8 @@ partial class CodeGenerator
         InputFragment[] inputFragments,
         bool applyOptimization,
         bool isEmbeddingSourceFile,
-        LinkerCreationOptions? creationOptions)
+        LinkerCreationOptions? creationOptions,
+        string[] prependExecutionSearchPaths)
     {
         // Try add fundamental attributes.
         if (creationOptions != null)
@@ -779,16 +852,35 @@ partial class CodeGenerator
             co.AssemblyType != AssemblyTypes.Dll &&
             co.CAbiStartUpObjectDirectoryPath is { } cabiStartUpObjectDirectoryPath)
         {
-            if (this.LoadAndConsumeCAbiStartUpObjectIfRequired(
+            if (this.TryLoadAndConsumeCAbiStartUpObjectIfRequired(
                 inputFragments,
-                cabiStartUpObjectDirectoryPath) is { } fragment)
+                cabiStartUpObjectDirectoryPath,
+                out var fragment1))
             {
                 // Emit this object.
-                this.EmitMembers(fragment);
+                this.EmitMembers(fragment1);
 
                 // Invoke delayed looking ups.
                 this.InvokeDelayedLookingUps();
             }
+        }
+
+        // Assign entry point.
+        if (creationOptions is { } co2 &&
+            co2.AssemblyType != AssemblyTypes.Dll)
+        {
+            this.AssignEntryPoint(
+                co2.EntryPointSymbol);
+        }
+
+        // Insert prepend search path.
+        if (prependExecutionSearchPaths.Length >= 1 &&
+            targetModule.EntryPoint is { } targetMethod)
+        {
+            this.InsertPrependExecutionPath(
+                inputFragments,
+                prependExecutionSearchPaths,
+                targetMethod);
         }
 
         // Apply method optimization for all object fragments.
@@ -813,14 +905,6 @@ partial class CodeGenerator
         }
 
         Debug.Assert(this.delayDebuggingInsertionEntries.Count == 0);
-        
-        // Assign entry point.
-        if (creationOptions is { } co2 &&
-            co2.AssemblyType != AssemblyTypes.Dll)
-        {
-            this.AssignEntryPoint(
-                co2.EntryPointSymbol);
-        }
 
         // (Completed all CIL implementations in this place.)
 

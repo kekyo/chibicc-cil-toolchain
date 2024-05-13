@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using chibicc.toolchain.IO;
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Logging;
 using chibild.Generating;
 using chibild.Internal;
@@ -213,7 +214,7 @@ public sealed class CilLinker
 #endif
 
         fragments = loadedFragmentLists.
-            SelectMany(loadedFragments => loadedFragments).
+            SelectMany(loadedFragments => loadedFragments ?? CommonUtilities.Empty<InputFragment>()).
             ToArray();
         return caughtErrorCount == 0;
     }
@@ -394,7 +395,8 @@ public sealed class CilLinker
             loadedFragments,
             options.ApplyOptimization,
             options.DebugSymbolType == DebugSymbolTypes.Embedded,
-            options.CreationOptions))
+            options.CreationOptions,
+            options.PrependExecutionSearchPaths))
         {
             return false;
         }

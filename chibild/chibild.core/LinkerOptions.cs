@@ -225,6 +225,9 @@ public sealed class LinkerOptions
 
     public LinkerCreationOptions? CreationOptions =
         new();
+    
+    public string[] PrependExecutionSearchPaths =
+        CommonUtilities.Empty<string>();
 
     public bool IsDryRun = false;
 }

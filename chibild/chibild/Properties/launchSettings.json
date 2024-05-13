@@ -6,8 +6,8 @@
       //"workingDirectory": "/home/kouji/Projects/chibicc-cil-toolchain/chibild/chibild.core.Tests/artifacts"
       //"commandLineArgs": "-o foo -mnet6.0 -a /home/kouji/.dotnet/sdk/6.0.419/AppHostTemplate/apphost -L/home/kouji/Projects/libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.27 /home/kouji/Projects/libc-cil/crt0/crt0_i_v.s main.o foo.a -lc-bootstrap -lSystem.Private.CoreLib",
       //"workingDirectory": "/home/kouji/Projects/chibicc-cil/aaa",
-      "commandLineArgs": "-o conftest -m net6.0 -d/home/kouji/Projects/chibicc-cil-build/libc-cil/../libc-cil/libc-bootstrap/bin/Debug/netstandard2.0/crt0 -L/home/kouji/Projects/chibicc-cil-build/libc-cil/../libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.29 -lSystem.Private.CoreLib -lc /tmp/chibicc-gvfcYn -a /home/kouji/.dotnet/sdk/6.0.421/AppHostTemplate/apphost",
-      "workingDirectory": "/home/kouji/Projects/chibicc-cil-build/libc-cil/newlib/build"
+      "commandLineArgs": "-o test/alignof -m net6.0 -d/home/kouji/Projects/chibicc-cil-build/chibicc-cil/../libc-cil/libc-bootstrap/bin/Debug/netstandard2.0/crt0 -L/home/kouji/Projects/chibicc-cil-build/chibicc-cil/../libc-cil/libc-bootstrap/bin/Debug/netstandard2.0 -L/home/kouji/.dotnet/shared/Microsoft.NETCore.App/6.0.29 -lSystem.Private.CoreLib -lc test/alignof.o test/common.o -a /home/kouji/.dotnet/sdk/6.0.421/AppHostTemplate/apphost",
+      "workingDirectory": "/home/kouji/Projects/chibicc-cil-build/chibicc-cil-toolchain/chibild/chibild/bin/Debug/net6.0"
     }
   }
 }

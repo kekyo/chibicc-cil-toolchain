@@ -2980,4 +2980,19 @@ public sealed partial class LinkerTests
             injectToAssemblyPath);
         return Verify(actual);
     }
+
+    [Test]
+    public Task PrependSearchPath()
+    {
+        var combineToAssemblyPath = Path.Combine(
+            LinkerTestRunner.ArtifactsBasePath, "prependertestbed.dll");
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.1
+                ret",
+            assemblyType: AssemblyTypes.Exe,
+            prependExecutionSearchPaths: new[] { "aaa/bin", "bbb/bin" },
+            additionalReferencePaths: new[] { combineToAssemblyPath });
+        return Verify(actual);
+    }
 }
