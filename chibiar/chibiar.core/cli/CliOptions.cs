@@ -18,6 +18,7 @@ public enum ArchiveModes
 {
     Nothing,
     Add,
+    Update,
     Delete,
     List,
 }
@@ -59,6 +60,9 @@ public sealed class CliOptions
                 {
                     case 'r':
                         options.Mode = ArchiveModes.Add;
+                        break;
+                    case 'u':
+                        options.Mode = ArchiveModes.Update;
                         break;
                     case 'd':
                         options.Mode = ArchiveModes.Delete;
@@ -139,6 +143,7 @@ public sealed class CliOptions
     {
         tw.WriteLine("  -r                Add object files into the archive");
         tw.WriteLine("  -c                Add object files into the archive silently");
+        tw.WriteLine("  -u                Update object files");
         tw.WriteLine("  -s                Add symbol table");
         tw.WriteLine("  -d                Delete object files from the archive");
         tw.WriteLine("  -t                List object files in the archive");

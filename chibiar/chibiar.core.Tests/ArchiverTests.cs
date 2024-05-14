@@ -45,13 +45,14 @@ public sealed class ArchiverTests
             var archivePath = Path.Combine(basePath, "output.a");
             
             var archiver = new Archiver(logger);
-            var actual = archiver.Add(
+            var actual = archiver.Run(
                 archivePath,
                 SymbolTableModes.Auto,
                 new[]
                 {
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                 },
+                false,
                 false);
             
             Assert.That(actual, Is.EqualTo(AddResults.Created));
@@ -74,7 +75,7 @@ public sealed class ArchiverTests
             var archivePath = Path.Combine(basePath, "output.a");
             
             var archiver = new Archiver(logger);
-            var actual = archiver.Add(
+            var actual = archiver.Run(
                 archivePath,
                 SymbolTableModes.Auto,
                 new[]
@@ -82,9 +83,60 @@ public sealed class ArchiverTests
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                     Path.Combine(ArtifactsBasePath, "codegen.o"),
                 },
+                false,
                 false);
             
             Assert.That(actual, Is.EqualTo(AddResults.Created));
+
+            using var zip = ZipFile.OpenRead(archivePath);
+            
+            Assert.That(
+                zip.Entries.Select(e => e.Name),
+                Is.EqualTo(new[] { "parse.o", "codegen.o", ArchiverUtilities.SymbolTableFileName }));
+
+            await VerifySymbolTableAsync(zip);
+        });
+    }
+    
+    [Test]
+    public Task Update()
+    {
+        return RunAsync(async (basePath, logger) =>
+        {
+            var archivePath = Path.Combine(basePath, "output.a");
+            
+            var newCodegenPath = Path.Combine(basePath, "codegen.o");
+            
+            // It's made for dummy updated codegen.o.
+            File.Copy(
+                Path.Combine(ArtifactsBasePath, "tokenize.o"),
+                newCodegenPath);
+      
+            var archiver = new Archiver(logger);
+            var actual1 = archiver.Run(
+                archivePath,
+                SymbolTableModes.Auto,
+                new[]
+                {
+                    Path.Combine(ArtifactsBasePath, "parse.o"),
+                    Path.Combine(ArtifactsBasePath, "codegen.o"),
+                },
+                false,
+                false);
+            
+            Assert.That(actual1, Is.EqualTo(AddResults.Created));
+
+            var actual2 = archiver.Run(
+                archivePath,
+                SymbolTableModes.Auto,
+                new[]
+                {
+                    newCodegenPath,
+                },
+                true,   // update
+                false);
+            
+            Assert.That(actual2, Is.EqualTo(AddResults.Updated));
 
             using var zip = ZipFile.OpenRead(archivePath);
             

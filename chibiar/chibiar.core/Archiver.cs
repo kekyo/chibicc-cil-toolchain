@@ -74,18 +74,19 @@ public sealed class Archiver
             new GZipStream(ofs, CompressionLevel.Optimal) : ofs;
     }
 
-    internal AddResults Add(
+    internal AddResults Run(
         string archiveFilePath,
         SymbolTableModes symbolTableMode,
         string[] objectFilePaths,
+        bool isUpdateMode,
         bool isDryrun)
     {
-        var updated = File.Exists(archiveFilePath);
+        var isUpdateArchive = File.Exists(archiveFilePath);
         
         using var archive = isDryrun ?
             null : ZipFile.Open(
                 archiveFilePath,
-                updated ? ZipArchiveMode.Update : ZipArchiveMode.Create,
+                isUpdateArchive ? ZipArchiveMode.Update : ZipArchiveMode.Create,
                 Encoding.UTF8);
 
         var symbolLists = new SymbolList[objectFilePaths.Length];
@@ -103,21 +104,44 @@ public sealed class Archiver
                             var fileName = IsSourceFile(objectFilePath) ?
                                 (Path.GetFileNameWithoutExtension(objectFilePath) + ".o") :
                                 Path.GetFileName(objectFilePath);
+                            var dateTime = File.GetLastWriteTime(objectFilePath);
 
-                            var entry = archive.CreateEntry(
-                                fileName,
-                                CompressionLevel.NoCompression);  // ofs is already gzip compressed.
+                            if (isUpdateMode &&
+                                archive.Entries.FirstOrDefault(e => e.FullName == fileName) is { } entry)
+                            {
+                                if (entry.LastWriteTime < dateTime)
+                                {
+                                    entry.Delete();
+                                    
+                                    entry = archive.CreateEntry(
+                                        fileName,
+                                        CompressionLevel.NoCompression);  // ofs is already gzip compressed.
 
-                            entry.LastWriteTime = File.GetLastWriteTime(objectFilePath);
-                            
-                            using var afs = entry.Open();
-                            ofs.CopyTo(afs);
-                            
-                            afs.Flush();
+                                    entry.LastWriteTime = dateTime;
+                        
+                                    using var afs = entry.Open();
+                                    ofs.CopyTo(afs);
+                        
+                                    afs.Flush();
+                                }
+                            }
+                            else
+                            {
+                                entry = archive.CreateEntry(
+                                    fileName,
+                                    CompressionLevel.NoCompression);  // ofs is already gzip compressed.
+
+                                entry.LastWriteTime = dateTime;
+                        
+                                using var afs = entry.Open();
+                                ofs.CopyTo(afs);
+                        
+                                afs.Flush();
+                            }
                         }
                     }
 
-                    if (updated &&
+                    if (isUpdateArchive &&
                         symbolTableMode != SymbolTableModes.ForceIgnore &&
                         archive?.GetEntry(ArchiverUtilities.SymbolTableFileName) is { } symbolTableEntry)
                     {
@@ -145,7 +169,7 @@ public sealed class Archiver
             ArchiverUtilities.WriteSymbolTable(afs, symbolLists);
         }
 
-        return updated ? AddResults.Updated : AddResults.Created;
+        return isUpdateArchive ? AddResults.Updated : AddResults.Created;
     }
 
     public void Archive(CliOptions options)
@@ -153,10 +177,23 @@ public sealed class Archiver
         switch (options.Mode)
         {
             case ArchiveModes.Add:
-                if (this.Add(
+                if (this.Run(
                     options.ArchiveFilePath,
                     options.SymbolTableMode,
                     options.ObjectFilePaths.ToArray(),
+                    false,
+                    options.IsDryRun) == AddResults.Created &&
+                    !options.IsSilent)
+                {
+                    this.logger.Information($"creating {Path.GetFileName(options.ArchiveFilePath)}");
+                }
+                break;
+            case ArchiveModes.Update:
+                if (this.Run(
+                    options.ArchiveFilePath,
+                    options.SymbolTableMode,
+                    options.ObjectFilePaths.ToArray(),
+                    true,
                     options.IsDryRun) == AddResults.Created &&
                     !options.IsSilent)
                 {
