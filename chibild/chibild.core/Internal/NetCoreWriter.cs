@@ -7,12 +7,13 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
+using chibicc.toolchain.Logging;
 using System.Diagnostics;
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using chibicc.toolchain.Logging;
 
 namespace chibild.Internal;
 
@@ -52,7 +53,7 @@ internal static class NetCoreWriter
         Debug.Assert(co != null);
 
         var runtimeConfigJsonPath = Path.Combine(
-            Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath),
+            CommonUtilities.GetDirectoryPath(outputAssemblyCandidateFullPath),
             Path.GetFileNameWithoutExtension(outputAssemblyCandidateFullPath) + ".runtimeconfig.json");
 
         logger.Information(
@@ -111,7 +112,7 @@ internal static class NetCoreWriter
 
         var isPEImage = PEUtils.IsPEImage(ms);
         var outputFullPath = Path.Combine(
-            Utilities.GetDirectoryPath(outputAssemblyFullPath),
+            CommonUtilities.GetDirectoryPath(outputAssemblyFullPath),
             Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + (isPEImage ? ".exe" : ""));
 
         logger.Information(
@@ -138,7 +139,7 @@ internal static class NetCoreWriter
                 fs.Flush();
             }
 
-            if (!Utilities.IsInWindows)
+            if (!CommonUtilities.IsInWindows)
             {
                 while (true)
                 {

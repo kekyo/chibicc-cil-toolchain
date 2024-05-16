@@ -33,18 +33,10 @@ internal enum chmodFlags
 
 internal static class Utilities
 {
-    public static readonly bool IsInWindows =
-        Environment.OSVersion.Platform == PlatformID.Win32NT;
-
     public const int EINTR = 4;
     
     [DllImport("libc", SetLastError = true)]
     public static extern int chmod(string path, chmodFlags mode);
-
-    public static string GetDirectoryPath(string path) =>
-        Path.GetDirectoryName(path) is { } d ?
-            Path.GetFullPath(string.IsNullOrWhiteSpace(d) ? "." : d) :
-            Path.DirectorySeparatorChar.ToString();
 
 #if NETFRAMEWORK || NETSTANDARD2_0
     public static bool TryAdd<TKey, TValue>(

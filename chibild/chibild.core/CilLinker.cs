@@ -313,7 +313,7 @@ public sealed class CilLinker
             Concat(inputReferences.
                 OfType<LibraryPathReference>().
                 Where(ir => Path.GetExtension(ir.RelativePath) == ".dll").
-                Select(ir => Utilities.GetDirectoryPath(Path.Combine(baseInputPath, ir.RelativePath)))).
+                Select(ir => CommonUtilities.GetDirectoryPath(Path.Combine(baseInputPath, ir.RelativePath)))).
             Distinct().
             ToArray();
         
@@ -346,7 +346,7 @@ public sealed class CilLinker
         var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
         var outputAssemblyCandidateFullPath = requireAppHost?
             Path.Combine(
-                Utilities.GetDirectoryPath(outputAssemblyFullPath),
+                CommonUtilities.GetDirectoryPath(outputAssemblyFullPath),
                 Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + ".dll") :
             outputAssemblyFullPath;
 
@@ -412,7 +412,7 @@ public sealed class CilLinker
         }
 
         var outputAssemblyBasePath =
-            Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath);
+            CommonUtilities.GetDirectoryPath(outputAssemblyCandidateFullPath);
         try
         {
             if (!Directory.Exists(outputAssemblyBasePath))
@@ -490,7 +490,7 @@ public sealed class CilLinker
             if (cachedAssemblies.FirstOrDefault(
                 assembly => assembly.Name.Name == corlibName) is { } corlibAssembly)
             {
-                var corlibBasePath = Utilities.GetDirectoryPath(
+                var corlibBasePath = CommonUtilities.GetDirectoryPath(
                     corlibAssembly.MainModule.FileName);
 
                 requiredAssemblyBasePaths = requiredAssemblyBasePaths.
@@ -501,7 +501,7 @@ public sealed class CilLinker
             Parallel.ForEach(cachedAssemblies.
                 SelectMany(assembly => assembly.Modules).
                 Where(module => requiredAssemblyBasePaths.
-                    Contains(Utilities.GetDirectoryPath(module.FileName))),
+                    Contains(CommonUtilities.GetDirectoryPath(module.FileName))),
                 module =>
                 {
                     var tp = Path.Combine(
@@ -519,7 +519,7 @@ public sealed class CilLinker
                         foreach (var ext in new[] { ".pdb", ".mdb" })
                         {
                             var fp = Path.Combine(
-                                 Utilities.GetDirectoryPath(module.FileName),
+                                CommonUtilities.GetDirectoryPath(module.FileName),
                                  Path.GetFileNameWithoutExtension(module.FileName) + ext);
                             tp = Path.Combine(
                                 outputAssemblyBasePath,

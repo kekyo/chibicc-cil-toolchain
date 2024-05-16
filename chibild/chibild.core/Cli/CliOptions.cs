@@ -9,7 +9,6 @@
 
 using chibicc.toolchain.Internal;
 using chibicc.toolchain.Logging;
-using chibild.Internal;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -376,7 +375,7 @@ public sealed class CliOptions
                                 break;
                             case ObjectFilePathReference(var path):
                                 options.OutputAssemblyPath = Path.Combine(
-                                    Utilities.GetDirectoryPath(path),
+                                    CommonUtilities.GetDirectoryPath(path),
                                     Path.GetFileNameWithoutExtension(path) + ".dll");
                                 break;
                         }

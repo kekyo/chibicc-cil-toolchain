@@ -52,21 +52,27 @@ chibicc-toolchainは、以下のツールチェインプログラムで構成さ
 
 * chibias: CILアセンブラ
 * chibild: CILオブジェクトリンカ
+* chibiar: CILオブジェクトアーカイバ
 
 ![chibicc-toolchain overview](Images/toolchain.png)
 
 chibiasは、CILソースコード群('*.s')をほぼそのままオブジェクトファイル('*.o')として出力し、
 CILソースコードの実質的なアセンブル処理は、chibildが行います。
-従って、chibiasは構文チェックを行いません。
 
-chibiasとchibildの奇妙な挙動は、実装の制約によるものですが、
-ツールチェイン使用者にとって見れば、POSIXで想定されるasやldなどのツールチェインと対比させて使用方法を理解できるという強みがあります。
+* chibiasは、パーサーによる構文チェックを行いますが、シンボルの妥当性など細かい検査を行いません。
+* chibiasが出力するオブジェクトファイルは、実際には入力となるCILソースファイルをgzipで圧縮しただけです。
+  このことは、実際にオブジェクトファイルを `gzip -d` することで確かめることができます。
+* 同様に、chibiarが出力するアーカイブファイルは、実際にはシンボルテーブルファイルを含めたzipファイルです。
+  全く同様に、`unzip` コマンドで確かめることができます。
+
+このような、chibias, chibild, chibiarの奇妙な挙動は実装の制約によるものですが、
+ツールチェイン使用者にとって見れば、POSIXで想定されるas,ld,arなどのツールチェインと対比させて使用方法を理解できるという強みがあります。
 
 以降の説明では、CILアセンブリソースコードをchibildで直接使用して解説します。
 
 ### CILアセンブル処理
 
-chibildは、複数のCILオブジェクトファイル（ソースコード）を入力として、アセンブルを行い、
+chibildは、複数のCILオブジェクトファイル（またはCILソースファイル）を入力として、アセンブルを行い、
 結果を.NETアセンブリとして出力します。
 この時、参照アセンブリ群を指定して、オブジェクトファイルから参照出来るようにします。
 
@@ -82,13 +88,15 @@ chibildはchibiccのバックエンドアセンブラとして開発しました
 CLIバージョンのツールチェインを、nugetからインストール出来ます
 
 * chibias: [chibias-cli](https://www.nuget.org/packages/chibias-cli)
-* chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli)
+* chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli).
+* chibiar: [chibiar-cli](https://www.nuget.org/packages/chibiar-cli).
 
-(紛らわしいのですが、 'chibias-cil' や 'chibild-cil' ではありません :)
+(紛らわしいのですが、 'chibias-cil' ではありません :)
 
 ```bash
 $ dotnet tool install -g chibias-cli
 $ dotnet tool install -g chibild-cli
+$ dotnet tool install -g chibiar-cli
 ```
 
 使用可能になったかどうかは、以下のように確認できます:
@@ -132,7 +140,7 @@ usage: cil-ecma-chibild [options] <input path> [<input path> ...]
 
 * chibildの実際のコマンド名は、`cil-ecma-chibild` です。chibiarやchibiasも同様です。
   この命名規則は、GNU binutilsになぞらえたものです。
-* chibildは、コマンドラインで指摘された複数の入力ファイル（オブジェクト '*.o'、CILソース '*.s'）
+* chibildは、コマンドラインで指示された複数の入力ファイル（オブジェクト '*.o'、CILソース '*.s'）
   をアセンブルして、1つの.NETアセンブリにまとめます。
 * 参照ライブラリ名 `-l` は、アーカイブファイルパス ('*.a') を含めて、先頭から順に評価されます。
   この機能は、重複するシンボル(関数/グローバル変数)にも適用されます。

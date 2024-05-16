@@ -7,6 +7,8 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
+using chibicc.toolchain.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Mdb;
@@ -15,7 +17,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using chibicc.toolchain.Logging;
 
 namespace chibild.Internal;
 
@@ -44,7 +45,7 @@ internal sealed class MultipleSymbolReaderProvider : ISymbolReaderProvider
         where TSymbolReaderProvider : ISymbolReaderProvider
     {
         var path = Path.Combine(
-            Utilities.GetDirectoryPath(fullPath),
+            CommonUtilities.GetDirectoryPath(fullPath),
             Path.GetFileNameWithoutExtension(fullPath) + extension);
 
         try

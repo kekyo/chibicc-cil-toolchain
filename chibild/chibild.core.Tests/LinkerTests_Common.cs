@@ -7,7 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using chibild.Internal;
+using chibicc.toolchain.Internal;
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -33,7 +33,7 @@ partial class LinkerTests
                 var appHostTemplatePath = Path.GetFullPath(
                     Path.Combine(
                         LinkerTestRunner.ArtifactsBasePath,
-                        Utilities.IsInWindows ? "apphost.exe" : "apphost.linux-x64"));
+                        CommonUtilities.IsInWindows ? "apphost.exe" : "apphost.linux-x64"));
                 var tf = TargetFramework.TryParse(targetFrameworkMoniker, out var tf1) ?
                     tf1 : throw new InvalidOperationException();
                 return new()

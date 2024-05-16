@@ -9,6 +9,7 @@
 
 using System;
 using System.Globalization;
+using System.IO;
 
 #if NET45 || NET461
 using System.Collections.Generic;
@@ -50,7 +51,15 @@ namespace chibicc.toolchain.Internal
     internal static class CommonUtilities
     {
         private static readonly IFormatProvider invariantCulture = CultureInfo.InvariantCulture;
-        
+
+        public static readonly bool IsInWindows =
+            Environment.OSVersion.Platform == PlatformID.Win32NT;
+
+        public static string GetDirectoryPath(string path) =>
+            Path.GetDirectoryName(path) is { } d ?
+                Path.GetFullPath(string.IsNullOrWhiteSpace(d) ? "." : d) :
+                Path.DirectorySeparatorChar.ToString();
+
 #if NET40 || NET45
         private static class ArrayEmpty<T>
         {

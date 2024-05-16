@@ -55,22 +55,28 @@ chibicc-toolchain consists of the following toolchain programs:
 
 * chibias: A CIL assembler.
 * chibild: A CIL object linker.
+* chibild: A CIL object archiver.
 
 ![chibicc-toolchain overview](Images/toolchain.png)
 
 chibias outputs the CIL source code ('*.s') almost as is as an object file ('*.o'),
 and chibild performs the actual assembly process of the CIL source code.
-Therefore, chibias does not perform syntax checking.
 
-The strange behavior of chibias and chibild is due to implementation limitations.
+* chibias performs syntax checking by the parser, but does not perform detailed checking such as symbol validity.
+* The '*.o' file output by chibias is actually just a compression with gzip format of the input CIL source file.
+  This can be verified by actually `gzip -d` the object file.
+* Similarly, the '*.a' file output by chibiar is actually a zip file format including the symbol table file.
+  Exactly the same can be verified with the `unzip` command.
+
+The strange internal behavior of chibias, chibild and chibiar is due to implementation limitations.
 For toolchain users, the advantage is that they can contrast their usage with
-that of the "as" and "ld" toolchains expected on POSIX.
+that of the "as", "ld" and "ar" toolchains expected on POSIX.
 
 In the following sections, the CIL assembly source code is used directly in chibild.
 
 ### CIL assembling
 
-chibild takes multiple CIL object file (source codes) as input, performs assembly,
+chibild takes multiple CIL object file (or CIL source file) as input, performs assembly,
 and outputs the result as .NET assemblies.
 At this time, reference assemblies can be specified so that they can be referenced from the CIL object file.
 
@@ -87,12 +93,14 @@ Install CLI via nuget:
 
 * chibias: [chibias-cli](https://www.nuget.org/packages/chibias-cli)
 * chibild: [chibild-cli](https://www.nuget.org/packages/chibild-cli).
+* chibiar: [chibiar-cli](https://www.nuget.org/packages/chibiar-cli).
 
-* (It is not `chibias-cil` and `chibild-cil` :)
+* (It is NOT `chibias-cil` :)
 
 ```bash
 $ dotnet tool install -g chibias-cli
 $ dotnet tool install -g chibild-cli
+$ dotnet tool install -g chibiar-cli
 ```
 
 Then:
