@@ -13,7 +13,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chibiar.cli;
+using chibiar.Cli;
 using chibicc.toolchain.Archiving;
 using chibicc.toolchain.Internal;
 using chibicc.toolchain.IO;

@@ -8,7 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using chibicc.toolchain.Logging;
-using chibild.cli;
+using chibild.Cli;
 using System;
 using System.Runtime.InteropServices;
 

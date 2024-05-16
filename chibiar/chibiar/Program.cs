@@ -10,7 +10,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using chibiar.cli;
+using chibiar.Cli;
 using chibicc.toolchain.Logging;
 
 namespace chibiar;

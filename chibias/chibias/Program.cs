@@ -9,7 +9,7 @@
 
 using System;
 using System.Runtime.InteropServices;
-using chibias.cli;
+using chibias.Cli;
 using chibicc.toolchain.Logging;
 
 namespace chibias;

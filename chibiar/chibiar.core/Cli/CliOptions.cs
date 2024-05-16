@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.IO;
 using chibicc.toolchain.Logging;
 
-namespace chibiar.cli;
+namespace chibiar.Cli;
 
 public enum ArchiveModes
 {
