@@ -34,6 +34,8 @@ public sealed class CliOptions
         { "omit", RuntimeConfigurationOptions.Omit },
     };
 
+    private readonly string defaultTargetFrameworkMoniker;
+
     public string OutputAssemblyPath = null!;
     public readonly LinkerOptions LinkerOptions = new();
     public string? InjectToAssemblyPath;
@@ -42,15 +44,15 @@ public sealed class CliOptions
     public string BaseInputPath = Directory.GetCurrentDirectory();
     public InputReference[] InputReferences = CommonUtilities.Empty<InputReference>();
 
-    private CliOptions()
-    {
-    }
+    private CliOptions(string defaultTargetFrameworkMoniker) =>
+        this.defaultTargetFrameworkMoniker = defaultTargetFrameworkMoniker;
 
     public static CliOptions Parse(
         string[] args,
         string defaultTargetFrameworkMoniker)
     {
-        var options = new CliOptions();
+        var options = new CliOptions(defaultTargetFrameworkMoniker);
+        
         var libraryBasePaths = new List<string>();
         var inputReferences = new List<InputReference>();
         var prependExecutionSearchPaths = new List<string>();
@@ -106,7 +108,7 @@ public sealed class CliOptions
                                 continue;
                             }
                             break;
-                        case 'i':
+                        case 'j':
                             if (TryGetOptionArgument(args, ref index, out var path4))
                             {
                                 options.InjectToAssemblyPath = path4;
@@ -449,7 +451,7 @@ public sealed class CliOptions
         logger.Information($"IsDryRun={this.LinkerOptions.IsDryRun}");
     }
 
-    public static void WriteUsage(TextWriter tw)
+    public void WriteUsage(TextWriter tw)
     {
         tw.WriteLine("  -o <path>         Output assembly path");
         tw.WriteLine("  -shared, -mdll    Produce dll assembly");
@@ -457,7 +459,7 @@ public sealed class CliOptions
         tw.WriteLine("           -mwinexe Produce Windows executable assembly");
         tw.WriteLine("  -L <path>         Reference assembly base path");
         tw.WriteLine("  -l <name>         Reference assembly name");
-        tw.WriteLine("  -i <path>         Will inject into an assembly file");
+        tw.WriteLine("  -j <path>         Will inject into an assembly file");
         tw.WriteLine("  -g, -g2           Produce embedded debug symbol (defaulted)");
         tw.WriteLine("      -g1           Produce portable debug symbol file");
         tw.WriteLine("      -gm           Produce mono debug symbol file");
@@ -470,7 +472,7 @@ public sealed class CliOptions
         tw.WriteLine("  -e <symbol>       Entry point symbol (defaulted: _start)");
         tw.WriteLine("  -B <path>         Prepend execution search path");
         tw.WriteLine("  -v <version>      Apply assembly version (defaulted: 1.0.0.0)");
-        tw.WriteLine($"  -m <tfm>          Target framework moniker (defaulted: {ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker})");
+        tw.WriteLine($"  -m <tfm>          Target framework moniker (defaulted: {defaultTargetFrameworkMoniker})");
         tw.WriteLine("  -m <arch>         Target Windows architecture [AnyCPU|Preferred32Bit|X86|X64|IA64|ARM|ARMv7|ARM64] (defaulted: AnyCPU)");
         tw.WriteLine("  -m <rollforward>  CoreCLR rollforward configuration [Major|Minor|Feature|Patch|LatestMajor|LatestMinor|LatestFeature|LatestPatch|Disable|Default|Omit] (defaulted: Major)");
         tw.WriteLine("  -a <path>         .NET Core AppHost template path");
