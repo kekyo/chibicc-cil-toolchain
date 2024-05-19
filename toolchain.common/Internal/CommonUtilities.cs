@@ -179,19 +179,51 @@ namespace chibicc.toolchain.Internal
                  invariantCulture,
                  out value));
 
-        public static bool TryParseFloat32(string word, out float value) =>
-            float.TryParse(
-                word,
-                NumberStyles.Float,
-                invariantCulture,
-                out value);
+        public static bool TryParseFloat32(string word, out float value)
+        {
+            switch (word.ToLowerInvariant())
+            {
+                case "inf":
+                case "+inf":
+                    value = float.PositiveInfinity;
+                    return true;
+                case "-inf":
+                    value = float.NegativeInfinity;
+                    return true;
+                case "nan":
+                    value = float.NaN;
+                    return true;
+                default:
+                    return float.TryParse(
+                        word,
+                        NumberStyles.Float,
+                        invariantCulture,
+                        out value);
+            }
+        }
 
-        public static bool TryParseFloat64(string word, out double value) =>
-            double.TryParse(
-                word,
-                NumberStyles.Float,
-                invariantCulture,
-                out value);
+        public static bool TryParseFloat64(string word, out double value)
+        {
+            switch (word.ToLowerInvariant())
+            {
+                case "inf":
+                case "+inf":
+                    value = double.PositiveInfinity;
+                    return true;
+                case "-inf":
+                    value = double.NegativeInfinity;
+                    return true;
+                case "nan":
+                    value = double.NaN;
+                    return true;
+                default:
+                    return double.TryParse(
+                        word,
+                        NumberStyles.Float,
+                        invariantCulture,
+                        out value);
+            }
+        }
 
         public static bool TryParseEnum<TEnum>(string word, out TEnum value)
             where TEnum : struct, Enum =>
