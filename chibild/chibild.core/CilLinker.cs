@@ -429,6 +429,7 @@ public sealed class CilLinker
         if (File.Exists(outputAssemblyCandidateFullPath))
         {
             backupFilePath = outputAssemblyCandidateFullPath + ".bak";
+            File.Delete(backupFilePath);
             File.Move(outputAssemblyCandidateFullPath, backupFilePath);
         }
 
