@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -146,14 +147,19 @@ public sealed class Archiver
             Parallel.ForEach(objectNames,
                 (objectName, _, index) =>
                 {
-                    using var stream = ArchiverUtilities.OpenArchivedObject(
+                    if (ArchiverUtilities.TryOpenArchivedObject(
                         archiveFilePath,
-                        objectName);
-                
-                    var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(stream).
-                        ToArray();
+                        objectName,
+                        true,
+                        out var stream))
+                    {
+                        using var _s = stream;
+                        
+                        var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(stream).
+                            ToArray();
 
-                    symbolLists[index] = new(objectName, symbols);
+                        symbolLists[index] = new(objectName, symbols);
+                    }
                 });
         }
         else
@@ -196,6 +202,7 @@ public sealed class Archiver
     internal bool AddOrUpdate(
         string archiveFilePath,
         string[] objectFilePaths,
+        bool isCreateSymbolTable,
         bool isDryrun)
     {
         var isCreatedArchive = !File.Exists(archiveFilePath);
@@ -211,12 +218,71 @@ public sealed class Archiver
             objectNames,
             isDryrun);
 
-        AddSymbolTable(
-            archiveFilePath,
-            symbolLists,
-            isDryrun);
+        if (isCreateSymbolTable)
+        {
+            AddSymbolTable(
+                archiveFilePath,
+                symbolLists,
+                isDryrun);
+        }
 
         return isCreatedArchive;
+    }
+
+    internal void Extract(
+        string archiveFilePath,
+        string[] objectNames,
+        bool isDryrun)
+    {
+        if (!isDryrun || File.Exists(archiveFilePath))
+        {
+            Parallel.ForEach(objectNames,
+                objectName =>
+                {
+                    if (ArchiverUtilities.TryOpenArchivedObject(
+                        archiveFilePath,
+                        objectName,
+                        false,
+                        out var inputStream))
+                    {
+                        using var outputStream = isDryrun ?
+                            new MemoryStream() :
+                            StreamUtilities.OpenStream(objectName, true);
+    
+                        inputStream.CopyTo(outputStream);
+                        outputStream.Flush();
+                    }
+                    else
+                    {
+                        this.logger.Error($"Object is not found: {objectName}");
+                    }
+                });
+        }
+    }
+
+    internal void List(
+        string archiveFilePath,
+        string[] objectNames)
+    {
+        if (objectNames.Length >= 1)
+        {
+            var existObjectNames = new HashSet<string>(
+                ArchiverUtilities.EnumerateArchivedObjectNames(archiveFilePath));
+
+            foreach (var objectName in objectNames.
+                Where(existObjectNames.Contains))
+            {
+                Console.WriteLine(objectName);
+            }
+        }
+        else
+        {
+            foreach (var objectName in
+                ArchiverUtilities.EnumerateArchivedObjectNames(archiveFilePath))
+            {
+                Console.WriteLine(objectName);
+            }
+        }
     }
 
     public void Archive(CliOptions options)
@@ -226,12 +292,24 @@ public sealed class Archiver
             case ArchiveModes.AddOrUpdate:
                 if (this.AddOrUpdate(
                     options.ArchiveFilePath,
-                    options.ObjectFilePaths.ToArray(),
+                    options.ObjectNames.ToArray(),
+                    options.IsCreateSymbolTable,
                     options.IsDryRun) &&
                     !options.IsSilent)
                 {
                     this.logger.Information($"creating {Path.GetFileName(options.ArchiveFilePath)}");
                 }
+                break;
+            case ArchiveModes.Extract:
+                this.Extract(
+                    options.ArchiveFilePath,
+                    options.ObjectNames.ToArray(),
+                    options.IsDryRun);
+                break;
+            case ArchiveModes.List:
+                this.List(
+                    options.ArchiveFilePath,
+                    options.ObjectNames.ToArray());
                 break;
             default:
                 throw new NotImplementedException();

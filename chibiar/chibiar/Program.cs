@@ -23,7 +23,7 @@ public static class Program
         {
             var options = CliOptions.Parse(args);
 
-            if (options.ShowHelp || options.ObjectFilePaths.Count == 0)
+            if (options.ShowHelp)
             {
                 Console.WriteLine();
                 Console.WriteLine($"cil-ecma-chibiar [{ThisAssembly.AssemblyVersion},{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyMetadata.CommitId}]");

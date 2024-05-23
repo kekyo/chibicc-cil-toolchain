@@ -18,6 +18,7 @@ public enum ArchiveModes
 {
     Nothing,
     AddOrUpdate,
+    Extract,
     Delete,
     List,
 }
@@ -27,10 +28,11 @@ public sealed class CliOptions
     public string ArchiveFilePath = null!;
     public ArchiveModes Mode = ArchiveModes.Nothing;
     public bool IsSilent = false;
+    public bool IsCreateSymbolTable = true;
     public bool IsDryRun = false;
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
-    public readonly List<string> ObjectFilePaths = new();
+    public readonly List<string> ObjectNames = new();
 
     private CliOptions()
     {
@@ -60,6 +62,9 @@ public sealed class CliOptions
                     case 'u':
                         options.Mode = ArchiveModes.AddOrUpdate;
                         break;
+                    case 'x':
+                        options.Mode = ArchiveModes.Extract;
+                        break;
                     case 'd':
                         options.Mode = ArchiveModes.Delete;
                         break;
@@ -70,6 +75,10 @@ public sealed class CliOptions
                         options.IsSilent = true;
                         break;
                     case 's':
+                        options.IsCreateSymbolTable = true;
+                        break;
+                    case 'S':
+                        options.IsCreateSymbolTable = false;
                         break;
                     case 'h':
                         options.ShowHelp = true;
@@ -125,7 +134,7 @@ public sealed class CliOptions
 
         for (var index = 2; index < args.Length; index++)
         {
-            options.ObjectFilePaths.Add(Path.GetFullPath(args[index]));
+            options.ObjectNames.Add(args[index]);
         }
 
         return options;
@@ -134,9 +143,11 @@ public sealed class CliOptions
     public static void WriteUsage(TextWriter tw)
     {
         tw.WriteLine("  -r, -u            Add or update object files into the archive");
-        tw.WriteLine("  -c                Add object files into the archive silently");
-        tw.WriteLine("  -s                Add symbol table (Always enabled)");
+        tw.WriteLine("  -c                Create archive file silently");
+        tw.WriteLine("  -x                Extract object files from the archive");
         tw.WriteLine("  -d                Delete object files from the archive");
+        tw.WriteLine("  -s                Add symbol table (default)");
+        tw.WriteLine("  -S                Will not add symbol table");
         tw.WriteLine("  -t                List object files in the archive");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)");
         tw.WriteLine("      --dryrun      Need to dryrun");

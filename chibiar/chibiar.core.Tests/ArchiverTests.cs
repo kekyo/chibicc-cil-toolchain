@@ -7,6 +7,8 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Archiving;
+using chibicc.toolchain.Logging;
 using NUnit.Framework;
 using System;
 using System.IO;
@@ -14,8 +16,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chibicc.toolchain.Archiving;
-using chibicc.toolchain.Logging;
+
 using static VerifyNUnit.Verifier;
 using static chibiar.ArchiverTestRunner;
 
@@ -51,6 +52,7 @@ public sealed class ArchiverTests
                 {
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                 },
+                true,
                 false);
             
             Assert.That(actual, Is.True);
@@ -80,6 +82,7 @@ public sealed class ArchiverTests
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                     Path.Combine(ArtifactsBasePath, "codegen.o"),
                 },
+                true,
                 false);
             
             Assert.That(actual, Is.True);
@@ -116,6 +119,7 @@ public sealed class ArchiverTests
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                     Path.Combine(ArtifactsBasePath, "codegen.o"),
                 },
+                true,
                 false);
             
             Assert.That(actual1, Is.True);
@@ -126,6 +130,7 @@ public sealed class ArchiverTests
                 {
                     newCodegenPath,
                 },
+                true,
                 false);
             
             Assert.That(actual2, Is.False);
