@@ -17,8 +17,7 @@ namespace chibiar.Cli;
 public enum ArchiveModes
 {
     Nothing,
-    Add,
-    Update,
+    AddOrUpdate,
     Delete,
     List,
 }
@@ -28,7 +27,6 @@ public sealed class CliOptions
     public string ArchiveFilePath = null!;
     public ArchiveModes Mode = ArchiveModes.Nothing;
     public bool IsSilent = false;
-    public SymbolTableModes SymbolTableMode = SymbolTableModes.Auto;
     public bool IsDryRun = false;
     public LogLevels LogLevel = LogLevels.Warning;
     public bool ShowHelp = false;
@@ -59,10 +57,8 @@ public sealed class CliOptions
                 switch (arg0[index])
                 {
                     case 'r':
-                        options.Mode = ArchiveModes.Add;
-                        break;
                     case 'u':
-                        options.Mode = ArchiveModes.Update;
+                        options.Mode = ArchiveModes.AddOrUpdate;
                         break;
                     case 'd':
                         options.Mode = ArchiveModes.Delete;
@@ -74,10 +70,6 @@ public sealed class CliOptions
                         options.IsSilent = true;
                         break;
                     case 's':
-                        options.SymbolTableMode = SymbolTableModes.ForceUpdate;
-                        break;
-                    case 'S':
-                        options.SymbolTableMode = SymbolTableModes.ForceIgnore;
                         break;
                     case 'h':
                         options.ShowHelp = true;
@@ -141,10 +133,9 @@ public sealed class CliOptions
 
     public static void WriteUsage(TextWriter tw)
     {
-        tw.WriteLine("  -r                Add object files into the archive");
+        tw.WriteLine("  -r, -u            Add or update object files into the archive");
         tw.WriteLine("  -c                Add object files into the archive silently");
-        tw.WriteLine("  -u                Update object files");
-        tw.WriteLine("  -s                Add symbol table");
+        tw.WriteLine("  -s                Add symbol table (Always enabled)");
         tw.WriteLine("  -d                Delete object files from the archive");
         tw.WriteLine("  -t                List object files in the archive");
         tw.WriteLine("      --log <level> Log level [debug|trace|information|warning|error|silent] (defaulted: warning)");

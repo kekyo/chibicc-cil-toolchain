@@ -45,17 +45,15 @@ public sealed class ArchiverTests
             var archivePath = Path.Combine(basePath, "output.a");
             
             var archiver = new Archiver(logger);
-            var actual = archiver.Run(
+            var actual = archiver.AddOrUpdate(
                 archivePath,
-                SymbolTableModes.Auto,
                 new[]
                 {
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                 },
-                false,
                 false);
             
-            Assert.That(actual, Is.EqualTo(AddResults.Created));
+            Assert.That(actual, Is.True);
 
             using var zip = ZipFile.OpenRead(archivePath);
             
@@ -75,18 +73,16 @@ public sealed class ArchiverTests
             var archivePath = Path.Combine(basePath, "output.a");
             
             var archiver = new Archiver(logger);
-            var actual = archiver.Run(
+            var actual = archiver.AddOrUpdate(
                 archivePath,
-                SymbolTableModes.Auto,
                 new[]
                 {
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                     Path.Combine(ArtifactsBasePath, "codegen.o"),
                 },
-                false,
                 false);
             
-            Assert.That(actual, Is.EqualTo(AddResults.Created));
+            Assert.That(actual, Is.True);
 
             using var zip = ZipFile.OpenRead(archivePath);
             
@@ -113,30 +109,26 @@ public sealed class ArchiverTests
                 newCodegenPath);
       
             var archiver = new Archiver(logger);
-            var actual1 = archiver.Run(
+            var actual1 = archiver.AddOrUpdate(
                 archivePath,
-                SymbolTableModes.Auto,
                 new[]
                 {
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                     Path.Combine(ArtifactsBasePath, "codegen.o"),
                 },
-                false,
                 false);
             
-            Assert.That(actual1, Is.EqualTo(AddResults.Created));
+            Assert.That(actual1, Is.True);
 
-            var actual2 = archiver.Run(
+            var actual2 = archiver.AddOrUpdate(
                 archivePath,
-                SymbolTableModes.Auto,
                 new[]
                 {
                     newCodegenPath,
                 },
-                true,   // update
                 false);
             
-            Assert.That(actual2, Is.EqualTo(AddResults.Updated));
+            Assert.That(actual2, Is.False);
 
             using var zip = ZipFile.OpenRead(archivePath);
             
