@@ -22,7 +22,7 @@ namespace chibicc.toolchain.Archiving;
 
 public static class ArchiverUtilities
 {
-    public static readonly string SymbolTableFileName = "__symtable$";
+    public static readonly string SymbolTableFileName = "__.SYMDEF";
     
     private enum ObjectSymbolStates
     {
