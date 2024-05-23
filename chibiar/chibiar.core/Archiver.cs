@@ -106,7 +106,7 @@ public sealed class Archiver
                                 Path.GetFileName(objectFilePath);
                             var dateTime = File.GetLastWriteTime(objectFilePath);
 
-                            if (isUpdateMode &&
+                            if (isUpdateMode && isUpdateArchive &&
                                 archive.Entries.FirstOrDefault(e => e.FullName == fileName) is { } entry)
                             {
                                 if (entry.LastWriteTime < dateTime)
