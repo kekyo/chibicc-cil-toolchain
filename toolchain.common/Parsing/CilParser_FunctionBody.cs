@@ -21,17 +21,8 @@ namespace chibicc.toolchain.Parsing;
 
 partial class CilParser
 {
-    // TODO: static generating from Mono.Cecil.
     private static readonly Dictionary<string, OpCode> opCodes =
-        typeof(OpCodes).GetFields().
-            Where(field =>
-                field.IsPublic && field.IsStatic && field.IsInitOnly &&
-                field.FieldType.FullName == "System.Reflection.Emit.OpCode").
-            Select(field => (OpCode)field.GetValue(null)!).
-            Where(opCode => opCode.OpCodeType != OpCodeType.Nternal).
-            ToDictionary(
-                opCode => opCode.Name!.Replace('_', '.').TrimEnd('.').ToLowerInvariant(),
-                StringComparer.OrdinalIgnoreCase);
+        ReflectionEmitDefinition.GetOpCodes();
 
     private static readonly HashSet<string> isArgumentIndirectingOpCode =
         new(opCodes.Where(entry =>

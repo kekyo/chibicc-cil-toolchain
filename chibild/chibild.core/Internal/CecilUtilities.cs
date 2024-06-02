@@ -20,7 +20,8 @@ namespace chibild.Internal;
 
 internal static class CecilUtilities
 {
-    private static readonly Dictionary<string, OpCode> opCodes;
+    private static readonly Dictionary<string, OpCode> opCodes =
+        CecilDefinition.GetOpCodes();
 
     private static readonly HashSet<char> invalidMemberNameChars = new()
     {
@@ -33,34 +34,13 @@ internal static class CecilUtilities
         '\u0018', '\u0019', '\u001a', '\u001b', '\u001c', '\u001d', '\u001e', '\u001f',
     };
 
+#if DEBUG
     static CecilUtilities()
     {
         var translator = CilParser.GetOpCodeTranslator();
-
-        opCodes = typeof(OpCodes).GetFields().
-            Where(field =>
-                field.IsPublic && field.IsStatic && field.IsInitOnly &&
-                field.FieldType.FullName == "Mono.Cecil.Cil.OpCode").
-            Select(field =>
-            {
-                var opCode = (OpCode)field.GetValue(null)!;
-
-                // Verify between Cecil's opcode and Reflection.Emit opcode.
-                if (!translator.TryGetValue(opCode.Value, out var name))
-                {
-                    name = null;
-                }
-
-                return (name, opCode);
-            }).
-            Where(entry => entry.name != null && entry.opCode.OpCodeType != OpCodeType.Nternal).
-            ToDictionary(
-                entry => entry.name!,
-                entry => entry.opCode,
-                StringComparer.OrdinalIgnoreCase);
-
         Debug.Assert(translator.All(t => opCodes.ContainsKey(t.Value)));
     }
+#endif
 
     public static string SanitizeFileNameToMemberName(string fileName)
     {
