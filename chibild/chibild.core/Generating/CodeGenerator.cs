@@ -188,26 +188,28 @@ internal sealed partial class CodeGenerator
                 }
             }
 #else
-            Parallel.ForEach(inputFragments, currentFragment =>
-            {
-                if (currentFragment is ArchivedObjectInputFragment afif)
+            Parallel.ForEach(inputFragments,
+                new() { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) },
+                currentFragment =>
                 {
-                    switch (afif.LoadObjectIfRequired(
-                        this.logger,
-                        isLocationOriginSource))
+                    if (currentFragment is ArchivedObjectInputFragment afif)
                     {
-                        case ArchivedObjectInputFragment.LoadObjectResults.Loaded:
-                            found = true;
-                            this.ConsumeFragment(afif, inputFragments);
-                            break;
-                        case ArchivedObjectInputFragment.LoadObjectResults.Ignored:
-                            break;
-                        default:
-                            this.caughtError = true;
-                            break;
+                        switch (afif.LoadObjectIfRequired(
+                            this.logger,
+                            isLocationOriginSource))
+                        {
+                            case ArchivedObjectInputFragment.LoadObjectResults.Loaded:
+                                found = true;
+                                this.ConsumeFragment(afif, inputFragments);
+                                break;
+                            case ArchivedObjectInputFragment.LoadObjectResults.Ignored:
+                                break;
+                            default:
+                                this.caughtError = true;
+                                break;
+                        }
                     }
-                }
-            });
+                });
 #endif
         }
         while (found && !this.caughtError);
@@ -228,14 +230,16 @@ internal sealed partial class CodeGenerator
             this.ConsumeFragment(currentFragment, inputFragments);
         }
 #else
-        Parallel.ForEach(inputFragments, currentFragment =>
-        {
-            if (currentFragment is ObjectInputFragment ofif &&
-                ofif is not ArchivedObjectInputFragment)
+        Parallel.ForEach(inputFragments,
+            new() { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) },
+            currentFragment =>
             {
-                this.ConsumeFragment(ofif, inputFragments);
-            }
-        });
+                if (currentFragment is ObjectInputFragment ofif &&
+                    ofif is not ArchivedObjectInputFragment)
+                {
+                    this.ConsumeFragment(ofif, inputFragments);
+                }
+            });
 #endif
         if (this.caughtError)
         {

@@ -43,6 +43,7 @@ public sealed class Assembler
         {
             () =>
             {
+                // Checking only parsing.
                 using (var inputStream = StreamUtilities.OpenStream(sourceFilePath, false))
                 {
                     var tr = new StreamReader(inputStream, Encoding.UTF8, true);
@@ -61,6 +62,7 @@ public sealed class Assembler
             },
             () =>
             {
+                // Convert source code to object file.
                 using var outputStream = isDryrun ?
                     null : ObjectStreamUtilities.OpenObjectStream(outputTemporaryFilePath, true);
 

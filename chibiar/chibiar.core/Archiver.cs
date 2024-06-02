@@ -145,6 +145,7 @@ public sealed class Archiver
         if (!isDryrun || File.Exists(archiveFilePath))
         {
             Parallel.ForEach(objectNames,
+                new() { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) },
                 (objectName, _, index) =>
                 {
                     if (ArchiverUtilities.TryOpenArchivedObject(
@@ -237,6 +238,7 @@ public sealed class Archiver
         if (!isDryrun || File.Exists(archiveFilePath))
         {
             Parallel.ForEach(objectNames,
+                new() { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) },
                 objectName =>
                 {
                     if (ArchiverUtilities.TryOpenArchivedObject(
