@@ -45,93 +45,117 @@ public sealed class Archiver
             (Path.GetFileNameWithoutExtension(objectFilePath) + ".o") :
             Path.GetFileName(objectFilePath);
         
-    private static string[] AddOrUpdateObjectFiles(
+    private static bool TryAddOrUpdateObjectFiles(
         string archiveFilePath,
-        bool isCreatedArchive,
+        string outputArchiveFilePath,
         string[] objectFilePaths,
-        bool isDryrun)
+        bool isDryrun,
+        out string[] outputObjectNames)
     {
         if (!isDryrun)
         {
-            if (isCreatedArchive)
-            {
-                using var a = ZipFile.Open(
-                    archiveFilePath,
-                    ZipArchiveMode.Create,
-                    Encoding.UTF8);
-            }
-            
-            using var archive = ZipFile.Open(
-                archiveFilePath,
-                ZipArchiveMode.Update,
-                Encoding.UTF8);
-        
-            if (!isCreatedArchive &&
-                archive.Entries.FirstOrDefault(entry =>
-                    entry.Name == ArchiverUtilities.SymbolTableFileName) is { } symbolTableEntry)
-            {
-                symbolTableEntry.Delete();
-            }
-
-            var entries = archive.Entries.
-                ToDictionary(entry => entry.Name);
-
-            foreach (var objectFilePath in objectFilePaths)
-            {
-                var objectName = GetObjectName(objectFilePath);
-                if (entries.TryGetValue(objectName, out var entry))
-                {
-                    var lastWriteTime = File.GetLastWriteTime(objectFilePath);
-                    if (lastWriteTime <= entry.LastWriteTime)
-                    {
-                        continue;
-                    }
-                    entry.Delete();
-                }
-
-                entry = archive.CreateEntry(
-                    objectName,
-                    CompressionLevel.NoCompression);
-
-                using var outputStream = entry.Open();
-                using var inputStream = OpenObjectStreamToCompressed(objectFilePath);
-        
-                inputStream.CopyTo(outputStream);
-                outputStream.Flush();
-            }
-            
-            return archive.Entries.
-                Select(entry => entry.Name).
+            var objectNames = objectFilePaths.
+                Select(GetObjectName).
                 ToArray();
-        }
-        else if (!isCreatedArchive)
-        {
-            using var archive = ZipFile.Open(
-                archiveFilePath,
-                ZipArchiveMode.Read,
+            
+            using var outputArchive = ZipFile.Open(
+                outputArchiveFilePath,
+                ZipArchiveMode.Create,
                 Encoding.UTF8);
-        
-            var entries = archive.Entries.
-                Select(entry => entry.Name).
-                ToList();
-            entries.Remove(ArchiverUtilities.SymbolTableFileName);
+            
+            using var readArchive = File.Exists(archiveFilePath) ?
+                ZipFile.Open(
+                    archiveFilePath,
+                    ZipArchiveMode.Read,
+                    Encoding.UTF8) :
+                null;
 
-            foreach (var objectFilePath in objectFilePaths)
+            var outputObjectNameList = new List<string>();
+            var isReplaced = new bool[objectFilePaths.Length];
+      
+            foreach (var readEntry in
+                 readArchive?.Entries.AsEnumerable() ??
+                 CommonUtilities.Empty<ZipArchiveEntry>())
             {
-                var objectName = GetObjectName(objectFilePath);
-                if (!entries.Contains(objectName))
+                if (readEntry.Name != ArchiverUtilities.SymbolTableFileName)
                 {
-                    entries.Add(objectName);
+                    outputObjectNameList.Add(readEntry.Name);
+                
+                    var index = Array.IndexOf(objectNames, readEntry.Name);
+                    if (index >= 0)
+                    {
+                        var objectFilePath = objectFilePaths[index];
+                        var objectLastWriteTime = File.GetLastWriteTime(objectFilePath);
+
+                        if (objectLastWriteTime > readEntry.LastWriteTime)
+                        {
+                            var objectName = objectNames[index];
+
+                            var outputEntry = outputArchive.CreateEntry(
+                                objectName, CompressionLevel.NoCompression);
+
+                            outputEntry.LastWriteTime = objectLastWriteTime;
+
+                            using var outputStream = outputEntry.Open();
+                            using var readStream = OpenObjectStreamToCompressed(objectFilePath);
+                        
+                            readStream.CopyTo(outputStream);
+                            outputStream.Flush();
+
+                            isReplaced[index] = true;
+                            continue;
+                        }
+                    }
+
+                    if (readEntry.Name != ArchiverUtilities.SymbolTableFileName)
+                    {
+                        var outputEntry = outputArchive.CreateEntry(
+                            readEntry.Name, CompressionLevel.NoCompression);
+
+                        outputEntry.LastWriteTime = readEntry.LastWriteTime;
+
+                        using var outputStream = outputEntry.Open();
+                        using var readStream = readEntry.Open();
+                        
+                        readStream.CopyTo(outputStream);
+                        outputStream.Flush();
+                    }
                 }
             }
 
-            return entries.ToArray();
+            for (var index = 0; index < objectFilePaths.Length; index++)
+            {
+                if (!isReplaced[index])
+                {
+                    var objectFilePath = objectFilePaths[index];
+                    var objectLastWriteTime = File.GetLastWriteTime(objectFilePath);
+
+                    var objectName = objectNames[index];
+                    outputObjectNameList.Add(objectName);
+
+                    var outputEntry = outputArchive.CreateEntry(
+                        objectName, CompressionLevel.NoCompression);
+
+                    outputEntry.LastWriteTime = objectLastWriteTime;
+
+                    using var outputStream = outputEntry.Open();
+                    using var readStream = OpenObjectStreamToCompressed(objectFilePath);
+                        
+                    readStream.CopyTo(outputStream);
+                    outputStream.Flush();
+                }
+            }
+            
+            outputObjectNames = outputObjectNameList.
+                ToArray();
+            return readArchive == null;
         }
         else
         {
-            return objectFilePaths.
+            outputObjectNames = objectFilePaths.
                 Select(GetObjectName).
                 ToArray();
+            return false;
         }
     }
 
@@ -206,28 +230,43 @@ public sealed class Archiver
         bool isCreateSymbolTable,
         bool isDryrun)
     {
-        var isCreatedArchive = !File.Exists(archiveFilePath);
+        var outputArchiveFilePath = archiveFilePath + $"_{Guid.NewGuid():N}";
 
-        var objectNames = AddOrUpdateObjectFiles(
-            archiveFilePath,
-            isCreatedArchive,
-            objectFilePaths,
-            isDryrun);
-
-        var symbolLists = GetSymbolLists(
-            archiveFilePath,
-            objectNames,
-            isDryrun);
-
-        if (isCreateSymbolTable)
+        try
         {
-            AddSymbolTable(
+            if (TryAddOrUpdateObjectFiles(
                 archiveFilePath,
-                symbolLists,
-                isDryrun);
+                outputArchiveFilePath,
+                objectFilePaths,
+                isDryrun,
+                out var outputObjectNames))
+            {
+                var symbolLists = GetSymbolLists(
+                    outputArchiveFilePath,
+                    outputObjectNames,
+                    isDryrun);
+
+                if (isCreateSymbolTable)
+                {
+                    AddSymbolTable(
+                        outputArchiveFilePath,
+                        symbolLists,
+                        isDryrun);
+                }
+            
+                File.Delete(archiveFilePath);
+                File.Move(outputArchiveFilePath, archiveFilePath);
+
+                return true;
+            }
+        }
+        catch
+        {
+            File.Delete(outputArchiveFilePath);
+            throw;
         }
 
-        return isCreatedArchive;
+        return false;
     }
 
     internal void Extract(
