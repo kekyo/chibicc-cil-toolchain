@@ -23,6 +23,7 @@ using static chibiar.ArchiverTestRunner;
 namespace chibiar;
 
 [TestFixture]
+[Parallelizable(ParallelScope.All)]
 public sealed class ArchiverTests
 {
     private static async Task VerifySymbolTableAsync(ZipArchive zip)

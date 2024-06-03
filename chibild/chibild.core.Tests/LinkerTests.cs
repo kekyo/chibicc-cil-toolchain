@@ -17,6 +17,7 @@ using static VerifyNUnit.Verifier;
 namespace chibild;
 
 [TestFixture]
+[Parallelizable(ParallelScope.All)]
 public sealed partial class LinkerTests
 {
     [Test]
