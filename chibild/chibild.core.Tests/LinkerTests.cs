@@ -17,6 +17,7 @@ using static VerifyNUnit.Verifier;
 namespace chibild;
 
 [TestFixture]
+[Parallelizable(ParallelScope.All)]
 public sealed partial class LinkerTests
 {
     [Test]
@@ -2978,6 +2979,21 @@ public sealed partial class LinkerTests
                 conv.i4
                 ret",
             injectToAssemblyPath);
+        return Verify(actual);
+    }
+
+    [Test]
+    public Task PrependSearchPath()
+    {
+        var combineToAssemblyPath = Path.Combine(
+            LinkerTestRunner.ArtifactsBasePath, "prependertestbed.dll");
+        var actual = Run(@"
+            .function public int32() main
+                ldc.i4.1
+                ret",
+            assemblyType: AssemblyTypes.Exe,
+            prependExecutionSearchPaths: new[] { "aaa/bin", "bbb/bin" },
+            additionalReferencePaths: new[] { combineToAssemblyPath });
         return Verify(actual);
     }
 }

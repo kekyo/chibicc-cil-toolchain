@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using System;
 using chibicc.toolchain.Internal;
 using chibicc.toolchain.Parsing;
 using chibicc.toolchain.Tokenizing;
@@ -22,7 +23,7 @@ namespace chibicc.toolchain.Archiving;
 
 public static class ArchiverUtilities
 {
-    public static readonly string SymbolTableFileName = "__symtable$";
+    public static readonly string SymbolTableFileName = "__.SYMDEF";
     
     private enum ObjectSymbolStates
     {
@@ -235,16 +236,39 @@ public static class ArchiverUtilities
         }
     }
 
-    public static Stream OpenArchivedObject(string archiveFilePath, string objectName)
+    public static bool TryOpenArchivedObject(
+        string archiveFilePath,
+        string objectName,
+        bool is_decoded_body,
+        out Stream stream)
     {
         var archive = ZipFile.Open(
             archiveFilePath,
             ZipArchiveMode.Read,
             Encoding.UTF8);
 
-        var zs = archive.GetEntry(objectName)!.Open();
-        var ofs = new GZipStream(zs, CompressionMode.Decompress);
+        try
+        {
+            if (archive.GetEntry(objectName) is { } entry)
+            {
+                var ofs = is_decoded_body ?
+                    new GZipStream(entry.Open(), CompressionMode.Decompress) :
+                    entry.Open();
 
-        return new ArchiveObjectStream(archive, ofs);
+                stream = new ArchiveObjectStream(archive, ofs);
+                return true;
+            }
+            else
+            {
+                archive.Dispose();
+                stream = null!;
+                return false;
+            }
+        }
+        catch
+        {
+            archive.Dispose();
+            throw;
+        }
     }
 }

@@ -7,9 +7,12 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using System.Runtime.CompilerServices;
-
-[assembly: InternalsVisibleTo("chibiar.core")]
-[assembly: InternalsVisibleTo("chibias.core")]
-[assembly: InternalsVisibleTo("chibild.core")]
-[assembly: InternalsVisibleTo("chibild.core.Tests")]
+namespace C
+{
+    public static class text
+    {
+        public static void __prepend_path_env(string path)
+        {
+        }
+    }
+}

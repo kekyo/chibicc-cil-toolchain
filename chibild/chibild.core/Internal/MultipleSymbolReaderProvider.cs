@@ -7,6 +7,9 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
+using chibicc.toolchain.IO;
+using chibicc.toolchain.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Mdb;
@@ -15,7 +18,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using chibicc.toolchain.Logging;
 
 namespace chibild.Internal;
 
@@ -44,7 +46,7 @@ internal sealed class MultipleSymbolReaderProvider : ISymbolReaderProvider
         where TSymbolReaderProvider : ISymbolReaderProvider
     {
         var path = Path.Combine(
-            Utilities.GetDirectoryPath(fullPath),
+            CommonUtilities.GetDirectoryPath(fullPath),
             Path.GetFileNameWithoutExtension(fullPath) + extension);
 
         try
@@ -52,17 +54,16 @@ internal sealed class MultipleSymbolReaderProvider : ISymbolReaderProvider
             if (File.Exists(path))
             {
                 var ms = new MemoryStream();
-                using (var mdbStream = new FileStream(
-                    path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var stream = StreamUtilities.OpenStream(path, false))
                 {
-                    mdbStream.CopyTo(ms);
+                    stream.CopyTo(ms);
                 }
                 ms.Position = 0;
 
                 var sr = provider.GetSymbolReader(module, ms);
                 if (this.loaded.Add(path))
                 {
-                    this.logger.Debug($"Symbol loaded from: {path}");
+                    this.logger.Debug($"Debug symbol is loaded from: {path}");
                 }
                 
                 return sr;
@@ -97,7 +98,7 @@ internal sealed class MultipleSymbolReaderProvider : ISymbolReaderProvider
                             var sr = embeddedProvider.GetSymbolReader(module, fullPath);
                             if (this.loaded.Add(fullPath))
                             {
-                                this.logger.Debug($"Embedded symbol loaded from: {fullPath}");
+                                this.logger.Debug($"Embedded debug symbol is loaded from: {fullPath}");
                             }
 
                             return sr;
@@ -118,7 +119,7 @@ internal sealed class MultipleSymbolReaderProvider : ISymbolReaderProvider
 
                     if (this.notFound.Add(fileName))
                     {
-                        this.logger.Trace($"Symbol not found: {fileName}");
+                        this.logger.Trace($"Debug symbol is not found: {fileName}");
                     }
                 }
             }

@@ -7,7 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using chibild.Internal;
+using chibicc.toolchain.Internal;
 using System;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -21,17 +21,19 @@ partial class LinkerTests
         string[]? additionalReferencePaths = null,
         AssemblyTypes assemblyType = AssemblyTypes.Dll,
         string targetFrameworkMoniker = "net45",
-        [CallerMemberName] string memberName = null!) =>
+        string[]? prependExecutionSearchPaths = null,
+         [CallerMemberName] string memberName = null!) =>
         LinkerTestRunner.RunCore(
             chibildSourceCodes,
             additionalReferencePaths,
             null,
+            prependExecutionSearchPaths,
             () =>
             {
                 var appHostTemplatePath = Path.GetFullPath(
                     Path.Combine(
                         LinkerTestRunner.ArtifactsBasePath,
-                        Utilities.IsInWindows ? "apphost.exe" : "apphost.linux-x64"));
+                        CommonUtilities.IsInWindows ? "apphost.exe" : "apphost.linux-x64"));
                 var tf = TargetFramework.TryParse(targetFrameworkMoniker, out var tf1) ?
                     tf1 : throw new InvalidOperationException();
                 return new()
@@ -49,12 +51,14 @@ partial class LinkerTests
         string[]? additionalReferencePaths = null,
         AssemblyTypes assemblyType = AssemblyTypes.Dll,
         string targetFrameworkMoniker = "net45",
+        string[]? prependExecutionSearchPaths = null,
         [CallerMemberName] string memberName = null!) =>
         this.Run(
             new[] { chibildSourceCode },
             additionalReferencePaths,
             assemblyType,
             targetFrameworkMoniker,
+            prependExecutionSearchPaths,
             memberName);
 
     private string RunInjection(
@@ -66,6 +70,7 @@ partial class LinkerTests
             new[] { chibildSourceCode },
             additionalReferencePaths,
             injectToAssemblyPath,
+            null,
             () => null,
             memberName);
 }

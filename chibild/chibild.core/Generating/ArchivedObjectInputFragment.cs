@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using System;
 using chibicc.toolchain.Archiving;
 using chibicc.toolchain.Parsing;
 using chibicc.toolchain.Logging;
@@ -179,9 +180,18 @@ internal sealed class ArchivedObjectInputFragment :
         {
             logger.Information($"Loading: {this.ObjectPath}");
 
-            using var stream = ArchiverUtilities.OpenArchivedObject(
+            if (!ArchiverUtilities.TryOpenArchivedObject(
                 Path.Combine(this.BaseInputPath, this.RelativePath),
-                this.archivedObjectName);
+                this.archivedObjectName,
+                true,
+                out var stream))
+            {
+                logger.Error(
+                    $"Unable find an object on archive: ObjectName={this.archivedObjectName}, ArchiveFile={this.RelativePath}");
+                return LoadObjectResults.CaughtError;
+            }
+
+            using var _s = stream;
             var tr = new StreamReader(stream, Encoding.UTF8, true);
 
             var parser = new CilParser(logger);

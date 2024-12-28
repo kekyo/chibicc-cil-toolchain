@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using chibicc.toolchain.IO;
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Logging;
 using chibild.Generating;
 using chibild.Internal;
@@ -156,11 +157,8 @@ public sealed class CilLinker
                             this.logger,
                             baseInputPath,
                             relativePath,
-                            // Create this assembly specific resolver,
-                            // because shared resolver can not resolve on multi-threaded context.
-                            // At the cost of having to load it again later in the primary assembly resolver.
                             this.CreateAssemblyResolver(
-                                ReadingMode.Immediate,
+                                ReadingMode.Deferred,
                                 assemblyReferenceBasePaths)),
                     };
                     break;
@@ -193,11 +191,8 @@ public sealed class CilLinker
                                 this.logger,
                                 foundEntry.basePath,
                                 foundEntry.fileName,
-                                // Create this assembly specific resolver,
-                                // because shared resolver can not resolve on multi-threaded context.
-                                // At the cost of having to load it again later in the primary assembly resolver.
                                 this.CreateAssemblyResolver(
-                                    ReadingMode.Immediate,
+                                    ReadingMode.Deferred,
                                     assemblyReferenceBasePaths)),
                         };
                     }
@@ -213,7 +208,7 @@ public sealed class CilLinker
 #endif
 
         fragments = loadedFragmentLists.
-            SelectMany(loadedFragments => loadedFragments).
+            SelectMany(loadedFragments => loadedFragments ?? CommonUtilities.Empty<InputFragment>()).
             ToArray();
         return caughtErrorCount == 0;
     }
@@ -312,7 +307,7 @@ public sealed class CilLinker
             Concat(inputReferences.
                 OfType<LibraryPathReference>().
                 Where(ir => Path.GetExtension(ir.RelativePath) == ".dll").
-                Select(ir => Utilities.GetDirectoryPath(Path.Combine(baseInputPath, ir.RelativePath)))).
+                Select(ir => CommonUtilities.GetDirectoryPath(Path.Combine(baseInputPath, ir.RelativePath)))).
             Distinct().
             ToArray();
         
@@ -345,7 +340,7 @@ public sealed class CilLinker
         var outputAssemblyFullPath = Path.GetFullPath(outputAssemblyPath);
         var outputAssemblyCandidateFullPath = requireAppHost?
             Path.Combine(
-                Utilities.GetDirectoryPath(outputAssemblyFullPath),
+                CommonUtilities.GetDirectoryPath(outputAssemblyFullPath),
                 Path.GetFileNameWithoutExtension(outputAssemblyFullPath) + ".dll") :
             outputAssemblyFullPath;
 
@@ -394,7 +389,8 @@ public sealed class CilLinker
             loadedFragments,
             options.ApplyOptimization,
             options.DebugSymbolType == DebugSymbolTypes.Embedded,
-            options.CreationOptions))
+            options.CreationOptions,
+            options.PrependExecutionSearchPaths))
         {
             return false;
         }
@@ -410,7 +406,7 @@ public sealed class CilLinker
         }
 
         var outputAssemblyBasePath =
-            Utilities.GetDirectoryPath(outputAssemblyCandidateFullPath);
+            CommonUtilities.GetDirectoryPath(outputAssemblyCandidateFullPath);
         try
         {
             if (!Directory.Exists(outputAssemblyBasePath))
@@ -427,6 +423,7 @@ public sealed class CilLinker
         if (File.Exists(outputAssemblyCandidateFullPath))
         {
             backupFilePath = outputAssemblyCandidateFullPath + ".bak";
+            File.Delete(backupFilePath);
             File.Move(outputAssemblyCandidateFullPath, backupFilePath);
         }
 
@@ -488,7 +485,7 @@ public sealed class CilLinker
             if (cachedAssemblies.FirstOrDefault(
                 assembly => assembly.Name.Name == corlibName) is { } corlibAssembly)
             {
-                var corlibBasePath = Utilities.GetDirectoryPath(
+                var corlibBasePath = CommonUtilities.GetDirectoryPath(
                     corlibAssembly.MainModule.FileName);
 
                 requiredAssemblyBasePaths = requiredAssemblyBasePaths.
@@ -499,7 +496,7 @@ public sealed class CilLinker
             Parallel.ForEach(cachedAssemblies.
                 SelectMany(assembly => assembly.Modules).
                 Where(module => requiredAssemblyBasePaths.
-                    Contains(Utilities.GetDirectoryPath(module.FileName))),
+                    Contains(CommonUtilities.GetDirectoryPath(module.FileName))),
                 module =>
                 {
                     var tp = Path.Combine(
@@ -517,7 +514,7 @@ public sealed class CilLinker
                         foreach (var ext in new[] { ".pdb", ".mdb" })
                         {
                             var fp = Path.Combine(
-                                 Utilities.GetDirectoryPath(module.FileName),
+                                CommonUtilities.GetDirectoryPath(module.FileName),
                                  Path.GetFileNameWithoutExtension(module.FileName) + ext);
                             tp = Path.Combine(
                                 outputAssemblyBasePath,

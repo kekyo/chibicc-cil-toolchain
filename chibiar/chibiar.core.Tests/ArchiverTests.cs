@@ -7,6 +7,8 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Archiving;
+using chibicc.toolchain.Logging;
 using NUnit.Framework;
 using System;
 using System.IO;
@@ -14,14 +16,14 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using chibicc.toolchain.Archiving;
-using chibicc.toolchain.Logging;
+
 using static VerifyNUnit.Verifier;
 using static chibiar.ArchiverTestRunner;
 
 namespace chibiar;
 
 [TestFixture]
+[Parallelizable(ParallelScope.All)]
 public sealed class ArchiverTests
 {
     private static async Task VerifySymbolTableAsync(ZipArchive zip)
@@ -45,16 +47,16 @@ public sealed class ArchiverTests
             var archivePath = Path.Combine(basePath, "output.a");
             
             var archiver = new Archiver(logger);
-            var actual = archiver.Add(
+            var actual = archiver.AddOrUpdate(
                 archivePath,
-                SymbolTableModes.Auto,
                 new[]
                 {
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                 },
+                true,
                 false);
             
-            Assert.That(actual, Is.EqualTo(AddResults.Created));
+            Assert.That(actual, Is.True);
 
             using var zip = ZipFile.OpenRead(archivePath);
             
@@ -74,17 +76,65 @@ public sealed class ArchiverTests
             var archivePath = Path.Combine(basePath, "output.a");
             
             var archiver = new Archiver(logger);
-            var actual = archiver.Add(
+            var actual = archiver.AddOrUpdate(
                 archivePath,
-                SymbolTableModes.Auto,
                 new[]
                 {
                     Path.Combine(ArtifactsBasePath, "parse.o"),
                     Path.Combine(ArtifactsBasePath, "codegen.o"),
                 },
+                true,
                 false);
             
-            Assert.That(actual, Is.EqualTo(AddResults.Created));
+            Assert.That(actual, Is.True);
+
+            using var zip = ZipFile.OpenRead(archivePath);
+            
+            Assert.That(
+                zip.Entries.Select(e => e.Name),
+                Is.EqualTo(new[] { "parse.o", "codegen.o", ArchiverUtilities.SymbolTableFileName }));
+
+            await VerifySymbolTableAsync(zip);
+        });
+    }
+    
+    [Test]
+    public Task Update()
+    {
+        return RunAsync(async (basePath, logger) =>
+        {
+            var archivePath = Path.Combine(basePath, "output.a");
+            
+            var newCodegenPath = Path.Combine(basePath, "codegen.o");
+            
+            // It's made for dummy updated codegen.o.
+            File.Copy(
+                Path.Combine(ArtifactsBasePath, "tokenize.o"),
+                newCodegenPath);
+      
+            var archiver = new Archiver(logger);
+            var actual1 = archiver.AddOrUpdate(
+                archivePath,
+                new[]
+                {
+                    Path.Combine(ArtifactsBasePath, "parse.o"),
+                    Path.Combine(ArtifactsBasePath, "codegen.o"),
+                },
+                true,
+                false);
+            
+            Assert.That(actual1, Is.True);
+
+            var actual2 = archiver.AddOrUpdate(
+                archivePath,
+                new[]
+                {
+                    newCodegenPath,
+                },
+                true,
+                false);
+            
+            Assert.That(actual2, Is.False);
 
             using var zip = ZipFile.OpenRead(archivePath);
             

@@ -7,10 +7,10 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using chibild.cli;
+using chibicc.toolchain.Logging;
+using chibild.Cli;
 using System;
 using System.Runtime.InteropServices;
-using chibicc.toolchain.Logging;
 
 namespace chibild;
 
@@ -34,7 +34,7 @@ public static class Program
                 Console.WriteLine("License under MIT");
                 Console.WriteLine();
                 Console.WriteLine("usage: cil-ecma-chibild [options] <input path> [<input path> ...]");
-                CliOptions.WriteUsage(Console.Out);
+                options.WriteUsage(Console.Out);
                 Console.WriteLine();
                 return 1;
             }

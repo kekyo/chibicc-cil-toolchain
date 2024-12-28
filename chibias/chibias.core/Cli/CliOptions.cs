@@ -7,14 +7,11 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using chibicc.toolchain.Logging;
+using System;
+using System.IO;
 
-namespace chibias.cli;
+namespace chibias.Cli;
 
 public sealed class CliOptions
 {

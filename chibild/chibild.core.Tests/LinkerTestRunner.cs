@@ -7,6 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.Logging;
 using chibild.Internal;
 using System;
@@ -39,6 +40,7 @@ internal static class LinkerTestRunner
         string[] chibildSourceCodes,
         string[]? additionalReferencePaths,
         string? injectToAssemblyPath,
+        string[]? prependExecutionSearchPaths,
         Func<LinkerCreationOptions?> creationOptionsF,
         string memberName)
     {
@@ -71,7 +73,7 @@ internal static class LinkerTestRunner
                         coreLibPath, tmp2Path,
                     }.
                     Concat(additionalReferencePaths ?? Array.Empty<string>()).
-                    Select(Utilities.GetDirectoryPath).
+                    Select(CommonUtilities.GetDirectoryPath).
                     Distinct().
                     ToArray();
                 var libraryReferences = new[]
@@ -116,6 +118,7 @@ internal static class LinkerTestRunner
                         IsDeterministic = true,
                         ApplyOptimization = false,
                         CreationOptions = creationOptions,
+                        PrependExecutionSearchPaths = prependExecutionSearchPaths ?? Array.Empty<string>(),
                     },
                     injectToAssemblyPath,
                     basePath,
@@ -127,7 +130,7 @@ internal static class LinkerTestRunner
                 var psi = new ProcessStartInfo()
                 {
                     FileName = Path.Combine(ArtifactsBasePath,
-                        Utilities.IsInWindows ? "ildasm.exe" : "ildasm.linux-x64"),
+                        CommonUtilities.IsInWindows ? "ildasm.exe" : "ildasm.linux-x64"),
                     Arguments = $"-utf8 -out={disassembledPath} {outputAssemblyPath}"
                 };
 

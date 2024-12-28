@@ -21,14 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Remove="artifacts\crt0.o" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="artifacts\crt0.o" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Update="LinkerTests.cs">
       <DependentUpon>AssemblerTests_Common.cs</DependentUpon>
     </Compile>

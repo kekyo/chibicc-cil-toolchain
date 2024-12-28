@@ -9,6 +9,7 @@
 
 using System;
 using System.Globalization;
+using System.IO;
 
 #if NET45 || NET461
 using System.Collections.Generic;
@@ -50,7 +51,15 @@ namespace chibicc.toolchain.Internal
     internal static class CommonUtilities
     {
         private static readonly IFormatProvider invariantCulture = CultureInfo.InvariantCulture;
-        
+
+        public static readonly bool IsInWindows =
+            Environment.OSVersion.Platform == PlatformID.Win32NT;
+
+        public static string GetDirectoryPath(string path) =>
+            Path.GetDirectoryName(path) is { } d ?
+                Path.GetFullPath(string.IsNullOrWhiteSpace(d) ? "." : d) :
+                Path.DirectorySeparatorChar.ToString();
+
 #if NET40 || NET45
         private static class ArrayEmpty<T>
         {
@@ -170,19 +179,51 @@ namespace chibicc.toolchain.Internal
                  invariantCulture,
                  out value));
 
-        public static bool TryParseFloat32(string word, out float value) =>
-            float.TryParse(
-                word,
-                NumberStyles.Float,
-                invariantCulture,
-                out value);
+        public static bool TryParseFloat32(string word, out float value)
+        {
+            switch (word.ToLowerInvariant())
+            {
+                case "inf":
+                case "+inf":
+                    value = float.PositiveInfinity;
+                    return true;
+                case "-inf":
+                    value = float.NegativeInfinity;
+                    return true;
+                case "nan":
+                    value = float.NaN;
+                    return true;
+                default:
+                    return float.TryParse(
+                        word,
+                        NumberStyles.Float,
+                        invariantCulture,
+                        out value);
+            }
+        }
 
-        public static bool TryParseFloat64(string word, out double value) =>
-            double.TryParse(
-                word,
-                NumberStyles.Float,
-                invariantCulture,
-                out value);
+        public static bool TryParseFloat64(string word, out double value)
+        {
+            switch (word.ToLowerInvariant())
+            {
+                case "inf":
+                case "+inf":
+                    value = double.PositiveInfinity;
+                    return true;
+                case "-inf":
+                    value = double.NegativeInfinity;
+                    return true;
+                case "nan":
+                    value = double.NaN;
+                    return true;
+                default:
+                    return double.TryParse(
+                        word,
+                        NumberStyles.Float,
+                        invariantCulture,
+                        out value);
+            }
+        }
 
         public static bool TryParseEnum<TEnum>(string word, out TEnum value)
             where TEnum : struct, Enum =>
