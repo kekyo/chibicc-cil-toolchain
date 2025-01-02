@@ -10,6 +10,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Text;
 
 #if NET45 || NET461
 using System.Collections.Generic;
@@ -50,7 +51,11 @@ namespace chibicc.toolchain.Internal
 {
     internal static class CommonUtilities
     {
-        private static readonly IFormatProvider invariantCulture = CultureInfo.InvariantCulture;
+        private static readonly IFormatProvider invariantCulture =
+            CultureInfo.InvariantCulture;
+
+        public static readonly Encoding UTF8 =
+            new UTF8Encoding(false);
 
         public static readonly bool IsInWindows =
             Environment.OSVersion.Platform == PlatformID.Win32NT;

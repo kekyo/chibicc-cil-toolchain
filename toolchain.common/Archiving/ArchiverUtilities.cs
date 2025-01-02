@@ -18,11 +18,13 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using chibicc.toolchain.IO;
 
 namespace chibicc.toolchain.Archiving;
 
 public static class ArchiverUtilities
 {
+    public static readonly string HeadIdentity = "chibiar1";
     public static readonly string SymbolTableFileName = "__.SYMDEF";
     
     private enum ObjectSymbolStates
@@ -35,7 +37,7 @@ public static class ArchiverUtilities
     private static IEnumerable<Symbol> InternalEnumerateSymbolsFromObjectFile(
         Stream objectFileStream)
     {
-        var tr = new StreamReader(objectFileStream, Encoding.UTF8, true);
+        var tr = StreamUtilities.CreateTextReader(objectFileStream);
 
         var state = ObjectSymbolStates.Idle;
         string? currentDirective = null;
@@ -224,15 +226,27 @@ public static class ArchiverUtilities
     public static IEnumerable<string> EnumerateArchivedObjectNames(
         string archiveFilePath)
     {
-        using var archive = ZipFile.Open(
-            archiveFilePath,
-            ZipArchiveMode.Read,
-            Encoding.UTF8);
-
-        foreach (var entry in archive.Entries.
-            Where(entry => entry.Name != SymbolTableFileName))
+        using var stream = StreamUtilities.OpenStream(archiveFilePath, false);
+        var demuxer = new StreamDemuxer(stream);
+        
+        while (true)
         {
-            yield return entry.Name;
+            if (demuxer.Prepare() is not { } entry)
+            {
+                break;
+            }
+            if (entry.Name is { } name && name != SymbolTableFileName)
+            {
+                yield return name;
+            }
+            if (entry.Length >= 1)
+            {
+                demuxer.Skip(entry);
+            }
+            else
+            {
+                demuxer.Finish(entry);
+            }
         }
     }
 
