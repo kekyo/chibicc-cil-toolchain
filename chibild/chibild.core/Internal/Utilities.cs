@@ -56,19 +56,6 @@ internal static class Utilities
     }
 #endif
 
-#if NET45 || NET461
-    public static IEnumerable<T> Prepend<T>(
-        this IEnumerable<T> enumerable,
-        T value)
-    {
-        yield return value;
-        foreach (var item in enumerable)
-        {
-            yield return item;
-        }
-    }
-#endif
-
 #if NET45 || NET461 || NETSTANDARD2_0
     public static HashSet<T> ToHashSet<T>(this IEnumerable<T> enumerable) =>
         new(enumerable);

@@ -35,195 +35,195 @@ public sealed class Archiver
     private static Stream OpenObjectStreamToCompressed(string objectFilePath)
     {
         var ofs = StreamUtilities.OpenStream(objectFilePath, false);
-    
-        return IsSourceFile(objectFilePath) ?
-            new GZipStream(ofs, CompressionLevel.Optimal) : ofs;
+
+        if (IsSourceFile(objectFilePath))
+        {
+            var gzs = new GZipStream(ofs, CompressionLevel.Optimal);
+            var ms = new MemoryStream();
+            gzs.CopyTo(ms);
+            ofs.Close();
+            ms.Position = 0;
+            return ms;
+        }
+        else
+        {
+            return ofs;
+        }
     }
 
     private static string GetObjectName(string objectFilePath) =>
         IsSourceFile(objectFilePath) ?
             (Path.GetFileNameWithoutExtension(objectFilePath) + ".o") :
             Path.GetFileName(objectFilePath);
-        
-    private static bool TryAddOrUpdateObjectFiles(
-        string archiveFilePath,
-        string outputArchiveFilePath,
-        string[] objectFilePaths,
-        bool isDryrun,
-        out string[] outputObjectNames)
+
+    private interface IObjectItemDescriptor
     {
-        if (!isDryrun)
+        int Length { get; }
+        string ObjectName { get; }
+    }
+
+    private sealed class ArchivedObjectItemDescriptor : IObjectItemDescriptor
+    {
+        public long Position { get; private set; }
+        public int Length { get; }
+        public string ObjectName { get; }
+
+        public ArchivedObjectItemDescriptor(long relativePosition, int length, string objectName)
         {
-            var objectNames = objectFilePaths.
-                Select(GetObjectName).
-                ToArray();
-            
-            using var outputArchive = ZipFile.Open(
-                outputArchiveFilePath,
-                ZipArchiveMode.Create,
-                Encoding.UTF8);
-            
-            using var readArchive = File.Exists(archiveFilePath) ?
-                ZipFile.Open(
-                    archiveFilePath,
-                    ZipArchiveMode.Read,
-                    Encoding.UTF8) :
-                null;
+            this.Position = relativePosition;
+            this.Length = length;
+            this.ObjectName = objectName;
+        }
+        
+        public void AdjustPosition(long basePosition) =>
+            this.Position += basePosition;
+    }
 
-            var outputObjectNameList = new List<string>();
-            var isReplaced = new bool[objectFilePaths.Length];
-      
-            foreach (var readEntry in
-                 readArchive?.Entries.AsEnumerable() ??
-                 CommonUtilities.Empty<ZipArchiveEntry>())
+    private static IEnumerable<ArchivedObjectItemDescriptor> EnumerateArchivedObjectDescriptors(
+        Stream archiveFileStream)
+    {
+        var ler = new LittleEndianReader(archiveFileStream);
+        var relativePosition = 0;
+        while (true)
+        {
+            if (!ler.TryReadString(256, out var objectName))
             {
-                if (readEntry.Name != ArchiverUtilities.SymbolTableFileName)
-                {
-                    outputObjectNameList.Add(readEntry.Name);
-                
-                    var index = Array.IndexOf(objectNames, readEntry.Name);
-                    if (index >= 0)
-                    {
-                        var objectFilePath = objectFilePaths[index];
-                        var objectLastWriteTime = File.GetLastWriteTime(objectFilePath);
+                throw new FormatException(
+                    $"Invalid object naming: Position={ler.Position?.ToString() ?? "(Unknown)"}");
+            }
+            if (objectName.Length == 0)
+            {
+                break;
+            }
+            if (!ler.TryReadInt32(out var length))
+            {
+                throw new FormatException(
+                    $"Invalid object length: Position={ler.Position?.ToString() ?? "(Unknown)"}");
+            }
+            yield return new(relativePosition, length, objectName);
+            relativePosition += length;
+        }
+    }
 
-                        if (objectLastWriteTime > readEntry.LastWriteTime)
+    private sealed class ObjectFileDescriptor : IObjectItemDescriptor
+    {
+        public int Length { get; }
+        public string Path { get; }
+        public string ObjectName =>
+            GetObjectName(this.Path);
+
+        public ObjectFileDescriptor(int length, string path)
+        {
+            this.Length = length;
+            this.Path = path;
+        }
+    }
+
+    private record struct SymbolListEntry(
+        IObjectItemDescriptor Descriptor,
+        SymbolList SymbolList);
+
+    private static SymbolListEntry[] GetSymbolListEntries(
+        string archiveFilePath,
+        string[] objectFilePaths)
+    {
+        var archivedObjectItems = CommonUtilities.Empty<ArchivedObjectItemDescriptor>();
+        var archiveFileBasePosition = 0L;
+
+        if (File.Exists(archiveFilePath))
+        {
+            using var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false);
+            var hashedObjectNames = new HashSet<string>(objectFilePaths.Select(GetObjectName));
+            archivedObjectItems = EnumerateArchivedObjectDescriptors(archiveFileStream).
+                Where(aod =>
+                    !hashedObjectNames.Contains(aod.ObjectName) &&
+                    aod.ObjectName != ArchiverUtilities.SymbolTableFileName).
+                ToArray();
+            archiveFileBasePosition = archiveFileStream.Position;
+        }
+
+        var symbolListEntries = new SymbolListEntry[objectFilePaths.Length + archivedObjectItems.Length];
+
+        Parallel.ForEach(objectFilePaths.Concat(archivedObjectItems.Cast<object>()),
+            (entry, _, index) =>
+            {
+                switch (entry)
+                {
+                    case string objectFilePath:
+                        using (var objectStream = OpenObjectStreamToCompressed(objectFilePath))
                         {
-                            var objectName = objectNames[index];
-
-                            var outputEntry = outputArchive.CreateEntry(
-                                objectName, CompressionLevel.NoCompression);
-
-                            outputEntry.LastWriteTime = objectLastWriteTime;
-
-                            using var outputStream = outputEntry.Open();
-                            using var readStream = OpenObjectStreamToCompressed(objectFilePath);
-                        
-                            readStream.CopyTo(outputStream);
-                            outputStream.Flush();
-
-                            isReplaced[index] = true;
-                            continue;
+                            var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFileStream(objectStream).
+                                ToArray();
+                            var ofd = new ObjectFileDescriptor((int)objectStream.Length, objectFilePath);
+                            symbolListEntries[index] = new(ofd, new(GetObjectName(objectFilePath), symbols));
                         }
-                    }
-
-                    if (readEntry.Name != ArchiverUtilities.SymbolTableFileName)
-                    {
-                        var outputEntry = outputArchive.CreateEntry(
-                            readEntry.Name, CompressionLevel.NoCompression);
-
-                        outputEntry.LastWriteTime = readEntry.LastWriteTime;
-
-                        using var outputStream = outputEntry.Open();
-                        using var readStream = readEntry.Open();
-                        
-                        readStream.CopyTo(outputStream);
-                        outputStream.Flush();
-                    }
+                        break;
+                    case ArchivedObjectItemDescriptor aod:
+                        aod.AdjustPosition(archiveFileBasePosition);
+                        using (var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false))
+                        {
+                            archiveFileStream.Position = aod.Position;
+                            var objectStream = new RangedStream(archiveFileStream, aod.Length);
+                            var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFileStream(objectStream).
+                                ToArray();
+                            symbolListEntries[index] = new(aod, new(aod.ObjectName, symbols));
+                        }
+                        break;
                 }
-            }
+            });
 
-            for (var index = 0; index < objectFilePaths.Length; index++)
-            {
-                if (!isReplaced[index])
-                {
-                    var objectFilePath = objectFilePaths[index];
-                    var objectLastWriteTime = File.GetLastWriteTime(objectFilePath);
+        return symbolListEntries;
+    }
 
-                    var objectName = objectNames[index];
-                    outputObjectNameList.Add(objectName);
-
-                    var outputEntry = outputArchive.CreateEntry(
-                        objectName, CompressionLevel.NoCompression);
-
-                    outputEntry.LastWriteTime = objectLastWriteTime;
-
-                    using var outputStream = outputEntry.Open();
-                    using var readStream = OpenObjectStreamToCompressed(objectFilePath);
-                        
-                    readStream.CopyTo(outputStream);
-                    outputStream.Flush();
-                }
-            }
-            
-            outputObjectNames = outputObjectNameList.
-                ToArray();
-            return readArchive == null;
-        }
-        else
+    private void WriteObjectItemDescriptors(
+        Stream outputArchiveFileStream,
+        IEnumerable<IObjectItemDescriptor> descriptors)
+    {
+        var lew = new LittleEndianWriter(outputArchiveFileStream);
+        foreach (var descriptor in descriptors)
         {
-            outputObjectNames = objectFilePaths.
-                Select(GetObjectName).
-                ToArray();
-            return false;
+            lew.Write(descriptor.ObjectName);
+            lew.Write(descriptor.Length);
         }
     }
 
-    private static SymbolList[] GetSymbolLists(
+    private static void WriteObjectItems(
+        Stream outputArchiveFileStream,
         string archiveFilePath,
-        string[] objectNames,
-        bool isDryrun)
+        IEnumerable<IObjectItemDescriptor> descriptors)
     {
-        var symbolLists = new SymbolList[objectNames.Length]!;
-
-        if (!isDryrun || File.Exists(archiveFilePath))
+        foreach (var descriptor in descriptors)
         {
-            Parallel.ForEach(objectNames,
-                new() { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) },
-                (objectName, _, index) =>
-                {
-                    if (ArchiverUtilities.TryOpenArchivedObject(
-                        archiveFilePath,
-                        objectName,
-                        true,
-                        out var stream))
-                    {
-                        using var _s = stream;
-                        
-                        var symbols = ArchiverUtilities.EnumerateSymbolsFromObjectFile(stream).
-                            ToArray();
-
-                        symbolLists[index] = new(objectName, symbols);
-                    }
-                });
-        }
-        else
-        {
-            for (var index = 0; index < symbolLists.Length; index++)
+            switch (descriptor)
             {
-                symbolLists[index] = new(objectNames[index], CommonUtilities.Empty<Symbol>());
+                case ObjectFileDescriptor ofd:
+                    using (var objectFileStream = OpenObjectStreamToCompressed(ofd.Path))
+                    {
+                        objectFileStream.CopyTo(outputArchiveFileStream);
+                    }
+                    break;
+                case ArchivedObjectItemDescriptor aod:
+                    using (var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false))
+                    {
+                        archiveFileStream.Position = aod.Position;
+                        var objectStream = new RangedStream(archiveFileStream, aod.Length);
+                        objectStream.CopyTo(outputArchiveFileStream);
+                    }
+                    break;
             }
         }
-
-        return symbolLists;
     }
 
-    private static void AddSymbolTable(
-        string archiveFilePath,
-        SymbolList[] symbolLists,
-        bool isDryrun)
+    private sealed class SymbolTableDescriptor : IObjectItemDescriptor
     {
-        if (!isDryrun)
-        {
-            using var archive = ZipFile.Open(
-                archiveFilePath,
-                ZipArchiveMode.Update,
-                Encoding.UTF8);
-
-            var symbolTableEntry = archive.CreateEntry(
-                ArchiverUtilities.SymbolTableFileName,
-                CompressionLevel.Optimal);
+        public int Length { get; }
+        public string ObjectName =>
+            ArchiverUtilities.SymbolTableFileName;
         
-            using var outputStream = symbolTableEntry.Open();
-
-            ArchiverUtilities.WriteSymbolTable(outputStream, symbolLists);
-        }
-        else
-        {
-            ArchiverUtilities.WriteSymbolTable(new MemoryStream(), symbolLists);
-        }
+        public SymbolTableDescriptor(int length) =>
+            this.Length = length;
     }
-
+    
     internal bool AddOrUpdate(
         string archiveFilePath,
         string[] objectFilePaths,
@@ -234,31 +234,47 @@ public sealed class Archiver
 
         try
         {
-            if (TryAddOrUpdateObjectFiles(
-                archiveFilePath,
+            var symbolListEntries = GetSymbolListEntries(
                 outputArchiveFilePath,
-                objectFilePaths,
-                isDryrun,
-                out var outputObjectNames))
-            {
-                var symbolLists = GetSymbolLists(
-                    outputArchiveFilePath,
-                    outputObjectNames,
-                    isDryrun);
+                objectFilePaths);
 
+            using (var outputArchiveFileStream = isDryrun ?
+                new NullStream() :
+                StreamUtilities.OpenStream(outputArchiveFilePath, true))
+            {
                 if (isCreateSymbolTable)
                 {
-                    AddSymbolTable(
-                        outputArchiveFilePath,
-                        symbolLists,
-                        isDryrun);
-                }
-            
-                File.Delete(archiveFilePath);
-                File.Move(outputArchiveFilePath, archiveFilePath);
+                    var symbolTableStream = new MemoryStream();
+                    ArchiverUtilities.WriteSymbolTable(
+                        symbolTableStream,
+                        symbolListEntries.Select(entry => entry.SymbolList));
+                    symbolTableStream.Position = 0;
 
-                return true;
+                    WriteObjectItemDescriptors(
+                        outputArchiveFileStream,
+                        symbolListEntries.
+                            Select(entry => entry.Descriptor).
+                            Prepend(new SymbolTableDescriptor((int)symbolTableStream.Length)));
+
+                    symbolTableStream.CopyTo(outputArchiveFileStream);
+                }
+                else
+                {
+                    WriteObjectItemDescriptors(
+                        outputArchiveFileStream,
+                        symbolListEntries.Select(entry => entry.Descriptor));
+                }
+
+                WriteObjectItems(
+                    outputArchiveFileStream,
+                    archiveFilePath,
+                    symbolListEntries.Select(entry => entry.Descriptor));
+
+                outputArchiveFileStream.Flush();
             }
+        
+            File.Delete(archiveFilePath);
+            File.Move(outputArchiveFilePath, archiveFilePath);
         }
         catch
         {
@@ -274,30 +290,40 @@ public sealed class Archiver
         string[] objectNames,
         bool isDryrun)
     {
-        if (!isDryrun || File.Exists(archiveFilePath))
+        var archivedObjectItems = CommonUtilities.Empty<ArchivedObjectItemDescriptor>();
+        var archiveFileBasePosition = 0L;
+
+        using (var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false))
         {
-            Parallel.ForEach(objectNames,
-                new() { MaxDegreeOfParallelism = Math.Max(1, Environment.ProcessorCount - 1) },
-                objectName =>
-                {
-                    if (ArchiverUtilities.TryOpenArchivedObject(
-                        archiveFilePath,
-                        objectName,
-                        false,
-                        out var inputStream))
-                    {
-                        using var outputStream = isDryrun ?
-                            new MemoryStream() :
-                            StreamUtilities.OpenStream(objectName, true);
-    
-                        inputStream.CopyTo(outputStream);
-                        outputStream.Flush();
-                    }
-                    else
-                    {
-                        this.logger.Error($"Object is not found: {objectName}");
-                    }
-                });
+            var hashedObjectNames = new HashSet<string>(objectNames);
+            archivedObjectItems = EnumerateArchivedObjectDescriptors(archiveFileStream).
+                Where(aod => hashedObjectNames.Contains(aod.ObjectName)).
+                ToArray();
+            archiveFileBasePosition = archiveFileStream.Position;
+        }
+
+        Parallel.ForEach(archivedObjectItems,
+            aod =>
+            {
+                aod.AdjustPosition(archiveFileBasePosition);
+                
+                using var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false);
+                
+                archiveFileStream.Position = aod.Position;
+                var objectStream = new RangedStream(archiveFileStream, aod.Length);
+                
+                using var outputObjectFileStream = isDryrun ?
+                    new NullStream() :
+                    StreamUtilities.OpenStream(aod.ObjectName, true);
+                objectStream.CopyTo(outputObjectFileStream);
+                outputObjectFileStream.Flush();
+            });
+
+        foreach (var exceptName in archivedObjectItems.
+            Select(aod => aod.ObjectName).
+            Except(objectNames))
+        {
+            this.logger.Error($"Object is not found: {exceptName}");
         }
     }
 
@@ -305,24 +331,19 @@ public sealed class Archiver
         string archiveFilePath,
         string[] objectNames)
     {
-        if (objectNames.Length >= 1)
-        {
-            var existObjectNames = new HashSet<string>(
-                ArchiverUtilities.EnumerateArchivedObjectNames(archiveFilePath));
+        var archivedObjectItems = CommonUtilities.Empty<ArchivedObjectItemDescriptor>();
 
-            foreach (var objectName in objectNames.
-                Where(existObjectNames.Contains))
-            {
-                Console.WriteLine(objectName);
-            }
-        }
-        else
+        using (var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false))
         {
-            foreach (var objectName in
-                ArchiverUtilities.EnumerateArchivedObjectNames(archiveFilePath))
-            {
-                Console.WriteLine(objectName);
-            }
+            var hashedObjectNames = new HashSet<string>(objectNames);
+            archivedObjectItems = EnumerateArchivedObjectDescriptors(archiveFileStream).
+                Where(aod => hashedObjectNames.Contains(aod.ObjectName)).
+                ToArray();
+        }
+
+        foreach (var objectName in archivedObjectItems)
+        {
+            Console.WriteLine(objectName);
         }
     }
 

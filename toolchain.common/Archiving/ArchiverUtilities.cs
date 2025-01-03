@@ -33,7 +33,7 @@ public static class ArchiverUtilities
         Structure,
     }
     
-    private static IEnumerable<Symbol> InternalEnumerateSymbolsFromObjectFile(
+    private static IEnumerable<Symbol> InternalEnumerateSymbolsFromObjectFileStream(
         Stream objectFileStream)
     {
         var tr = StreamUtilities.CreateTextReader(objectFileStream);
@@ -133,14 +133,14 @@ public static class ArchiverUtilities
         }
     }
 
-    public static IEnumerable<Symbol> EnumerateSymbolsFromObjectFile(
+    public static IEnumerable<Symbol> EnumerateSymbolsFromObjectFileStream(
         Stream objectFileStream) =>
-        InternalEnumerateSymbolsFromObjectFile(objectFileStream).
+        InternalEnumerateSymbolsFromObjectFileStream(objectFileStream).
         Distinct();
 
     public static void WriteSymbolTable(
         Stream symbolTableStream,
-        SymbolList[] symbolLists)
+        IEnumerable<SymbolList> symbolLists)
     {
         var tw = StreamUtilities.CreateTextWriter(symbolTableStream);
 
