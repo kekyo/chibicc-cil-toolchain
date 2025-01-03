@@ -9,11 +9,14 @@
 
 using System;
 using System.IO;
+using System.Text;
 
 namespace chibicc.toolchain.IO;
 
 public static class StreamUtilities
 {
+    private static readonly Encoding utf8 = new UTF8Encoding(false);
+    
     public static Stream OpenStream(string path, bool writable) =>
         (path == "-") ?
             (writable ? Console.OpenStandardOutput() : Console.OpenStandardInput()) :
@@ -23,4 +26,10 @@ public static class StreamUtilities
                 writable ? FileAccess.ReadWrite : FileAccess.Read,
                 FileShare.Read,
                 1024 * 1024);
+    
+    public static TextReader CreateTextReader(Stream stream) =>
+        new StreamReader(stream, utf8, true);
+
+    public static TextWriter CreateTextWriter(Stream stream) =>
+        new StreamWriter(stream, utf8);
 }

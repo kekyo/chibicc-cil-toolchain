@@ -15,6 +15,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using chibicc.toolchain.IO;
 using DiffEngine;
 
 namespace chibild;
@@ -55,8 +56,8 @@ internal static class LinkerTestRunner
         using (var logfs = new FileStream(
             logPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
         {
-            var logtw = new StreamWriter(
-                logfs, Encoding.UTF8);
+            var logtw = StreamUtilities.CreateTextWriter(
+                logfs);
             var logger = new TextWriterLogger(
                 LogLevels.Debug, logtw);
 

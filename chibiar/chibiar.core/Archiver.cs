@@ -230,7 +230,7 @@ public sealed class Archiver
         bool isCreateSymbolTable,
         bool isDryrun)
     {
-        var outputArchiveFilePath = archiveFilePath + $"_{Guid.NewGuid():N}";
+        var outputArchiveFilePath = $"{archiveFilePath}_{Guid.NewGuid():N}";
 
         try
         {

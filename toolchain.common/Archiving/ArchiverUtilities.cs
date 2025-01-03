@@ -18,6 +18,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using chibicc.toolchain.IO;
 
 namespace chibicc.toolchain.Archiving;
 
@@ -35,7 +36,7 @@ public static class ArchiverUtilities
     private static IEnumerable<Symbol> InternalEnumerateSymbolsFromObjectFile(
         Stream objectFileStream)
     {
-        var tr = new StreamReader(objectFileStream, Encoding.UTF8, true);
+        var tr = StreamUtilities.CreateTextReader(objectFileStream);
 
         var state = ObjectSymbolStates.Idle;
         string? currentDirective = null;
@@ -141,7 +142,7 @@ public static class ArchiverUtilities
         Stream symbolTableStream,
         SymbolList[] symbolLists)
     {
-        var tw = new StreamWriter(symbolTableStream, Encoding.UTF8);
+        var tw = StreamUtilities.CreateTextWriter(symbolTableStream);
 
         foreach (var symbolList in symbolLists)
         {
@@ -167,7 +168,7 @@ public static class ArchiverUtilities
         if (archive.GetEntry(SymbolTableFileName) is { } entry)
         {
             using var stream = entry.Open();
-            var tr = new StreamReader(stream, Encoding.UTF8, true);
+            var tr = StreamUtilities.CreateTextReader(stream);
 
             Token? currentObjectName = null;
             var symbols = new List<Symbol>();            

@@ -19,6 +19,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using chibicc.toolchain.IO;
 
 namespace chibild.Generating;
 
@@ -192,7 +193,7 @@ internal sealed class ArchivedObjectInputFragment :
             }
 
             using var _s = stream;
-            var tr = new StreamReader(stream, Encoding.UTF8, true);
+            var tr = StreamUtilities.CreateTextReader(stream);
 
             var parser = new CilParser(logger);
             var declarations = parser.Parse(

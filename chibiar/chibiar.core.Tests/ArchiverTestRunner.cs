@@ -12,6 +12,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using chibicc.toolchain.IO;
 using chibicc.toolchain.Logging;
 using DiffEngine;
 
@@ -46,8 +47,8 @@ internal static class ArchiverTestRunner
         var logPath = Path.Combine(basePath, "log.txt");
         using var logfs = new FileStream(
             logPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
-        var logtw = new StreamWriter(
-            logfs, Encoding.UTF8);
+        var logtw = StreamUtilities.CreateTextWriter(
+            logfs);
         var logger = new TextWriterLogger(
             LogLevels.Debug, logtw);
 

@@ -46,7 +46,7 @@ public sealed class Assembler
                 // Checking only parsing.
                 using (var inputStream = StreamUtilities.OpenStream(sourceFilePath, false))
                 {
-                    var tr = new StreamReader(inputStream, Encoding.UTF8, true);
+                    var tr = StreamUtilities.CreateTextReader(inputStream);
 
                     var parser = new CilParser(this.logger);
                     var _ = parser.Parse(

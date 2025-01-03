@@ -110,7 +110,7 @@ public sealed class CilLinker
                     using (var fs = ObjectStreamUtilities.OpenObjectStream(
                         Path.Combine(baseInputPath, relativePath), false))
                     {
-                        var tr = new StreamReader(fs, Encoding.UTF8, true);
+                        var tr = StreamUtilities.CreateTextReader(fs);
                         if (!ObjectFileInputFragment.TryLoad(
                             this.logger,
                             baseInputPath,

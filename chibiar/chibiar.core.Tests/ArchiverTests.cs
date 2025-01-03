@@ -16,7 +16,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using chibicc.toolchain.IO;
 using static VerifyNUnit.Verifier;
 using static chibiar.ArchiverTestRunner;
 
@@ -31,7 +31,7 @@ public sealed class ArchiverTests
        var symTableEntry = zip.GetEntry(ArchiverUtilities.SymbolTableFileName)!;
         using var afs = symTableEntry.Open();
 
-        var tr = new StreamReader(afs, Encoding.UTF8, true);
+        var tr = StreamUtilities.CreateTextReader(afs);
         var actual = await tr.ReadToEndAsync();
 
         await Verify(actual);

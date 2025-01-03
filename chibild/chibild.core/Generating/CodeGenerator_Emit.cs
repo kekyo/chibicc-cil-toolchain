@@ -679,7 +679,7 @@ partial class CodeGenerator
                 objectPath,
                 false);
 
-            var tr = new StreamReader(fs, Encoding.UTF8, true);
+            var tr = StreamUtilities.CreateTextReader(fs);
 
             if (!this.TryLoadAndConsumeAdhocObject(
                 inputFragments,
