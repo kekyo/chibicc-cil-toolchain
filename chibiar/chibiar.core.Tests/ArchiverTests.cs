@@ -16,7 +16,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using chibicc.toolchain.IO;
 using static VerifyNUnit.Verifier;
 using static chibiar.ArchiverTestRunner;
 
@@ -57,6 +57,13 @@ public sealed class ArchiverTests
                 false);
             
             Assert.That(actual, Is.True);
+
+            using var archiveStream = StreamUtilities.OpenStream(archivePath, false);
+            var demuxer = new StreamDemuxer(archiveStream);
+            
+            
+            demuxer.Run(
+                (id, name) => );
 
             using var zip = ZipFile.OpenRead(archivePath);
             

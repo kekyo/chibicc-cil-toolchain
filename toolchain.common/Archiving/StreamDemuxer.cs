@@ -98,67 +98,6 @@ internal sealed class StreamDemuxer
 
     public void Finish(Entry entry) =>
         this.ids.Remove(entry.Id);
-
-    private readonly Dictionary<int, SubStream> subStreams = new();
-    
-    public Stream? Next(Func<string, bool> predicate)
-    {
-        if (this.Prepare() is not { } entry)
-        {
-            return null;
-        }
-        bool fetch;
-        if (entry.Name is { } name)
-        {
-            fetch = predicate(name);
-            ids.Add(entry.Id, fetch);
-        }
-        else
-        {
-            if (!ids.TryGetValue(entry.Id, out fetch))
-            {
-                throw new FormatException("Invalid archive format.");
-            }
-        }
-    }
-
-    private sealed class SubStream : Stream
-    {
-        private readonly StreamDemuxer parent;
-        
-        public SubStream(StreamDemuxer parent) =>
-            this.parent = parent;
-
-        public override bool CanRead =>
-            true;
-        public override bool CanSeek =>
-            false;
-        public override bool CanWrite =>
-            false;
-        public override long Length =>
-            throw new InvalidOperationException();
-
-        public override long Position
-        {
-            get => throw new InvalidOperationException();
-            set => throw new InvalidOperationException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count)
-        {
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override long Seek(long offset, SeekOrigin origin) =>
-            throw new InvalidOperationException();
-        public override void SetLength(long value) =>
-            throw new InvalidOperationException();
-        public override void Write(byte[] buffer, int offset, int count) =>
-            throw new InvalidOperationException();
-    }
 }
 
 internal static class StreamDemuxerExtension

@@ -12,4 +12,5 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("chibiar.core")]
 [assembly: InternalsVisibleTo("chibias.core")]
 [assembly: InternalsVisibleTo("chibild.core")]
+[assembly: InternalsVisibleTo("chibiar.core.Tests")]
 [assembly: InternalsVisibleTo("chibild.core.Tests")]
