@@ -238,7 +238,7 @@ internal sealed class ArchivedObjectInputFragment :
     {
         logger.Information($"Loading symbol table: {relativePath}");
 
-        var symbolLists = ArchiverUtilities.EnumerateSymbolTable(
+        var symbolLists = ArchiverUtilities.EnumerateSymbolListFromArchive(
             Path.Combine(baseInputPath, relativePath));
         
         return symbolLists.Select(symbolList =>
