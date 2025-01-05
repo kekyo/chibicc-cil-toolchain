@@ -40,6 +40,7 @@ internal sealed class ArchivedObjectInputFragment :
         Loaded,
     }
 
+    private readonly ArchiveReader archiveReader;
     private readonly string archivedObjectName;
 
     private readonly Dictionary<string, Symbol> typeSymbols;
@@ -58,12 +59,14 @@ internal sealed class ArchivedObjectInputFragment :
     private ArchivedObjectInputFragment(
         string baseInputPath,
         string relativePath,
+        ArchiveReader archiveReader,
         string archivedObjectName,
         Dictionary<string, Symbol> typeSymbols,
         Dictionary<string, Symbol> variableSymbols,
         Dictionary<string, Symbol> functionSymbols) :
         base(baseInputPath, relativePath)
     {
+        this.archiveReader = archiveReader;
         this.archivedObjectName = archivedObjectName;
         this.ObjectName = Path.GetFileNameWithoutExtension(this.archivedObjectName);
         this.ObjectPath = $"{this.archivedObjectName}@{base.ObjectPath}";
@@ -181,19 +184,18 @@ internal sealed class ArchivedObjectInputFragment :
         {
             logger.Information($"Loading: {this.ObjectPath}");
 
-            if (!ArchiverUtilities.TryOpenArchivedObject(
-                Path.Combine(this.BaseInputPath, this.RelativePath),
+            if (!this.archiveReader.TryOpenObjectStream(
                 this.archivedObjectName,
                 true,
-                out var stream))
+                out var objectStream))
             {
                 logger.Error(
                     $"Unable find an object on archive: ObjectName={this.archivedObjectName}, ArchiveFile={this.RelativePath}");
                 return LoadObjectResults.CaughtError;
             }
 
-            using var _s = stream;
-            var tr = StreamUtilities.CreateTextReader(stream);
+            using var _ = objectStream;
+            var tr = StreamUtilities.CreateTextReader(objectStream);
 
             var parser = new CilParser(logger);
             var declarations = parser.Parse(
@@ -238,8 +240,10 @@ internal sealed class ArchivedObjectInputFragment :
     {
         logger.Information($"Loading symbol table: {relativePath}");
 
-        var symbolLists = ArchiverUtilities.EnumerateSymbolListFromArchive(
+        var archiveReader = new ArchiveReader(
             Path.Combine(baseInputPath, relativePath));
+
+        var symbolLists = archiveReader.EnumerateSymbolListFromArchive();
         
         return symbolLists.Select(symbolList =>
         {
@@ -271,6 +275,7 @@ internal sealed class ArchivedObjectInputFragment :
             return new ArchivedObjectInputFragment(
                 baseInputPath,
                 relativePath,
+                archiveReader,
                 symbolList.ObjectName,
                 symbols.TryGetValue("type", out var types) ? types : empty,
                 symbols.TryGetValue("variable", out var variableNames) ? variableNames : empty,

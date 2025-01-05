@@ -324,11 +324,8 @@ public static class ArchiverUtilities
     ////////////////////////////////////////////////////////////////////
 
     public static IEnumerable<SymbolList> EnumerateSymbolListFromArchive(
-        string archiveFilePath)
+        this ArchiveReader archiveReader)
     {
-        var archiveReader = new ArchiveReader(
-            archiveFilePath, [ SymbolTableFileName ]);
-
         if (archiveReader.TryOpenObjectStream(
             SymbolTableFileName, true, out var symbolTableStream))
         {
@@ -382,17 +379,5 @@ public static class ArchiverUtilities
                     symbols.Distinct().ToArray());
             }
         }
-    }
-
-    public static bool TryOpenArchivedObject(
-        string archiveFilePath,
-        string objectName,
-        bool decodedBody,
-        out Stream stream)
-    {
-        var archiveReader = new ArchiveReader(
-            archiveFilePath, [ objectName ]);
-        return archiveReader.TryOpenObjectStream(
-            objectName, decodedBody, out stream);
     }
 }
