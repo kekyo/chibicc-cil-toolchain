@@ -7,12 +7,12 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
+using chibiar.Archiving;
 using chibiar.Cli;
 using chibicc.toolchain.Archiving;
 using chibicc.toolchain.IO;
 using chibicc.toolchain.Logging;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,7 +40,7 @@ public sealed class Archiver
         {
             var isExistArchiveFile = File.Exists(archiveFilePath);
             
-            var symbolListEntries = ArchiverUtilities.GetCombinedSymbolListEntries(
+            var symbolListEntries = ArchiveWriter.GetCombinedSymbolListEntries(
                 archiveFilePath,
                 objectFilePaths);
 
@@ -48,11 +48,13 @@ public sealed class Archiver
                new NullStream() :
                StreamUtilities.OpenStream(outputArchiveFilePath, true))
             {
-                ArchiverUtilities.WriteArchive(
+                ArchiveWriter.WriteArchive(
                     outputArchiveFileStream,
                     symbolListEntries,
                     archiveFilePath,
                     writeSymbolTable);
+
+                outputArchiveFileStream.Flush();
             }
 
             if (!isDryrun)
@@ -78,34 +80,35 @@ public sealed class Archiver
         string[] objectNames,
         bool isDryrun)
     {
-        var hashedObjectNames = new HashSet<string>(objectNames);
-        var descriptors = ArchiverUtilities.LoadArchivedObjectItemDescriptors(
-            archiveFilePath, aod => hashedObjectNames.Contains(aod.ObjectName) ? aod : null).
-            ToArray();
+        var archiveReader = new ArchiveReader(archiveFilePath, objectNames);
+        var read = objectNames.ToDictionary(objectName => objectName, _ => false);
 
-        Parallel.ForEach(descriptors,
-            descriptor =>
+        Parallel.ForEach(
+            archiveReader.ObjectNames,
+            objectName =>
             {
-                var aod = (ArchivedObjectItemDescriptor)descriptor;
-                
-                using var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false);
-                
-                archiveFileStream.Position = aod.Position;
-                var objectStream = new RangedStream(
-                    archiveFileStream, aod.Length, false);
-                
+                if (!archiveReader.TryOpenObjectStream(objectName, false, out var objectStream))
+                {
+                    throw new ArgumentException(
+                        $"Could not extract an object: Path={archiveFilePath}, Name={objectName}");
+                }
+
+                using var _ = objectStream;
                 using var outputObjectFileStream = isDryrun ?
                     new NullStream() :
-                    StreamUtilities.OpenStream(aod.ObjectName, true);
+                    StreamUtilities.OpenStream(objectName, true);
                 objectStream.CopyTo(outputObjectFileStream);
                 outputObjectFileStream.Flush();
+
+                lock (read)
+                {
+                    read[objectName] = true;
+                }
             });
 
-        foreach (var exceptName in descriptors.
-            Select(aod => aod!.ObjectName).
-            Except(objectNames))
+        foreach (var entry in read.Where(entry => !entry.Value))
         {
-            this.logger.Error($"Object is not found: {exceptName}");
+            this.logger.Error($"Object is not found: {entry.Key}");
         }
     }
 
@@ -113,14 +116,11 @@ public sealed class Archiver
         string archiveFilePath,
         string[] objectNames)
     {
-        var hashedObjectNames = new HashSet<string>(objectNames);
-        var descriptors = ArchiverUtilities.LoadArchivedObjectItemDescriptors(
-            archiveFilePath, aod => hashedObjectNames.Contains(aod.ObjectName) ? aod : null).
-            ToArray();
+        var archiveReader = new ArchiveReader(archiveFilePath, objectNames);
 
-        foreach (var descriptor in descriptors)
+        foreach (var objectItem in archiveReader.ObjectNames)
         {
-            Console.WriteLine(descriptor.ObjectName);
+            Console.WriteLine(objectItem);
         }
     }
 
