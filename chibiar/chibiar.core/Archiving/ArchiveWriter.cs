@@ -139,12 +139,19 @@ public static class ArchiveWriter
         IEnumerable<IObjectItemDescriptor> descriptors)
     {
         var lew = new LittleEndianWriter(outputArchiveFileStream);
+        
+        // Head of the identity.
+        lew.Write(ArchiverUtilities.ArchiveIdentity);
+        
+        // Descriptors.
         foreach (var descriptor in descriptors)
         {
             lew.Write(descriptor.ObjectName);
             lew.Write(descriptor.Length);
         }
-        lew.Write(string.Empty);   // Termination
+        
+        // Descriptor termination.
+        lew.Write(string.Empty);
     }
 
     private static void WriteObjectItemBodies(

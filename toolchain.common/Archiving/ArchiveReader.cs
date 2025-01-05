@@ -24,6 +24,7 @@ public sealed class ArchiveReader
         string archiveFilePath)
     {
         this.archiveFilePath = archiveFilePath;
+        
         var descriptors = ArchiverUtilities.LoadArchivedObjectItemDescriptors(
             this.archiveFilePath, aod => aod);
         this.ObjectNames = descriptors.
@@ -38,6 +39,7 @@ public sealed class ArchiveReader
         IEnumerable<string> objectNames)
     {
         this.archiveFilePath = archiveFilePath;
+
         var hashedObjectNames = new HashSet<string>(objectNames);
         var descriptors = ArchiverUtilities.LoadArchivedObjectItemDescriptors(
             this.archiveFilePath, aod => hashedObjectNames.Contains(aod.ObjectName) ? aod : null);

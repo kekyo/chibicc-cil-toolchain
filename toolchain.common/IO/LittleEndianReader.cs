@@ -94,7 +94,7 @@ internal sealed class LittleEndianReader
         if (maxLength >= 1)
         {
             var buffer = new List<byte>(maxLength);
-            while (buffer.Count < maxLength)
+            while (buffer.Count <= maxLength)
             {
                 var ch = this.parent.ReadByte();
                 if (ch == -1)

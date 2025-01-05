@@ -77,6 +77,7 @@ public enum FileTypes
 
 public static class ArchiverUtilities
 {
+    public static readonly string ArchiveIdentity = "chibias1";
     public static readonly string SymbolTableFileName = "__.SYMDEF";
     
     public static FileTypes GetFileType(string path) =>
@@ -278,6 +279,13 @@ public static class ArchiverUtilities
         Stream archiveFileStream)
     {
         var ler = new LittleEndianReader(archiveFileStream);
+        if (!ler.TryReadString(ArchiveIdentity.Length, out var identity) ||
+            identity != ArchiveIdentity)
+        {
+            throw new FormatException(
+                "Invalid archive identity.");
+        }
+        
         var relativePosition = 0;
         while (true)
         {
