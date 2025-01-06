@@ -15,6 +15,7 @@ using chibicc.toolchain.Tokenizing;
 using chibicc.toolchain.Internal;
 using chibild.Internal;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -240,14 +241,17 @@ internal sealed class ArchivedObjectInputFragment :
     {
         logger.Information($"Loading symbol table: {relativePath}");
 
+        using var scope = logger.BeginScope(LogLevels.Debug);
+
         var archiveReader = new ArchiveReader(
             Path.Combine(baseInputPath, relativePath));
 
         var symbolLists = archiveReader.EnumerateSymbolListFromArchive();
-        
-        return symbolLists.Select(symbolList =>
+                
+        var fragments = symbolLists.Select(symbolList =>
         {
             var symbols = symbolList.Symbols.
+                AsParallel().
                 GroupBy(symbol =>
                 {
                     switch (symbol.Directive)
@@ -272,6 +276,8 @@ internal sealed class ArchivedObjectInputFragment :
 
             var empty = new Dictionary<string, Symbol>();
             
+            scope.Debug($"Examined a symbol list: {relativePath}, {symbolList.ObjectName}");
+
             return new ArchivedObjectInputFragment(
                 baseInputPath,
                 relativePath,
@@ -282,5 +288,9 @@ internal sealed class ArchivedObjectInputFragment :
                 symbols.TryGetValue("function", out var functionNames) ? functionNames : empty);
         }).
         ToArray();
+        
+        scope.Debug($"Loaded symbol table: {relativePath}");
+
+        return fragments;
     }
 }

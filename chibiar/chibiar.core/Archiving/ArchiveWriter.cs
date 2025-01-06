@@ -10,8 +10,10 @@
 using chibicc.toolchain.Archiving;
 using chibicc.toolchain.Internal;
 using chibicc.toolchain.IO;
+using chibicc.toolchain.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -34,9 +36,12 @@ public static class ArchiveWriter
     }
 
     public static SymbolListEntry[] GetCombinedSymbolListEntries(
+        ILogger logger,
         string archiveFilePath,
         string[] objectFilePaths)
     {
+        using var scope = logger.BeginScope(LogLevels.Debug);
+
         var archivedObjectItems = CommonUtilities.Empty<IObjectItemDescriptor>();
 
         if (File.Exists(archiveFilePath))
@@ -50,7 +55,9 @@ public static class ArchiveWriter
                         null :                                   // Will ignore symbol table
                         aod);                                    // Archived object file
         }
-        
+
+        scope.Debug("Step 1");
+
         // Aggregate and extract to add new object files
         var willAddNewObjectFileItems = objectFilePaths.
             Except(archivedObjectItems.
@@ -93,7 +100,11 @@ public static class ArchiveWriter
                         }
                         break;
                 }
+
+                scope.Debug($"Step 2: {entry.ObjectName}");
             });
+
+        scope.Debug($"Step 3");
 
         return symbolListEntries;
     }
@@ -155,10 +166,13 @@ public static class ArchiveWriter
     }
 
     private static void WriteObjectItemBodies(
+        ILogger logger,
         Stream outputArchiveFileStream,
         string readArchiveFilePath,
         IEnumerable<IObjectItemDescriptor> descriptors)
     {
+        using var scope = logger.BeginScope(LogLevels.Debug);
+
         foreach (var descriptor in descriptors)
         {
             switch (descriptor)
@@ -178,7 +192,11 @@ public static class ArchiveWriter
                     }
                     break;
             }
+
+            scope.Debug($"Step 1: {descriptor.ObjectName}");
         }
+
+        scope.Debug($"Step 2");
     }
 
     private sealed class SymbolTableDescriptor(int length) : IObjectItemDescriptor
@@ -190,15 +208,20 @@ public static class ArchiveWriter
     }
 
     public static void WriteArchive(
+        ILogger logger,
         Stream outputArchiveFileStream,
         SymbolListEntry[] symbolListEntries,
         string readArchiveFilePath,
         bool writeSymbolTable)
     {
+        using var scope = logger.BeginScope(LogLevels.Debug);
+
         if (writeSymbolTable)
         {
             // Create symbol table image (and get that length).
             var symbolTableImage = CreateSymbolTableImage(symbolListEntries);
+
+            scope.Debug("Step 1");
 
             // Write the descriptors to the head of the archive file.
             WriteObjectItemDescriptors(
@@ -220,10 +243,15 @@ public static class ArchiveWriter
                 symbolListEntries.Select(entry => entry.Descriptor));
         }
 
+        scope.Debug("Step 2");
+
         // Write all required object items.
         WriteObjectItemBodies(
+            logger,
             outputArchiveFileStream,
             readArchiveFilePath,
             symbolListEntries.Select(entry => entry.Descriptor));
+
+        scope.Debug("Step 3");
     }
 }

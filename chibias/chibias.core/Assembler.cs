@@ -7,17 +7,17 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using System;
+using chibicc.toolchain.Internal;
 using chibicc.toolchain.IO;
 using chibicc.toolchain.Logging;
 using chibicc.toolchain.Parsing;
 using chibicc.toolchain.Tokenizing;
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using chibicc.toolchain.Internal;
 
 namespace chibias;
 
@@ -33,6 +33,8 @@ public sealed class Assembler
         string sourceFilePath,
         bool isDryrun)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+
         var outputTemporaryFilePath =
             Path.Combine(
                 CommonUtilities.GetDirectoryPath(outputObjectFilePath),
@@ -59,23 +61,25 @@ public sealed class Assembler
                         Interlocked.Increment(ref count);
                     }
                 }
+                
+                scope.Debug("Checked");
             },
             () =>
             {
                 // Convert source code to object file.
                 using var outputStream = isDryrun ?
-                    null : ObjectStreamUtilities.OpenObjectStream(outputTemporaryFilePath, true);
+                    new NullStream() :
+                    ObjectStreamUtilities.OpenObjectStream(outputTemporaryFilePath, true);
 
-                if (outputStream != null)
+                using (var inputStream = StreamUtilities.OpenStream(sourceFilePath, false))
                 {
-                    using (var inputStream = StreamUtilities.OpenStream(sourceFilePath, false))
-                    {
-                        inputStream.CopyTo(outputStream);
-                        outputStream.Flush();
-                    }
+                    inputStream.CopyTo(outputStream);
+                    outputStream.Flush();
                 }
 
                 Interlocked.Increment(ref count);
+                
+                scope.Debug("Converted");
             },
         };
 

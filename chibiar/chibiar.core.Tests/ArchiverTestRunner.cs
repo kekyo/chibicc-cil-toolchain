@@ -50,7 +50,9 @@ internal static class ArchiverTestRunner
         var logtw = StreamUtilities.CreateTextWriter(
             logfs);
         var logger = new TextWriterLogger(
-            LogLevels.Debug, logtw);
+            "chibiar",
+            LogLevels.Debug,
+            logtw);
 
         try
         {

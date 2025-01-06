@@ -38,6 +38,7 @@ public static class Program
             }
 
             using var logger = new TextWriterLogger(
+                "chibias",
                 options.LogLevel,
                 Console.Out);
 

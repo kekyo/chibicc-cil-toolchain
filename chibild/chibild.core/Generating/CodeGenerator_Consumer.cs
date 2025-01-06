@@ -50,9 +50,8 @@ partial class CodeGenerator
             out var declaredFragment) &&
             declaredFragment != context.CurrentFragment)
         {
-            this.OutputTrace(
-                globalVariable.Name.Token,
-                $"Declaration ignored, because already declared in: {declaredFragment.ObjectPath}");
+            this.logger.Debug(
+                $"{globalVariable.Name.Token}: Declaration '{globalVariable.Name}' ignored, because already declared in: {declaredFragment.ObjectPath}");
             return;
         }
         
@@ -113,9 +112,8 @@ partial class CodeGenerator
             out var declaredFragment) &&
             declaredFragment != context.CurrentFragment)
         {
-            this.OutputTrace(
-                globalConstant.Name.Token,
-                $"Declaration ignored, because already declared in: {declaredFragment.ObjectPath}");
+            this.logger.Debug(
+                $"{globalConstant.Name.Token}: Declaration '{globalConstant.Name}' ignored, because already declared in: {declaredFragment.ObjectPath}");
             return;
         }
         
@@ -853,9 +851,8 @@ partial class CodeGenerator
             out var declaredFragment) &&
             declaredFragment != context.CurrentFragment)
         {
-            this.OutputTrace(
-                enumeration.Name.Token,
-                $"Declaration ignored, because already declared in: {declaredFragment.ObjectPath}");
+            this.logger.Debug(
+                $"{enumeration.Name.Token}: Declaration '{enumeration.Name}' ignored, because already declared in: {declaredFragment.ObjectPath}");
             return;
         }
         
@@ -947,9 +944,8 @@ partial class CodeGenerator
             out var declaredFragment) &&
             declaredFragment != context.CurrentFragment)
         {
-            this.OutputTrace(
-                structure.Name.Token,
-                $"Declaration ignored, because already declared in: {declaredFragment.ObjectPath}");
+            this.logger.Debug(
+                $"{structure.Name.Token}: Declaration '{structure.Name}' ignored, because already declared in: {declaredFragment.ObjectPath}");
             return;
         }
         

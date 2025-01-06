@@ -40,6 +40,7 @@ public static class Program
             }
 
             using var logger = new TextWriterLogger(
+                "chibild",
                 options.LogLevel,
                 Console.Out);
 

@@ -13,6 +13,7 @@ using chibicc.toolchain.Archiving;
 using chibicc.toolchain.IO;
 using chibicc.toolchain.Logging;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -32,6 +33,8 @@ public sealed class Archiver
         bool writeSymbolTable,
         bool isDryrun)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+
         var outputArchiveFilePath = Path.Combine(
             Path.GetTempPath(),
             $"chibiar_{Path.GetFileNameWithoutExtension(archiveFilePath)}_{Guid.NewGuid():N}{Path.GetExtension(archiveFilePath)}");
@@ -41,14 +44,18 @@ public sealed class Archiver
             var isExistArchiveFile = File.Exists(archiveFilePath);
             
             var symbolListEntries = ArchiveWriter.GetCombinedSymbolListEntries(
+                this.logger,
                 archiveFilePath,
                 objectFilePaths);
+
+            scope.Debug("Step 1");
 
             using (var outputArchiveFileStream = isDryrun ?
                new NullStream() :
                StreamUtilities.OpenStream(outputArchiveFilePath, true))
             {
                 ArchiveWriter.WriteArchive(
+                    this.logger,
                     outputArchiveFileStream,
                     symbolListEntries,
                     archiveFilePath,
@@ -57,11 +64,15 @@ public sealed class Archiver
                 outputArchiveFileStream.Flush();
             }
 
+            scope.Debug("Step 2");
+
             if (!isDryrun)
             {
                 File.Delete(archiveFilePath);
                 File.Move(outputArchiveFilePath, archiveFilePath);
             }
+
+            scope.Debug("Step 3");
 
             return !isExistArchiveFile;
         }
@@ -80,6 +91,8 @@ public sealed class Archiver
         string[] objectNames,
         bool isDryrun)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+
         var archiveReader = new ArchiveReader(archiveFilePath, objectNames);
         var read = objectNames.ToDictionary(objectName => objectName, _ => false);
 
@@ -104,6 +117,8 @@ public sealed class Archiver
                 {
                     read[objectName] = true;
                 }
+
+                scope.Debug($"Extracted: {objectName}");
             });
 
         foreach (var entry in read.Where(entry => !entry.Value))

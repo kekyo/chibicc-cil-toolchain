@@ -12,6 +12,7 @@ using chibicc.toolchain.Logging;
 using chibicc.toolchain.Tokenizing;
 using chibild.Internal;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -144,6 +145,8 @@ internal sealed class ObjectFileInputFragment :
     {
         logger.Information($"Loading: {relativePath}");
 
+        using var scope = logger.BeginScope(LogLevels.Debug);
+
         var parser = new CilParser(logger);
         var declarations = parser.Parse(
             CilTokenizer.TokenizeAll(baseInputPath, relativePath, tr),
@@ -180,6 +183,9 @@ internal sealed class ObjectFileInputFragment :
             initializers,
             enumerations,
             structures);
+
+        scope.Debug($"Loaded: {relativePath}");
+
         return !parser.CaughtError;
     }
 }

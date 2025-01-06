@@ -59,7 +59,7 @@ internal static class LinkerTestRunner
             var logtw = StreamUtilities.CreateTextWriter(
                 logfs);
             var logger = new TextWriterLogger(
-                LogLevels.Debug, logtw);
+                "chibild", LogLevels.Debug, logtw);
 
             logger.Information($"Test runner BasePath={basePath}");
 

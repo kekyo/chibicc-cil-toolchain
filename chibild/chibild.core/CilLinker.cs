@@ -287,9 +287,12 @@ public sealed class CilLinker
         string baseInputPath,
         params InputReference[] inputReferences)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+
         if (!inputReferences.OfType<ObjectInputReference>().
             Any())
         {
+            scope.Debug("No inputs");
             return false;
         }
 
@@ -323,8 +326,11 @@ public sealed class CilLinker
             produceDebuggingInformation,
             out var loadedFragments))
         {
+            scope.Debug("No input references");
             return false;
         }
+        
+        scope.Debug($"Loaded inputs: Fragments={loadedFragments.Length}");
 
         //////////////////////////////////////////////////////////////
 
@@ -370,6 +376,8 @@ public sealed class CilLinker
         }
 
         var targetModule = primaryAssembly.MainModule;
+        
+        scope.Debug("Initialized primary assembly");
 
         //////////////////////////////////////////////////////////////
 
@@ -382,6 +390,7 @@ public sealed class CilLinker
             loadedFragments,
             produceDebuggingInformation))
         {
+            scope.Debug("Caught any errors [1]");
             return false;
         }
 
@@ -392,6 +401,7 @@ public sealed class CilLinker
             options.CreationOptions,
             options.PrependExecutionSearchPaths))
         {
+            scope.Debug("Caught any errors [2]");
             return false;
         }
 
