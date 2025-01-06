@@ -8,15 +8,26 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Diagnostics;
+using System.Threading;
 
 namespace chibicc.toolchain.Logging;
 
 public abstract class LoggerBase : ILogger
 {
+    private static readonly int processId = Process.GetCurrentProcess().Id;
+    private static int sequenceId;
+
+    private readonly string prefix;
+
     public readonly LogLevels BaseLevel;
 
-    protected LoggerBase(LogLevels baseLevel) =>
+    protected LoggerBase(string prefix, LogLevels baseLevel)
+    {
         this.BaseLevel = baseLevel;
+        var id = Interlocked.Increment(ref sequenceId);
+        this.prefix = $"{prefix} [{processId}{(id <= 1 ? string.Empty : $",{id}")}]:";
+    }
 
     public void OutputLog(
         LogLevels logLevel, string? message, Exception? ex)
@@ -27,23 +38,25 @@ public abstract class LoggerBase : ILogger
         }
     }
 
+    private static string GetLogLevelString(LogLevels logLevel) =>
+        logLevel != LogLevels.Information ?
+            $" {logLevel.ToString().ToLowerInvariant()}:" :
+            string.Empty;
+
     protected virtual string? ToString(
         LogLevels logLevel, string? message, Exception? ex)
     {
-        static string GetLogLevelString(LogLevels logLevel) =>
-            logLevel != LogLevels.Information ? $" {logLevel.ToString().ToLowerInvariant()}:" : "";
-
         if (message is { } && ex is { })
         {
-            return $"chibild:{GetLogLevelString(logLevel)} {message}, {ex}";
+            return $"{prefix}{GetLogLevelString(logLevel)} {message}, {ex}";
         }
         else if (message is { })
         {
-            return $"chibild:{GetLogLevelString(logLevel)} {message}";
+            return $"{prefix}{GetLogLevelString(logLevel)} {message}";
         }
         else if (ex is { })
         {
-            return $"chibild:{GetLogLevelString(logLevel)} {ex}";
+            return $"{prefix}{GetLogLevelString(logLevel)} {ex}";
         }
         else
         {

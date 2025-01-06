@@ -30,7 +30,11 @@ public sealed class CliOptions
     public bool IsSilent = false;
     public bool IsCreateSymbolTable = true;
     public bool IsDryRun = false;
+#if DEBUG
+    public LogLevels LogLevel = LogLevels.Trace;
+#else
     public LogLevels LogLevel = LogLevels.Warning;
+#endif
     public bool ShowHelp = false;
     public readonly List<string> ObjectNames = new();
 

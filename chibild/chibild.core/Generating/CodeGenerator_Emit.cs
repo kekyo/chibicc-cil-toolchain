@@ -349,6 +349,8 @@ partial class CodeGenerator
     private void EmitMembers(
         ObjectInputFragment fragment)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+        
         var holder = new TypeDefinitionsHolder(
             fragment,
             this.targetModule);
@@ -364,7 +366,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total emitted enumerations [file]: {count}");
+        scope.Debug($"Total emitted enumerations [file]: {count}");
 
         count = 0;
         foreach (var structure in fragment.GetDeclaredStructures(true))
@@ -375,7 +377,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total emitted structures [file]: {count}");
+        scope.Debug($"Total emitted structures [file]: {count}");
 
         count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(true))
@@ -386,7 +388,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total emitted functions [file]: {count}");
+        scope.Debug($"Total emitted functions [file]: {count}");
 
         count = 0;
         foreach (var variable in fragment.GetDeclaredVariables(true))
@@ -397,7 +399,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted variables [file]: {count}");
+        scope.Debug($"Total emitted variables [file]: {count}");
 
         count = 0;
         foreach (var constant in fragment.GetDeclaredConstants(true))
@@ -408,7 +410,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted constants [file]: {count}");
+        scope.Debug($"Total emitted constants [file]: {count}");
 
         var fileScopedInitializerNames = (holder.GetFileScopedTypeIfAvailable()?.
             Methods.
@@ -438,7 +440,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted initializers [file]: {count}");
+        scope.Debug($"Total emitted initializers [file]: {count}");
 
         ///////////////////////////////////////////////////
 
@@ -449,7 +451,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted enumerations [public/internal]: {count}");
+        scope.Debug($"Total emitted enumerations [public/internal]: {count}");
 
         count = 0;
         foreach (var structure in fragment.GetDeclaredStructures(false))
@@ -458,7 +460,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted structures [public/internal]: {count}");
+        scope.Debug($"Total emitted structures [public/internal]: {count}");
 
         count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(false))
@@ -469,7 +471,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted functions [public/internal]: {count}");
+        scope.Debug($"Total emitted functions [public/internal]: {count}");
 
         count = 0;
         foreach (var variable in fragment.GetDeclaredVariables(false))
@@ -480,7 +482,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted variables [public/internal]: {count}");
+        scope.Debug($"Total emitted variables [public/internal]: {count}");
 
         count = 0;
         foreach (var constant in fragment.GetDeclaredConstants(false))
@@ -491,7 +493,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted constants [public/internal]: {count}");
+        scope.Debug($"Total emitted constants [public/internal]: {count}");
 
         var initializerNames = (holder.GetDataTypeIfAvailable()?.
             Methods.
@@ -521,7 +523,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted initializers [internal]: {count}");
+        scope.Debug($"Total emitted initializers [internal]: {count}");
 
         ///////////////////////////////////////////////////
 
@@ -537,7 +539,7 @@ partial class CodeGenerator
             count++;
         }
         
-        this.logger.Trace($"Total emitted module functions: {count}");
+        scope.Debug($"Total emitted module functions: {count}");
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -545,6 +547,8 @@ partial class CodeGenerator
     private void OptimizeMethods(
         ObjectInputFragment fragment)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+        
         var count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(true))
         {
@@ -552,7 +556,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total optimized methods [file]: {count}");
+        scope.Debug($"Total optimized methods [file]: {count}");
 
         count = 0;
         foreach (var function in fragment.GetDeclaredFunctions(false))
@@ -561,7 +565,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total optimized methods [public/internal]: {count}");
+        scope.Debug($"Total optimized methods [public/internal]: {count}");
 
         count = 0;
         foreach (var initializer in fragment.GetDeclaredInitializer(true))
@@ -570,7 +574,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total optimized methods [file initializer]: {count}");
+        scope.Debug($"Total optimized methods [file initializer]: {count}");
 
         count = 0;
         foreach (var initializer in fragment.GetDeclaredInitializer(false))
@@ -579,7 +583,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total optimized methods [public/internal initializer]: {count}");
+        scope.Debug($"Total optimized methods [public/internal initializer]: {count}");
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -679,7 +683,7 @@ partial class CodeGenerator
                 objectPath,
                 false);
 
-            var tr = new StreamReader(fs, Encoding.UTF8, true);
+            var tr = StreamUtilities.CreateTextReader(fs);
 
             if (!this.TryLoadAndConsumeAdhocObject(
                 inputFragments,
@@ -783,6 +787,8 @@ partial class CodeGenerator
 
     private void InvokeDelayedLookingUps()
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+
         // Apply all delayed looking up (types).
         var count = 0;
         while (this.delayLookingUpEntries1.Count >= 1)
@@ -792,7 +798,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total delayed looking up [1]: {count}");
+        scope.Debug($"Total delayed looking up [1]: {count}");
 
         // Apply all delayed looking up (not types).
         count = 0;
@@ -803,7 +809,7 @@ partial class CodeGenerator
             count++;
         }
 
-        this.logger.Trace($"Total delayed looking up [2]: {count}");
+        scope.Debug($"Total delayed looking up [2]: {count}");
 
         // Assert reverse dependencies are nothing.
         Debug.Assert(this.delayLookingUpEntries1.Count == 0);
@@ -816,6 +822,8 @@ partial class CodeGenerator
         LinkerCreationOptions? creationOptions,
         string[] prependExecutionSearchPaths)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+
         // Try add fundamental attributes.
         if (creationOptions != null)
         {
@@ -836,6 +844,8 @@ partial class CodeGenerator
             this.AddPointerVisualizerAttributes(
                 inputFragments);
         }
+        
+        scope.Debug("Step 2");
 
         // Combine all object fragments into target module.
         foreach (var fragment in inputFragments.
@@ -843,9 +853,13 @@ partial class CodeGenerator
         {
             this.EmitMembers(fragment);
         }
+        
+        scope.Debug("Step 3");
 
         // Invoke delayed looking ups.
         this.InvokeDelayedLookingUps();
+        
+        scope.Debug("Step 4");
 
         // Load CABI main object.
         if (creationOptions is { } co &&
@@ -864,6 +878,8 @@ partial class CodeGenerator
                 this.InvokeDelayedLookingUps();
             }
         }
+        
+        scope.Debug("Step 5");
 
         // Assign entry point.
         if (creationOptions is { } co2 &&
@@ -872,6 +888,8 @@ partial class CodeGenerator
             this.AssignEntryPoint(
                 co2.EntryPointSymbol);
         }
+        
+        scope.Debug("Step 6");
 
         // Insert prepend search path.
         if (prependExecutionSearchPaths.Length >= 1 &&
@@ -882,6 +900,8 @@ partial class CodeGenerator
                 prependExecutionSearchPaths,
                 targetMethod);
         }
+        
+        scope.Debug("Step 7");
 
         // Apply method optimization for all object fragments.
         if (applyOptimization)
@@ -892,6 +912,8 @@ partial class CodeGenerator
                 this.OptimizeMethods(fragment);
             }
         }
+        
+        scope.Debug("Step 8");
 
         // Apply all delayed debugger information.
         if (this.produceDebuggingInformation)
@@ -907,6 +929,8 @@ partial class CodeGenerator
         Debug.Assert(this.delayDebuggingInsertionEntries.Count == 0);
 
         // (Completed all CIL implementations in this place.)
+        
+        scope.Debug("Finished");
 
         ///////////////////////////////////////////////
 

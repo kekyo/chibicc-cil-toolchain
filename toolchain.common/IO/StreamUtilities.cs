@@ -9,6 +9,8 @@
 
 using System;
 using System.IO;
+using System.Text;
+using chibicc.toolchain.Internal;
 
 namespace chibicc.toolchain.IO;
 
@@ -23,4 +25,10 @@ public static class StreamUtilities
                 writable ? FileAccess.ReadWrite : FileAccess.Read,
                 FileShare.Read,
                 1024 * 1024);
+    
+    public static TextReader CreateTextReader(Stream stream) =>
+        new StreamReader(stream, CommonUtilities.UTF8, true);
+
+    public static TextWriter CreateTextWriter(Stream stream) =>
+        new StreamWriter(stream, CommonUtilities.UTF8);
 }

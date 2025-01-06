@@ -13,8 +13,8 @@ namespace chibicc.toolchain.Logging;
 
 public enum LogLevels
 {
-    Debug = 1,
-    Trace,
+    Trace = 1,
+    Debug,
     Information,
     Warning,
     Error,

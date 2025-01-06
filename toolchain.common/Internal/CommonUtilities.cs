@@ -10,6 +10,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Text;
 
 #if NET45 || NET461
 using System.Collections.Generic;
@@ -52,6 +53,8 @@ namespace chibicc.toolchain.Internal
     {
         private static readonly IFormatProvider invariantCulture = CultureInfo.InvariantCulture;
 
+        public static readonly Encoding UTF8 = new UTF8Encoding(false);
+    
         public static readonly bool IsInWindows =
             Environment.OSVersion.Platform == PlatformID.Win32NT;
 
@@ -71,6 +74,19 @@ namespace chibicc.toolchain.Internal
 #else
         public static T[] Empty<T>() =>
             Array.Empty<T>();
+#endif
+
+#if NET40 || NET45 || NET461
+    public static IEnumerable<T> Prepend<T>(
+        this IEnumerable<T> enumerable,
+        T value)
+    {
+        yield return value;
+        foreach (var item in enumerable)
+        {
+            yield return item;
+        }
+    }
 #endif
 
         public static bool TryParseUInt8(

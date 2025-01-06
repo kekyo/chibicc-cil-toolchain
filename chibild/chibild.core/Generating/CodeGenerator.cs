@@ -13,6 +13,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -62,18 +63,14 @@ internal sealed partial class CodeGenerator
             $"{token.RelativePath}:{token.Line + 1}:{token.StartColumn + 1}: {message}");
     }
 
-    private void OutputTrace(Token token, string message)
-    {
-        this.logger.Trace(
-            $"{token.RelativePath}:{token.Line + 1}:{token.StartColumn + 1}: {message}");
-    }
-
     //////////////////////////////////////////////////////////////
 
     private void ConsumeFragment(
         ObjectInputFragment currentFragment,
         InputFragment[] inputFragments)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+
         var context = new LookupContext(
             this.targetModule,
             currentFragment,
@@ -84,26 +81,37 @@ internal sealed partial class CodeGenerator
         {
             this.ConsumeGlobalVariable(context, variable);
         }
+        scope.Debug($"[1]: {currentFragment.ObjectName}");
+
         foreach (var constant in currentFragment.GlobalConstants)
         {
             this.ConsumeGlobalConstant(context, constant);
         }
+        scope.Debug($"[2]: {currentFragment.ObjectName}");
+
         foreach (var function in currentFragment.Functions)
         {
             this.ConsumeFunction(context, function);
         }
+        scope.Debug($"[3]: {currentFragment.ObjectName}");
+
         foreach (var initializer in currentFragment.Initializers)
         {
             this.ConsumeInitializer(context, initializer);
         }
+        scope.Debug($"[4]: {currentFragment.ObjectName}");
+
         foreach (var enumeration in currentFragment.Enumerations)
         {
             this.ConsumeEnumeration(context, enumeration);
         }
+        scope.Debug($"[5]: {currentFragment.ObjectName}");
+
         foreach (var structure in currentFragment.Structures)
         {
             this.ConsumeStructure(context, structure);
         }
+        scope.Debug($"[6]: {currentFragment.ObjectName}");
 #else
         Parallel.Invoke(
             () =>
@@ -112,6 +120,7 @@ internal sealed partial class CodeGenerator
                 {
                     this.ConsumeGlobalVariable(context, variable);
                 }
+                scope.Debug($"[1]: {currentFragment.ObjectName}");
             },
             () =>
             {
@@ -119,6 +128,7 @@ internal sealed partial class CodeGenerator
                 {
                     this.ConsumeGlobalConstant(context, constant);
                 }
+                scope.Debug($"[2]: {currentFragment.ObjectName}");
             },
             () =>
             {
@@ -126,6 +136,7 @@ internal sealed partial class CodeGenerator
                 {
                     this.ConsumeFunction(context, function);
                 }
+                scope.Debug($"[3]: {currentFragment.ObjectName}");
             },
             () =>
             {
@@ -133,6 +144,7 @@ internal sealed partial class CodeGenerator
                 {
                     this.ConsumeInitializer(context, initializer);
                 }
+                scope.Debug($"[4]: {currentFragment.ObjectName}");
             },
             () =>
             {
@@ -140,6 +152,7 @@ internal sealed partial class CodeGenerator
                 {
                     this.ConsumeEnumeration(context, enumeration);
                 }
+                scope.Debug($"[5]: {currentFragment.ObjectName}");
             },
             () =>
             {
@@ -147,6 +160,7 @@ internal sealed partial class CodeGenerator
                 {
                     this.ConsumeStructure(context, structure);
                 }
+                scope.Debug($"[6]: {currentFragment.ObjectName}");
             });
 #endif
     }
@@ -219,6 +233,9 @@ internal sealed partial class CodeGenerator
         InputFragment[] inputFragments,
         bool isLocationOriginSource)
     {
+        using var scope = this.logger.BeginScope(LogLevels.Debug);
+        scope.Debug($"InputFragments={inputFragments.Length}");
+        
         ////////////////////////////////////
         // Step 1. Consume all objects.
 
@@ -246,12 +263,16 @@ internal sealed partial class CodeGenerator
             return false;
         }
 
+        scope.Debug("Step 2");
+
         ////////////////////////////////////
         // Step 2. Consume scheduled object referring in archives.
-
+        
         this.ConsumeArchivedObject(
             inputFragments,
             isLocationOriginSource);
+
+        scope.Debug("Finished");
 
         return !this.caughtError;
     }

@@ -7,24 +7,92 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////
 
-using System;
 using chibicc.toolchain.Internal;
+using chibicc.toolchain.IO;
 using chibicc.toolchain.Parsing;
 using chibicc.toolchain.Tokenizing;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace chibicc.toolchain.Archiving;
 
+public interface IObjectItemDescriptor
+{
+    int Length { get; }
+    string ObjectName { get; }
+}
+
+public sealed class ArchivedObjectItemDescriptor : IObjectItemDescriptor
+{
+    public long Position { get; private set; }
+    public int Length { get; }
+    public string ObjectName { get; }
+
+    internal ArchivedObjectItemDescriptor(long relativePosition, int length, string objectName)
+    {
+        this.Position = relativePosition;
+        this.Length = length;
+        this.ObjectName = objectName;
+    }
+
+    internal void AdjustPosition(long basePosition) =>
+        this.Position += basePosition;
+}
+
+internal interface IObjectFileDescriptor : IObjectItemDescriptor
+{
+    string Path { get; }
+}
+
+public sealed class ObjectFileDescriptor : IObjectFileDescriptor
+{
+    public int Length { get; }
+    public string Path { get; }
+    public string ObjectName =>
+        ArchiverUtilities.GetObjectName(this.Path);
+
+    internal ObjectFileDescriptor(int length, string path)
+    {
+        this.Length = length;
+        this.Path = path;
+    }
+}
+
+public record struct SymbolListEntry(
+    IObjectItemDescriptor Descriptor,
+    SymbolList SymbolList);
+
+public enum FileTypes
+{
+    Other,
+    ObjectFile,
+    SourceFile,
+}
+
 public static class ArchiverUtilities
 {
+    public static readonly string ArchiveIdentity = "chibias1";
     public static readonly string SymbolTableFileName = "__.SYMDEF";
     
+    public static FileTypes GetFileType(string path) =>
+        Path.GetExtension(path) switch
+        {
+            ".o" => FileTypes.ObjectFile,
+            ".s" => FileTypes.SourceFile,
+            _ => FileTypes.Other,
+        };
+
+    public static string GetObjectName(string objectFilePath) =>
+        GetFileType(objectFilePath) == FileTypes.SourceFile ?
+            (Path.GetFileNameWithoutExtension(objectFilePath) + ".o") :
+            Path.GetFileName(objectFilePath);
+
     private enum ObjectSymbolStates
     {
         Idle,
@@ -32,10 +100,10 @@ public static class ArchiverUtilities
         Structure,
     }
     
-    private static IEnumerable<Symbol> InternalEnumerateSymbolsFromObjectFile(
+    private static IEnumerable<Symbol> InternalEnumerateSymbolsFromObjectFileStream(
         Stream objectFileStream)
     {
-        var tr = new StreamReader(objectFileStream, Encoding.UTF8, true);
+        var tr = StreamUtilities.CreateTextReader(objectFileStream);
 
         var state = ObjectSymbolStates.Idle;
         string? currentDirective = null;
@@ -132,47 +200,150 @@ public static class ArchiverUtilities
         }
     }
 
-    public static IEnumerable<Symbol> EnumerateSymbolsFromObjectFile(
+    public static IEnumerable<Symbol> EnumerateSymbolsFromObjectFileStream(
         Stream objectFileStream) =>
-        InternalEnumerateSymbolsFromObjectFile(objectFileStream).
+        InternalEnumerateSymbolsFromObjectFileStream(objectFileStream).
         Distinct();
+    
+    ////////////////////////////////////////////////////////////////////
 
-    public static void WriteSymbolTable(
-        Stream symbolTableStream,
-        SymbolList[] symbolLists)
+    public static Stream ToCompressedObjectStream(
+        Stream objectFileStream,
+        string referenceObjectFilePath)
     {
-        var tw = new StreamWriter(symbolTableStream, Encoding.UTF8);
-
-        foreach (var symbolList in symbolLists)
+        if (GetFileType(referenceObjectFilePath) == FileTypes.ObjectFile)
         {
-            tw.WriteLine($".object {symbolList.ObjectName}");
-
-            foreach (var symbol in symbolList.Symbols.Distinct())
+            if (objectFileStream.CanSeek)
             {
-                tw.WriteLine($"    {symbol.Directive} {symbol.Scope} {symbol.Name}{(symbol.MemberCount is { } mc ? $" {mc}" : "")}");
+                return objectFileStream;
+            }
+            var ms = new MemoryStream();
+            objectFileStream.CopyTo(ms);
+            objectFileStream.Dispose();
+            ms.Position = 0;
+            return ms;
+        }
+        else
+        {
+            var gzs = new GZipStream(objectFileStream, CompressionLevel.Optimal);
+            var ms = new MemoryStream();
+            gzs.CopyTo(ms);
+            objectFileStream.Dispose();
+            ms.Position = 0;
+            return ms;
+        }
+    }
+
+    public static Stream OpenCompressedObjectStream(string objectFilePath)
+    {
+        var ofs = StreamUtilities.OpenStream(objectFilePath, false);
+        return ToCompressedObjectStream(ofs, objectFilePath);
+    }
+
+    public static Stream ToDecompressedObjectStream(
+        Stream objectFileStream,
+        string referenceObjectFilePath)
+    {
+        if (GetFileType(referenceObjectFilePath) != FileTypes.ObjectFile)
+        {
+            if (objectFileStream.CanSeek)
+            {
+                return objectFileStream;
+            }
+            var ms = new MemoryStream();
+            objectFileStream.CopyTo(ms);
+            objectFileStream.Dispose();
+            ms.Position = 0;
+            return ms;
+        }
+        else
+        {
+            var gzs = new GZipStream(objectFileStream, CompressionMode.Decompress);
+            var ms = new MemoryStream();
+            gzs.CopyTo(ms);
+            objectFileStream.Dispose();
+            ms.Position = 0;
+            return ms;
+        }
+    }
+
+    public static Stream OpenDecompressedObjectStream(string objectFilePath)
+    {
+        var ofs = StreamUtilities.OpenStream(objectFilePath, false);
+        return ToDecompressedObjectStream(ofs, objectFilePath);
+    }
+
+    ////////////////////////////////////////////////////////////////////
+
+    private static IEnumerable<ArchivedObjectItemDescriptor> EnumerateArchivedObjectItemDescriptors(
+        Stream archiveFileStream)
+    {
+        var ler = new LittleEndianReader(archiveFileStream);
+        if (!ler.TryReadString(ArchiveIdentity.Length, out var identity) ||
+            identity != ArchiveIdentity)
+        {
+            throw new FormatException(
+                "Invalid archive identity.");
+        }
+        
+        var relativePosition = 0;
+        while (true)
+        {
+            if (!ler.TryReadString(256, out var objectName))
+            {
+                throw new FormatException(
+                    $"Invalid object naming: Position={ler.Position?.ToString() ?? "(Unknown)"}");
+            }
+            if (objectName.Length == 0)
+            {
+                // Detected termination.
+                break;
+            }
+            if (!ler.TryReadInt32(out var length))
+            {
+                throw new FormatException(
+                    $"Invalid object length: Position={ler.Position?.ToString() ?? "(Unknown)"}");
+            }
+            yield return new(relativePosition, length, objectName);
+            relativePosition += length;
+        }
+    }
+
+    public static IObjectItemDescriptor[] LoadArchivedObjectItemDescriptors(
+        string archiveFilePath,
+        Func<ArchivedObjectItemDescriptor, IObjectItemDescriptor?> selector)
+    {
+        using var archiveFileStream = StreamUtilities.OpenStream(archiveFilePath, false);
+        var descriptors = EnumerateArchivedObjectItemDescriptors(archiveFileStream).
+            Select(aod => selector(aod)!).
+            Where(d => d != null).
+            ToArray();
+        var archiveFileBasePosition = archiveFileStream.Position;
+        foreach (var descriptor in descriptors)
+        {
+            if (descriptor is ArchivedObjectItemDescriptor aod)
+            {
+                aod.AdjustPosition(archiveFileBasePosition);
             }
         }
-
-        tw.Flush();
+        return descriptors;
     }
-    
-    public static IEnumerable<SymbolList> EnumerateSymbolTable(
-        string archiveFilePath)
-    {
-        using var archive = ZipFile.Open(
-            archiveFilePath,
-            ZipArchiveMode.Read,
-            Encoding.UTF8);
 
-        if (archive.GetEntry(SymbolTableFileName) is { } entry)
+    ////////////////////////////////////////////////////////////////////
+
+    public static IEnumerable<SymbolList> EnumerateSymbolListFromArchive(
+        this ArchiveReader archiveReader)
+    {
+        if (archiveReader.TryOpenObjectStream(
+            SymbolTableFileName, true, out var symbolTableStream))
         {
-            using var stream = entry.Open();
-            var tr = new StreamReader(stream, Encoding.UTF8, true);
+            var tr = StreamUtilities.CreateTextReader(symbolTableStream);
 
             Token? currentObjectName = null;
             var symbols = new List<Symbol>();            
-            
-            foreach (var tokens in CilTokenizer.TokenizeAll("", SymbolTableFileName, tr).
+
+            foreach (var tokens in CilTokenizer.TokenizeAll(
+                "", SymbolTableFileName, tr).
                 Where(tokens => tokens.Length >= 2))
             {
                 switch (tokens[0])
@@ -193,12 +364,10 @@ public static class ArchiverUtilities
                     // enumeration public enumbaz 3
                     // structure public structhoge 5
                     case (TokenTypes.Identity, var directive)
-                        when tokens.Length >= 3 &&
-                            tokens[1] is (TokenTypes.Identity, var scope) &&
-                            CommonUtilities.TryParseEnum<Scopes>(scope, out _) &&
-                            tokens[2] is (TokenTypes.Identity, var name):
-                        if (tokens.Length >= 4 &&
-                            tokens[3] is (TokenTypes.Identity, var mc) &&
+                        when tokens is [_, (TokenTypes.Identity, var scope), _, ..] &&
+                             CommonUtilities.TryParseEnum<Scopes>(scope, out _) &&
+                             tokens[2] is (TokenTypes.Identity, var name):
+                        if (tokens is [_, _, _, (TokenTypes.Identity, var mc), ..] &&
                             int.TryParse(mc, NumberStyles.Integer, CultureInfo.InvariantCulture, out var memberCount) &&
                             memberCount >= 0)
                         {
@@ -211,64 +380,12 @@ public static class ArchiverUtilities
                         break;
                 }
             }
-
             if (currentObjectName is var (_, con2))
             {
                 yield return new(
                     con2,
                     symbols.Distinct().ToArray());
             }
-        }
-    }
-
-    public static IEnumerable<string> EnumerateArchivedObjectNames(
-        string archiveFilePath)
-    {
-        using var archive = ZipFile.Open(
-            archiveFilePath,
-            ZipArchiveMode.Read,
-            Encoding.UTF8);
-
-        foreach (var entry in archive.Entries.
-            Where(entry => entry.Name != SymbolTableFileName))
-        {
-            yield return entry.Name;
-        }
-    }
-
-    public static bool TryOpenArchivedObject(
-        string archiveFilePath,
-        string objectName,
-        bool is_decoded_body,
-        out Stream stream)
-    {
-        var archive = ZipFile.Open(
-            archiveFilePath,
-            ZipArchiveMode.Read,
-            Encoding.UTF8);
-
-        try
-        {
-            if (archive.GetEntry(objectName) is { } entry)
-            {
-                var ofs = is_decoded_body ?
-                    new GZipStream(entry.Open(), CompressionMode.Decompress) :
-                    entry.Open();
-
-                stream = new ArchiveObjectStream(archive, ofs);
-                return true;
-            }
-            else
-            {
-                archive.Dispose();
-                stream = null!;
-                return false;
-            }
-        }
-        catch
-        {
-            archive.Dispose();
-            throw;
         }
     }
 }

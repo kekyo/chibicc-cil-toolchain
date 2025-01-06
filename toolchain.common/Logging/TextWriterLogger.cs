@@ -16,8 +16,8 @@ public sealed class TextWriterLogger : LoggerBase, IDisposable
 {
     public readonly TextWriter Writer;
 
-    public TextWriterLogger(LogLevels baseLevel, TextWriter tw) :
-        base(baseLevel) =>
+    public TextWriterLogger(string prefix, LogLevels baseLevel, TextWriter tw) :
+        base(prefix, baseLevel) =>
         this.Writer = tw;
 
     public void Dispose() =>

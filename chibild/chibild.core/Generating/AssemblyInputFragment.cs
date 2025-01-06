@@ -307,6 +307,8 @@ internal sealed class AssemblyInputFragment :
 
         logger.Information($"Loading assembly: {relativePath}");
 
+        using var scope = logger.BeginScope(LogLevels.Debug);
+
         var assembly = assemblyResolver.ReadAssemblyFrom(
             Path.Combine(baseInputPath, relativePath));
 
@@ -402,6 +404,8 @@ internal sealed class AssemblyInputFragment :
                 g => g.Key,
                 // Sorted descending longer parameters.
                 g => g.OrderByDescending(method => method.Parameters.Count).ToArray());
+
+        scope.Debug($"Loaded assembly: {relativePath}");
 
         return new(
             baseInputPath,
