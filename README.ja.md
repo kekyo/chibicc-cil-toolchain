@@ -25,6 +25,8 @@
 
 ## これは何?
 
+初めての方は [meta-build script repository](https://github.com/kekyo/chibicc-cil-build) も参照してください。
+
 chibicc-toolchainは、.NET CIL/CLR 上に [chibicc](https://github.com/rui314/chibicc) を移植するためのバックエンドとなる、CIL/MSILアセンブラ・リンカなどのツールチェインです。
 このツールチェインで使用するCILアセンブラは、簡素な構文規則でCILアセンブリ言語を記述可能で、アセンブルを行い、.NETアセンブリファイルを出力することが出来ます。
 以下はコード例です:

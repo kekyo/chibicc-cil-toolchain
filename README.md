@@ -25,6 +25,8 @@
 
 ## What is this?
 
+Please refer [meta-build script repository](https://github.com/kekyo/chibicc-cil-build) for first time.
+
 chibicc-toolchain is a toolchain, including a CIL/MSIL assembler and a linker,
 that serves as a backend for porting [chibicc](https://github.com/rui314/chibicc) on .NET CIL/CLR.
 The CIL assembler used in this toolchain can write CIL assembly language with simple syntax rules, perform assembly, and output .
