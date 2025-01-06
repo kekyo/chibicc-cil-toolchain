@@ -65,8 +65,6 @@ and chibild performs the actual assembly process of the CIL source code.
 * chibias performs syntax checking by the parser, but does not perform detailed checking such as symbol validity.
 * The '*.o' file output by chibias is actually just a compression with gzip format of the input CIL source file.
   This can be verified by actually `gzip -d` the object file.
-* Similarly, the '*.a' file output by chibiar is actually a zip file format including the symbol table file.
-  Exactly the same can be verified with the `unzip` command.
 
 The strange internal behavior of chibias, chibild and chibiar is due to implementation limitations.
 For toolchain users, the advantage is that they can contrast their usage with

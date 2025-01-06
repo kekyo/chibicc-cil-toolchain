@@ -15,10 +15,12 @@ using chibicc.toolchain.Tokenizing;
 using chibicc.toolchain.Internal;
 using chibild.Internal;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using chibicc.toolchain.IO;
 
 namespace chibild.Generating;
 
@@ -39,6 +41,7 @@ internal sealed class ArchivedObjectInputFragment :
         Loaded,
     }
 
+    private readonly ArchiveReader archiveReader;
     private readonly string archivedObjectName;
 
     private readonly Dictionary<string, Symbol> typeSymbols;
@@ -57,12 +60,14 @@ internal sealed class ArchivedObjectInputFragment :
     private ArchivedObjectInputFragment(
         string baseInputPath,
         string relativePath,
+        ArchiveReader archiveReader,
         string archivedObjectName,
         Dictionary<string, Symbol> typeSymbols,
         Dictionary<string, Symbol> variableSymbols,
         Dictionary<string, Symbol> functionSymbols) :
         base(baseInputPath, relativePath)
     {
+        this.archiveReader = archiveReader;
         this.archivedObjectName = archivedObjectName;
         this.ObjectName = Path.GetFileNameWithoutExtension(this.archivedObjectName);
         this.ObjectPath = $"{this.archivedObjectName}@{base.ObjectPath}";
@@ -180,19 +185,18 @@ internal sealed class ArchivedObjectInputFragment :
         {
             logger.Information($"Loading: {this.ObjectPath}");
 
-            if (!ArchiverUtilities.TryOpenArchivedObject(
-                Path.Combine(this.BaseInputPath, this.RelativePath),
+            if (!this.archiveReader.TryOpenObjectStream(
                 this.archivedObjectName,
                 true,
-                out var stream))
+                out var objectStream))
             {
                 logger.Error(
                     $"Unable find an object on archive: ObjectName={this.archivedObjectName}, ArchiveFile={this.RelativePath}");
                 return LoadObjectResults.CaughtError;
             }
 
-            using var _s = stream;
-            var tr = new StreamReader(stream, Encoding.UTF8, true);
+            using var _ = objectStream;
+            var tr = StreamUtilities.CreateTextReader(objectStream);
 
             var parser = new CilParser(logger);
             var declarations = parser.Parse(
@@ -237,12 +241,17 @@ internal sealed class ArchivedObjectInputFragment :
     {
         logger.Information($"Loading symbol table: {relativePath}");
 
-        var symbolLists = ArchiverUtilities.EnumerateSymbolTable(
+        using var scope = logger.BeginScope(LogLevels.Debug);
+
+        var archiveReader = new ArchiveReader(
             Path.Combine(baseInputPath, relativePath));
-        
-        return symbolLists.Select(symbolList =>
+
+        var symbolLists = archiveReader.EnumerateSymbolListFromArchive();
+                
+        var fragments = symbolLists.Select(symbolList =>
         {
             var symbols = symbolList.Symbols.
+                AsParallel().
                 GroupBy(symbol =>
                 {
                     switch (symbol.Directive)
@@ -267,14 +276,21 @@ internal sealed class ArchivedObjectInputFragment :
 
             var empty = new Dictionary<string, Symbol>();
             
+            scope.Debug($"Examined a symbol list: {relativePath}, {symbolList.ObjectName}");
+
             return new ArchivedObjectInputFragment(
                 baseInputPath,
                 relativePath,
+                archiveReader,
                 symbolList.ObjectName,
                 symbols.TryGetValue("type", out var types) ? types : empty,
                 symbols.TryGetValue("variable", out var variableNames) ? variableNames : empty,
                 symbols.TryGetValue("function", out var functionNames) ? functionNames : empty);
         }).
         ToArray();
+        
+        scope.Debug($"Loaded symbol table: {relativePath}");
+
+        return fragments;
     }
 }

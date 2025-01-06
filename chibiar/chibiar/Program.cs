@@ -39,6 +39,7 @@ public static class Program
             }
 
             using var logger = new TextWriterLogger(
+                "chibiar",
                 options.LogLevel,
                 Console.Out);
 

@@ -18,7 +18,11 @@ public sealed class CliOptions
     public string OutputObjectFilePath = null!;
     public bool IsLinked = true;
     public bool IsDryRun = false;
+#if DEBUG
+    public LogLevels LogLevel = LogLevels.Trace;
+#else
     public LogLevels LogLevel = LogLevels.Warning;
+#endif
     public bool ShowHelp = false;
     public string? SourceFilePath;
 

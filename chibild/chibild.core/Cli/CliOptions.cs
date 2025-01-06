@@ -38,7 +38,11 @@ public sealed class CliOptions
     public string OutputAssemblyPath = null!;
     public readonly LinkerOptions LinkerOptions = new();
     public string? InjectToAssemblyPath;
+#if DEBUG
+    public LogLevels LogLevel = LogLevels.Trace;
+#else
     public LogLevels LogLevel = LogLevels.Warning;
+#endif
     public bool ShowHelp = false;
     public string BaseInputPath = Directory.GetCurrentDirectory();
     public InputReference[] InputReferences = CommonUtilities.Empty<InputReference>();
